@@ -1,14 +1,7 @@
 /**
  * @file lv_conf.h
- * Configuration file for v9.4.0-dev
- */
-
-/*
- * Copy this file as `lv_conf.h`
- * 1. simply next to `lvgl` folder
- * 2. or to any other place and
- *    - define `LV_CONF_INCLUDE_SIMPLE`;
- *    - add the path as an include path.
+ * LVGL v9 configuration (based on LVGL's lv_conf.h template).
+ * Pulled in via the LV_CONF_INCLUDE_SIMPLE build flag.
  */
 
 /* clang-format off */

@@ -1,20 +1,21 @@
-Import("env", "projenv")
+# `pio run` only BUILDS. The native emulator has no chip to flash, so this hook
+# repurposes the "upload" action (and adds an "Execute" button in the IDE) to
+# RUN the built binary — i.e. open the SDL window.
+Import("env")
 
-exec_name = "${BUILD_DIR}/${PROGNAME}${PROGSUFFIX}"
-
-# Override unused "upload" to execute compiled binary
 from SCons.Script import AlwaysBuild
-AlwaysBuild(env.Alias("upload", exec_name, exec_name))
 
-# Add custom target to explorer
+program = "${BUILD_DIR}/${PROGNAME}${PROGSUFFIX}"
+
+# `pio run -t upload` -> run the program
+AlwaysBuild(env.Alias("upload", program, program))
+
+# "Execute" target / button in the PlatformIO IDE explorer
 env.AddTarget(
-    name = "execute",
-    dependencies = exec_name,
-    actions = exec_name,
-    title = "Execute",
-    description = "Build and execute",
-    group="General"
+    name="execute",
+    dependencies=program,
+    actions=program,
+    title="Execute",
+    description="Build and run",
+    group="General",
 )
-
-#print('=====================================')
-#print(env.Dump())

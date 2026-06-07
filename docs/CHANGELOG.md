@@ -4,6 +4,10 @@ Newest first. One short entry per change.
 
 ## 2026-06-07
 
+- Made `CLAUDE.md` the single project-context file (dropped the `AGENTS.md` symlink).
+- Trimmed `support/sdl2_build_extra.py` (drop unused import + dead code, add comment)
+  and the obsolete copy-instructions header in `include/lv_conf.h`.
+- Expanded README: how it works, controls, and how to add an app.
 - Merged `lv_conf_v9.h` into `include/lv_conf.h` (single LVGL config file).
 - Apple-Silicon-only: removed Intel/Linux/Windows build notes and the unused
   `-m32` handling in `support/sdl2_build_extra.py`.
@@ -19,4 +23,4 @@ Newest first. One short entry per change.
 - Trimmed the upstream emulator fork to a minimal base: two PlatformIO envs
   (`emulator_Dial`, `device`), LVGL v9 only, removed EEZ Studio, Tab5, unused
   boards, scaffold READMEs, and image assets.
-- Added `AGENTS.md` (+ `CLAUDE.md` symlink) and `docs/` for project context.
+- Added `CLAUDE.md` and `docs/` for project context.
