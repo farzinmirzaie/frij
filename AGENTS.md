@@ -31,7 +31,7 @@ If `pio` is not on PATH, it ships with the VS Code PlatformIO extension at
 | `src/launcher/` | Home screen, navigation, back button, app registry |
 | `src/apps/` | Mini-apps (one folder each) + `apps.cpp` where they register |
 | `src/utility/` | LVGL↔M5GFX glue (the only board-specific code): `lvgl_port_m5stack.cpp` (device), `sdl_main.cpp` (emulator) |
-| `include/lv_conf*.h` | LVGL v9 config (`lv_conf.h` just includes `lv_conf_v9.h`) |
+| `include/lv_conf.h` | LVGL v9 config (LVGL's `lv_conf.h` template, trimmed) |
 | `support/sdl2_build_extra.py` | SDL2 build helper for the emulator |
 | `platformio.ini` | 2 envs: `emulator_Dial`, `device` (real board, WIP) |
 | `docs/` | Living project docs — see below |
@@ -69,5 +69,5 @@ Changes are reviewed before they are committed:
 ## Gotchas
 
 - The `device` env is a placeholder — no verified board panel yet. Emulator is the daily driver.
-- `-arch arm64` in `platformio.ini` is Apple-Silicon only; remove on Intel/Linux.
+- Dev machine is an **Apple Silicon Mac** only (emulator builds with `-arch arm64`).
 - This is a trimmed fork of `m5stack/lv_m5_emulator`; M5GFX is the rendering lib.

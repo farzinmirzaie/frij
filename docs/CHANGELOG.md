@@ -4,6 +4,9 @@ Newest first. One short entry per change.
 
 ## 2026-06-07
 
+- Merged `lv_conf_v9.h` into `include/lv_conf.h` (single LVGL config file).
+- Apple-Silicon-only: removed Intel/Linux/Windows build notes and the unused
+  `-m32` handling in `support/sdl2_build_extra.py`.
 - Tightened README and docs; removed conversational/session-specific phrasing.
 - Made the project target-agnostic: dropped board-specific branding; apps are
   pure LVGL, only `src/utility/` is board-specific. Board specs moved to
