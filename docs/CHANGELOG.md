@@ -4,6 +4,8 @@ Newest first. One short entry per change.
 
 ## 2026-06-07
 
+- Trimmed `platformio.ini`: collapsed the header comment, dropped the redundant
+  `LVGL_USE_V8=0` define, and tightened comments.
 - Made `CLAUDE.md` the single project-context file (dropped the `AGENTS.md` symlink).
 - Trimmed `support/sdl2_build_extra.py` (drop unused import + dead code, add comment)
   and the obsolete copy-instructions header in `include/lv_conf.h`.
