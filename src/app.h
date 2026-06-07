@@ -19,6 +19,7 @@
  */
 typedef struct {
     const char* name;
+    uint32_t    color;                            // page background, 0xRRGGBB
 
     void (*build_glance)(lv_obj_t* parent);
 

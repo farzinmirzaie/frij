@@ -4,6 +4,14 @@ Newest first. One short entry per change.
 
 ## 2026-06-07
 
+- Carousel now **follows the finger** during a drag and snaps on release
+  (`carousel.cpp` owns press/drag input; vertical swipes routed via a callback).
+- Each app has its own background **color** (`frij_app_t.color`); colors slide
+  in during a swipe.
+- Todo now has **3 screens** (list / add / stats) to exercise the app carousel.
+
+## 2026-06-07
+
 - Reworked the launcher into a looping glance **carousel** (Launcher phase A):
   swipe left/right between apps, swipe up to open an app's own screen carousel,
   swipe down for a Settings stub, and Back via Backspace (emulator) / button GPIO

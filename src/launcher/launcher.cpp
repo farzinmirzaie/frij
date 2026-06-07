@@ -6,29 +6,39 @@
 #include "registry.h"
 
 /*
- * Three layers, one screen-level gesture handler that routes by the current
- * layer. The screen is round, so content is kept centered.
+ * Three layers. The carousel owns horizontal drags (paging) and reports
+ * vertical swipes via a callback; the launcher turns those into open/settings.
  *
- * Locking: frij_launcher_start() runs outside the LVGL task (locks). Gesture
- * callbacks and frij_back() run inside the LVGL task (no locking).
+ * Locking: frij_launcher_start() runs outside the LVGL task (locks). The
+ * carousel callbacks and frij_back() run inside it (no locking).
  */
 
 typedef enum { LAYER_LAUNCHER, LAYER_APP, LAYER_SETTINGS } layer_t;
 
 static const uint32_t COLOR_BG = 0x101418;
 
-static layer_t           s_layer = LAYER_LAUNCHER;
-static frij_carousel_t   s_apps;            // glance carousel (launcher home)
-static frij_carousel_t   s_screens;         // open app's screen carousel
-static lv_obj_t*         s_overlay = NULL;  // app/settings layer over the home
+static layer_t         s_layer = LAYER_LAUNCHER;
+static frij_carousel_t s_apps;            // glance carousel (home)
+static frij_carousel_t s_screens;         // open app's screen carousel
+static lv_obj_t*       s_overlay = NULL;  // app/settings layer over the home
 
-// ---- carousel page builders ---------------------------------------------
+// ---- carousel page builders ----------------------------------------------
+
+static void paint_bg(lv_obj_t* page, uint32_t color)
+{
+    lv_obj_set_style_bg_color(page, lv_color_hex(color), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(page, LV_OPA_COVER, LV_PART_MAIN);
+}
 
 static void glance_builder(lv_obj_t* page, int index, void* user)
 {
     (void)user;
     const frij_app_t* app = frij_registry_get(index);
-    if (app && app->build_glance) {
+    if (!app) {
+        return;
+    }
+    paint_bg(page, app->color);
+    if (app->build_glance) {
         app->build_glance(page);
     }
 }
@@ -36,12 +46,16 @@ static void glance_builder(lv_obj_t* page, int index, void* user)
 static void screen_builder(lv_obj_t* page, int index, void* user)
 {
     const frij_app_t* app = (const frij_app_t*)user;
-    if (app && app->build_screen) {
+    if (!app) {
+        return;
+    }
+    paint_bg(page, app->color);
+    if (app->build_screen) {
         app->build_screen(page, index);
     }
 }
 
-// ---- layer transitions ----------------------------------------------------
+// ---- layer transitions -----------------------------------------------------
 
 static lv_obj_t* make_layer(void)
 {
@@ -53,7 +67,6 @@ static lv_obj_t* make_layer(void)
     lv_obj_set_style_radius(o, 0, LV_PART_MAIN);
     lv_obj_set_style_pad_all(o, 0, LV_PART_MAIN);
     lv_obj_clear_flag(o, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_add_flag(o, LV_OBJ_FLAG_EVENT_BUBBLE);  // swipes bubble to the screen
     return o;
 }
 
@@ -65,7 +78,7 @@ static void enter_app(int index)
     }
     int screens = app->screen_count > 0 ? app->screen_count : 1;
     s_overlay = make_layer();
-    frij_carousel_init(&s_screens, s_overlay, screens, screen_builder, (void*)app);
+    frij_carousel_init(&s_screens, s_overlay, screens, screen_builder, NULL, (void*)app);
     s_layer = LAYER_APP;
 }
 
@@ -92,36 +105,18 @@ void frij_back(void)
     s_layer = LAYER_LAUNCHER;
 }
 
-// ---- gestures --------------------------------------------------------------
+// ---- vertical swipe on the home carousel -----------------------------------
 
-static void on_gesture(lv_event_t* e)
+static void on_vswipe(lv_dir_t dir, void* user)
 {
-    (void)e;
-    lv_dir_t dir = lv_indev_get_gesture_dir(lv_indev_active());
-
-    switch (s_layer) {
-        case LAYER_LAUNCHER:
-            if (dir == LV_DIR_LEFT) {
-                frij_carousel_next(&s_apps);
-            } else if (dir == LV_DIR_RIGHT) {
-                frij_carousel_prev(&s_apps);
-            } else if (dir == LV_DIR_TOP) {
-                enter_app(frij_carousel_index(&s_apps));
-            } else if (dir == LV_DIR_BOTTOM) {
-                open_settings();
-            }
-            break;
-
-        case LAYER_APP:
-            if (dir == LV_DIR_LEFT) {
-                frij_carousel_next(&s_screens);
-            } else if (dir == LV_DIR_RIGHT) {
-                frij_carousel_prev(&s_screens);
-            }
-            break;
-
-        case LAYER_SETTINGS:
-            break;
+    (void)user;
+    if (s_layer != LAYER_LAUNCHER) {
+        return;
+    }
+    if (dir == LV_DIR_TOP) {
+        enter_app(frij_carousel_index(&s_apps));
+    } else if (dir == LV_DIR_BOTTOM) {
+        open_settings();
     }
 }
 
@@ -135,8 +130,7 @@ void frij_launcher_start(void)
     lv_obj_set_style_bg_color(screen, lv_color_hex(COLOR_BG), LV_PART_MAIN);
     lv_obj_clear_flag(screen, LV_OBJ_FLAG_SCROLLABLE);
 
-    frij_carousel_init(&s_apps, screen, frij_registry_count(), glance_builder, NULL);
-    lv_obj_add_event_cb(screen, on_gesture, LV_EVENT_GESTURE, NULL);
+    frij_carousel_init(&s_apps, screen, frij_registry_count(), glance_builder, on_vswipe, NULL);
     s_layer = LAYER_LAUNCHER;
 
     lvgl_port_unlock();

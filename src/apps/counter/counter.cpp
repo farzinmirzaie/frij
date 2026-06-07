@@ -86,6 +86,6 @@ static void screen(lv_obj_t* parent, int index)
 
 const frij_app_t* counter_app(void)
 {
-    static const frij_app_t app = {"Counter", glance, 1, screen};
+    static const frij_app_t app = {"Counter", 0x123A6B, glance, 1, screen};
     return &app;
 }

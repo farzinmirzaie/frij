@@ -4,30 +4,41 @@
 #include "lvgl.h"
 
 /*
- * A horizontal, looping pager. Shows one page at a time; next()/prev() wrap
- * around. The page content is (re)built by `builder(page, index, user)` each
- * time the index changes.
+ * A horizontal, looping, drag-following pager.
  *
- * The carousel does not handle gestures itself — the launcher detects swipes
- * and calls next()/prev(). This keeps gesture meaning (which differs per
- * layer) in one place.
+ * The page content is built by `builder(page, index, user)`. While the user
+ * drags horizontally the current and incoming pages follow the finger; on
+ * release the carousel snaps to whichever is mostly in view (wrapping at the
+ * ends).
+ *
+ * A vertical drag is reported to `vswipe(dir, user)` on release (LV_DIR_TOP /
+ * LV_DIR_BOTTOM) — the launcher uses this for open / settings. `vswipe` may be
+ * NULL (e.g. inside an app, where vertical does nothing).
  */
 typedef void (*frij_page_builder)(lv_obj_t* page, int index, void* user);
+typedef void (*frij_vswipe_cb)(lv_dir_t dir, void* user);
 
 typedef struct {
-    lv_obj_t*         page;
+    lv_obj_t*         viewport;   // clips the pages
+    lv_obj_t*         cur;        // page currently centered
+    lv_obj_t*         adj;        // incoming neighbor during a drag (or NULL)
+
     int               count;
     int               index;
+    int               adj_index;  // index the neighbor was built for
     frij_page_builder builder;
+    frij_vswipe_cb    vswipe;
     void*             user;
+
+    lv_point_t        start;      // press origin
+    int               axis;       // 0 undecided, 1 horizontal, 2 vertical
+    int               dir_sign;   // -1 dragging left (next), +1 right (prev)
+    bool              busy;       // a snap animation is running
 } frij_carousel_t;
 
-// Create a carousel filling `parent` and build page 0.
 void frij_carousel_init(frij_carousel_t* c, lv_obj_t* parent, int count,
-                        frij_page_builder builder, void* user);
+                        frij_page_builder builder, frij_vswipe_cb vswipe, void* user);
 
-void frij_carousel_next(frij_carousel_t* c);  // +1, wraps
-void frij_carousel_prev(frij_carousel_t* c);  // -1, wraps
-int  frij_carousel_index(const frij_carousel_t* c);
+int frij_carousel_index(const frij_carousel_t* c);
 
 #endif  // FRIJ_CAROUSEL_H
