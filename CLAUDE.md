@@ -30,6 +30,7 @@ If `pio` is not on PATH, it ships with the VS Code PlatformIO extension at
 | `src/app.h` | App contract (`frij_app_t`: glance + screens) — all a mini-app needs |
 | `src/launcher/` | Carousel, layer state machine, gestures, Back input, registry |
 | `src/apps/` | Mini-apps (one folder each) + `apps.cpp` where they register |
+| `src/store/` | Shared key→JSON store (file on emulator, Supabase on device TODO) |
 | `src/utility/` | LVGL↔M5GFX glue (the only board-specific code): `lvgl_port_m5stack.cpp` (device), `sdl_main.cpp` (emulator) |
 | `include/lv_conf.h` | LVGL v9 config (LVGL's `lv_conf.h` template, trimmed) |
 | `support/sdl2_build_extra.py` | SDL2 build helper for the emulator |
@@ -52,6 +53,7 @@ If `pio` is not on PATH, it ships with the VS Code PlatformIO extension at
 - [docs/ROADMAP.md](docs/ROADMAP.md) — the app vision + what's next.
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how boot, render loop, and the port layer work.
 - [docs/LAUNCHER.md](docs/LAUNCHER.md) — launcher layers, gestures, and the app contract.
+- [docs/STORAGE.md](docs/STORAGE.md) — shared data store + cloud sync (Supabase) plan.
 - [docs/HARDWARE.md](docs/HARDWARE.md) — board targets + how to add a new one.
 - [docs/SKILLS.md](docs/SKILLS.md) — Claude skills/tools worth using on this stack.
 

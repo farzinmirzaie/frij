@@ -1,17 +1,38 @@
 #include "counter.h"
 
+#include <stdlib.h>  // atoi
+
+#include "store/store.h"
+
 /*
  * Counter — a number with - and + buttons.
  *
- * Includes only "app.h"; knows nothing about the launcher.
+ * Includes only "app.h" (+ the shared store); knows nothing about the launcher.
  *   glance : shows the current value
  *   screen : the value plus -/+ buttons (one screen)
  *
- * State lives in file-static vars: one counter on screen at a time.
+ * The value persists via the shared store under the key "counter".
  */
+
+static const char* STORE_KEY = "counter";
 
 static int       s_count = 0;
 static lv_obj_t* s_value = NULL;  // the big number label on the app screen
+
+static void load_count(void)
+{
+    char buf[16];
+    if (frij_store_load(STORE_KEY, buf, sizeof(buf))) {
+        s_count = atoi(buf);
+    }
+}
+
+static void save_count(void)
+{
+    char buf[16];
+    lv_snprintf(buf, sizeof(buf), "%d", s_count);
+    frij_store_save(STORE_KEY, buf);
+}
 
 static void refresh(void)
 {
@@ -25,6 +46,7 @@ static void on_minus(lv_event_t* e)
     (void)e;
     s_count--;
     refresh();
+    save_count();
 }
 
 static void on_plus(lv_event_t* e)
@@ -32,6 +54,7 @@ static void on_plus(lv_event_t* e)
     (void)e;
     s_count++;
     refresh();
+    save_count();
 }
 
 static lv_obj_t* make_button(lv_obj_t* parent, const char* text, lv_event_cb_t cb)
@@ -47,6 +70,8 @@ static lv_obj_t* make_button(lv_obj_t* parent, const char* text, lv_event_cb_t c
 
 static void glance(lv_obj_t* parent)
 {
+    load_count();
+
     lv_obj_set_flex_flow(parent, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(parent, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
                           LV_FLEX_ALIGN_CENTER);
@@ -63,6 +88,7 @@ static void glance(lv_obj_t* parent)
 static void screen(lv_obj_t* parent, int index)
 {
     (void)index;  // single screen
+    load_count();
 
     s_value = lv_label_create(parent);
     lv_obj_set_style_text_color(s_value, lv_color_hex(0xFFFFFF), LV_PART_MAIN);

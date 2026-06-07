@@ -23,7 +23,11 @@ target whatever board we run on (see [HARDWARE.md](HARDWARE.md)).
 - [ ] **Launcher B**: real Settings layer (swipe-down) — brightness; wifi is device-only.
 - [ ] **Launcher C**: multi-screen app carousels + glance data refresh (`on_show`).
 - [ ] **P2 — Flesh out Todos**: real add/toggle/delete (currently a fixed checklist).
-- [ ] **P3 — Persistence**: save state (NVS/flash on device; file on emulator).
+- [x] **Storage 1**: shared `frij_store` (key→JSON) + emulator file backend;
+  Counter persists. See [STORAGE.md](STORAGE.md).
+- [ ] **Storage 2**: Supabase backend on device (wifi, scoped key, offline queue).
+- [ ] **Storage 3**: web app reading the same data (Google-Keep-style).
+- [ ] **P3 — Persistence**: migrate remaining app state onto `frij_store`.
 - [ ] **P4 — More apps**: grocery, reminders, photos.
 - [ ] **P5 — Device bring-up**: confirm M5GFX panel support for the target board, flash, test touch/buttons.
 

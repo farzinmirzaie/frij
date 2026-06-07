@@ -4,6 +4,12 @@ Newest first. One short entry per change.
 
 ## 2026-06-07
 
+- Added a shared **`frij_store`** key→JSON utility (`src/store/`): emulator
+  file backend now, Supabase over HTTPS on device later. Counter persists its
+  value through it. Design in `docs/STORAGE.md`; chosen cloud backend: Supabase.
+
+## 2026-06-07
+
 - Carousel now **follows the finger** during a drag and snaps on release
   (`carousel.cpp` owns press/drag input; vertical swipes routed via a callback).
 - Each app has its own background **color** (`frij_app_t.color`); colors slide
