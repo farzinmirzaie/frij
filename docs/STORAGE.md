@@ -47,13 +47,24 @@ REST and a web app reads the same rows.
 The anon key + RLS is what the device and web app use; the `service_role` key is
 admin-only and must never ship on the device.
 
+## How it works now (emulator)
+
+`src/store/store.cpp` (native): `load()` reads the local cache (fast), `save()`
+writes the cache **and** upserts to Supabase via libcurl, `pull()` GETs the
+latest from Supabase into the cache. Config comes from `.env`. Counter and Todo
+both use it; Todo's list is a JSON array (ArduinoJson).
+
+Known limitation: the HTTP calls are synchronous, so `save`/`pull` briefly block
+the UI. Fine on the emulator; the device phase needs async (or a worker).
+
 ## Phasing
 
-1. **Local store (this phase):** the API above + the emulator file backend.
-   Apps gain persistence with zero cloud. Counter is the first user.
-2. **Device + cloud:** Supabase REST backend, wifi, a *scoped* key, offline
-   queue (the local file doubles as the cache).
-3. **Web app:** reads/writes the same rows via the Supabase JS client.
+1. **Local store:** API + emulator file backend. ✅
+2. **Emulator ↔ Supabase:** libcurl backend, `.env` config, file cache. ✅
+   (Requires the `store` table — see Setup.)
+3. **Device + cloud:** Supabase over `WiFiClientSecure`, NVS/LittleFS cache,
+   async + offline queue.
+4. **Web app:** reads/writes the same rows via the Supabase JS client.
 
 ## Things to get right later (device phase)
 

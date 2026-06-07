@@ -2,6 +2,15 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-08
+
+- `frij_store` now talks to **Supabase** on the emulator (libcurl): `save`
+  upserts + caches, `pull` fetches into the cache, `load` reads the cache.
+  Config from `.env`. Added ArduinoJson + `-lcurl`.
+- Fleshed out **Todo** into a cloud-backed checklist (JSON array via
+  ArduinoJson); toggling an item syncs. Counter pulls on open too.
+- Requires a `store` table in Supabase (see docs/STORAGE.md).
+
 ## 2026-06-07
 
 - Added `.env.example` (Supabase config) and documented Supabase setup + the

@@ -14,10 +14,17 @@
 
 void frij_store_init(void);
 
-// Copy stored text for `key` into `buf` (NUL-terminated). False if absent.
+// Read from the local cache into `buf` (NUL-terminated). Fast, no network.
+// False if absent.
 bool frij_store_load(const char* key, char* buf, size_t buf_size);
 
-// Persist `json` (any text) under `key`. False on failure.
+// Write to the local cache AND push to the cloud (best effort). False if the
+// cache write fails.
 bool frij_store_save(const char* key, const char* json);
+
+// Pull the latest value from the cloud into the local cache. Call before
+// load() when you want fresh data (e.g. when opening a screen). False if the
+// cloud has no value or is unreachable.
+bool frij_store_pull(const char* key);
 
 #endif  // FRIJ_STORE_H

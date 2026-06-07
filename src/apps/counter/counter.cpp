@@ -88,6 +88,7 @@ static void glance(lv_obj_t* parent)
 static void screen(lv_obj_t* parent, int index)
 {
     (void)index;  // single screen
+    frij_store_pull(STORE_KEY);
     load_count();
 
     s_value = lv_label_create(parent);
