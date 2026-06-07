@@ -1,18 +1,18 @@
-# Frij — M5Stack StopWatch multi-app UI
+# Frij — a multi-app launcher UI
 
-A fridge-mounted touch UI (todos, reminders, grocery list, photos) for the
-**M5Stack StopWatch Dev Kit**. Built on LVGL v9 + M5GFX. Develop on the PC
-emulator first; flash the real device later.
+A small launcher + mini-apps (todos, reminders, lists, photos…) on a **round
+touch display**. Built on LVGL v9 + M5GFX. Develop on the PC emulator first;
+flash a real board later.
 
-> **Owner is new to C and M5Stack.** Favor simple, readable code with comments
+**Target-agnostic by design.** Apps are pure LVGL and don't know the board;
+only `src/utility/` is board-specific. The same apps can be compiled for
+different hardware. Board details live in [docs/HARDWARE.md](docs/HARDWARE.md).
+
+> **Owner is new to C and embedded.** Favor simple, readable code with comments
 > that teach. Explain *why*, not just *what*. No premature abstraction.
-
-## Target hardware
-
-- MCU: ESP32-S3R8 (16MB flash, 8MB PSRAM)
-- Display: **round** 1.75" AMOLED, **466×466**, driver CO5300
-- Input: capacitive touch (CST820B), 2 programmable buttons + power, IMU (BMI270)
-- Emulator stand-in: M5Dial round frame (240×240) — design round, expect more px on device.
+>
+> **Do NOT use any `sa-*` (StashAway) skills in this repo** — this is a personal
+> project, a totally different context. Ignore those skills here.
 
 ## Quick start (PC emulator — no hardware needed)
 
@@ -34,10 +34,10 @@ PlatformIO sidebar.
 | `src/app.h` | Neutral app contract (`frij_app_t`) — all a mini-app needs |
 | `src/launcher/` | Home screen, navigation, back button, app registry |
 | `src/apps/` | Mini-apps (one folder each) + `apps.cpp` where they register |
-| `src/utility/` | LVGL↔M5GFX glue: `lvgl_port_m5stack.cpp` (device), `sdl_main.cpp` (emulator) |
+| `src/utility/` | LVGL↔M5GFX glue (the only board-specific code): `lvgl_port_m5stack.cpp` (device), `sdl_main.cpp` (emulator) |
 | `include/lv_conf*.h` | LVGL v9 config (`lv_conf.h` just includes `lv_conf_v9.h`) |
 | `support/sdl2_build_extra.py` | SDL2 build helper for the emulator |
-| `platformio.ini` | 2 envs: `emulator_Dial`, `board_StopWatch` (device WIP) |
+| `platformio.ini` | 2 envs: `emulator_Dial`, `device` (real board, WIP) |
 | `docs/` | Living project docs — see below |
 
 ## Key patterns
@@ -54,6 +54,8 @@ PlatformIO sidebar.
 - [docs/CHANGELOG.md](docs/CHANGELOG.md) — **append an entry for every change you make.**
 - [docs/ROADMAP.md](docs/ROADMAP.md) — the app vision + what's next.
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how boot, render loop, and the port layer work.
+- [docs/HARDWARE.md](docs/HARDWARE.md) — board targets + how to add a new one.
+- [docs/SKILLS.md](docs/SKILLS.md) — Claude skills/tools worth using on this stack.
 
 **Rule for any agent:** before finishing a task, log what changed in
 `docs/CHANGELOG.md` and update `docs/ROADMAP.md` if scope moved. This keeps
@@ -72,6 +74,6 @@ Never bundle two rounds into one commit. One reviewed round = one commit.
 
 ## Gotchas
 
-- No StopWatch board enum in M5GFX yet → `board_StopWatch` won't build until set. Emulator is the daily driver.
+- The `device` env is a placeholder — no verified board panel yet. Emulator is the daily driver.
 - `-arch arm64` in `platformio.ini` is Apple-Silicon only; remove on Intel/Linux.
-- This is a fork of `m5stack/lv_m5_emulator`; trimmed to the StopWatch + emulator only.
+- This is a trimmed fork of `m5stack/lv_m5_emulator`; M5GFX is the rendering lib.

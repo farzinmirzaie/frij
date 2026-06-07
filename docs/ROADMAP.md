@@ -2,8 +2,9 @@
 
 ## Vision
 
-A fridge-mounted touch screen running a small set of daily-life apps on a round
-466×466 display. Glanceable home screen; tap to open an app; back to home.
+A round touch screen running a small set of daily-life apps. Glanceable home
+screen; tap to open an app; back to home. Hardware-agnostic — the same apps
+target whatever board we run on (see [HARDWARE.md](HARDWARE.md)).
 
 ## Apps (planned)
 
@@ -22,11 +23,11 @@ A fridge-mounted touch screen running a small set of daily-life apps on a round
 - [ ] **P2 — Flesh out Todos**: real add/toggle/delete (the demo is read-only checkboxes).
 - [ ] **P3 — Persistence**: save state (NVS/flash on device; file on emulator).
 - [ ] **P4 — More apps**: grocery, reminders, photos.
-- [ ] **P5 — Device bring-up**: resolve M5GFX StopWatch board support, flash, test touch/buttons/IMU.
+- [ ] **P5 — Device bring-up**: confirm M5GFX panel support for the target board, flash, test touch/buttons.
 
 ## Open questions
 
-- M5GFX StopWatch (CO5300) board support — exists upstream yet? Blocks P5.
+- Does M5GFX support the target's round panel yet? Blocks P5 (see [HARDWARE.md](HARDWARE.md)).
 - Where do photos/data live? On-device flash vs Wi-Fi sync vs SD.
 - Navigation model: icon grid vs swipe carousel (round screen friendly?).
 

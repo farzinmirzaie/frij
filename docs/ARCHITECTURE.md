@@ -77,12 +77,13 @@ own state — that's the app's concern, not the launcher's.
 
 ## Emulator vs device
 
-| | Emulator (`emulator_Dial`) | Device (`board_StopWatch`) |
+| | Emulator (`emulator_Dial`) | Device (`device`) |
 | --- | --- | --- |
 | Platform | `native` + SDL2 | `espressif32` + Arduino |
-| Screen | M5Dial round 240×240 frame | round AMOLED 466×466 (CO5300) |
+| Screen | round 240×240 frame | round AMOLED (see HARDWARE.md) |
 | Entry | `sdl_main.cpp` `main()` | Arduino runtime |
-| Status | works now | WIP — board enum TBD |
+| Status | works now | WIP — placeholder env |
 
 Because resolutions differ, **don't hardcode pixel positions** — center / align
-relative to the screen so the same code scales to the real panel.
+relative to the screen so the same code scales to any panel. Board details:
+[HARDWARE.md](HARDWARE.md).

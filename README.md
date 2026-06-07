@@ -1,8 +1,9 @@
 # Frij
 
-A fridge-mounted touch UI for the **M5Stack StopWatch Dev Kit** (ESP32-S3, round
-466×466 AMOLED) — todos, reminders, grocery list, photos. Built with LVGL v9 +
-M5GFX. Develop on a PC emulator now; flash the real device later.
+A small launcher + mini-apps (todos, reminders, lists, photos…) for a **round
+touch display**. Built with LVGL v9 + M5GFX. Develop on a PC emulator now; flash
+a real board later. Target-agnostic — the same apps can run on different
+hardware (see [docs/HARDWARE.md](docs/HARDWARE.md)).
 
 Forked and trimmed from [m5stack/lv_m5_emulator](https://github.com/m5stack/lv_m5_emulator).
 
@@ -20,9 +21,9 @@ Window keys: **1–6** zoom, **L / R** rotate.
 
 ## Where things live
 
-- `src/user_app.cpp` — **start here**, this is your UI code.
+- `src/apps/` — the mini-apps; `src/apps/apps.cpp` registers them.
 - `AGENTS.md` — full project context for humans and AI agents.
 - `docs/` — [roadmap](docs/ROADMAP.md), [architecture](docs/ARCHITECTURE.md),
-  [changelog](docs/CHANGELOG.md).
+  [hardware](docs/HARDWARE.md), [skills](docs/SKILLS.md), [changelog](docs/CHANGELOG.md).
 
 New here? Read `AGENTS.md`, then `docs/ARCHITECTURE.md`.

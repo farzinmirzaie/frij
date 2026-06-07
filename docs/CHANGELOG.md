@@ -3,9 +3,21 @@
 Append-only log so future sessions know what happened. Newest first.
 One short entry per change: **what** changed and **why**.
 
+## 2026-06-07 — Decouple target + skills notes (round 3)
+
+- Made the project **target-agnostic**: removed fridge / specific-board branding
+  from the name and docs. Apps were already pure LVGL; only `src/utility/` is
+  board-specific. Why: the same apps should compile for other boards later.
+- `platformio.ini`: renamed the device env `board_StopWatch` → `device`; reworded
+  comments to describe the first board by spec, not brand.
+- Moved concrete board specs into [docs/HARDWARE.md](HARDWARE.md) (reference, not identity).
+- Added a rule to `AGENTS.md`: **never use `sa-*` skills in this repo**.
+- Added [docs/SKILLS.md](SKILLS.md): community Claude skills/tools worth using on this stack.
+- Verified: `pio run -e emulator_Dial` SUCCESS.
+
 ## 2026-06-07 — Launcher + first apps (round 2)
 
-- Renamed the product to **Frij** everywhere (kept lowercase "fridge" for the appliance).
+- Renamed the product to **Frij** everywhere.
 - Added the commit/review working rhythm to `AGENTS.md`: leave each round
   unstaged for review, commit it at the start of the next round.
 - New architecture: launcher + isolated mini-apps.
@@ -22,8 +34,8 @@ One short entry per change: **what** changed and **why**.
 
 - Forked `m5stack/lv_m5_emulator`; trimmed to a minimal, readable base.
 - `platformio.ini`: cut ~10 board envs down to two — `emulator_Dial` (PC/SDL2)
-  and `board_StopWatch` (device placeholder, WIP). Inlined the old
-  `emulator_common`. Why: the only target is the StopWatch; everything else was noise.
+  and a real-device placeholder (WIP). Inlined the old `emulator_common`.
+  Why: only one board mattered; everything else was noise.
 - Removed: EEZ Studio code/assets, Tab5 cleanup script, `lv_conf_v8.h`,
   PlatformIO scaffold READMEs (`lib/`, `test/`, `include/`), README gifs, support pngs.
 - `include/lv_conf.h`: now just includes `lv_conf_v9.h` (we're v9-only).
