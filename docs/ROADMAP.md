@@ -19,7 +19,7 @@ target whatever board we run on (see [HARDWARE.md](HARDWARE.md)).
 - [x] **P0 — Foundation**: minimal emulator build runs.
 - [x] **P1 — App framework**: isolated app contract (`app.h`) + registry.
 - [x] **Launcher A**: looping glance carousel, swipe-up to open an app, Back
-  via key/button, layer state machine. See [LAUNCHER.md](LAUNCHER.md).
+  via key/button, layer state machine. See [../src/launcher/README.md](../src/launcher/README.md).
 - [ ] **Launcher B**: real Settings layer (swipe-down) — brightness; wifi is device-only.
 - [ ] **Launcher C**: multi-screen app carousels + glance data refresh (`on_show`).
 - [ ] **P2 — Flesh out Todos**: real add/toggle/delete (currently a fixed checklist).

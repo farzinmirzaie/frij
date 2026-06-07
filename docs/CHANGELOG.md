@@ -4,6 +4,17 @@ Newest first. One short entry per change.
 
 ## 2026-06-08
 
+- Restructured `src/` into self-documenting packages: each folder now has its
+  own `README.md` (apps, launcher, ui, store, utility) and a top `src/README.md`.
+- Extracted a shared **`src/ui/`** package; moved the carousel there.
+- Made **Settings an app** under `apps/settings/`; it registers in the registry's
+  settings slot (`frij_registry_set_settings`) and the launcher reuses the app
+  builder for it. Removed `launcher/settings.*`.
+- Removed `docs/LAUNCHER.md` (now `src/launcher/README.md`); trimmed the
+  duplicated launcher/store detail out of `docs/ARCHITECTURE.md` / `docs/STORAGE.md`.
+
+## 2026-06-08
+
 - Reworked navigation into a **4-direction finger-follow** model. The launcher
   now owns one input handler and routes by axis; the carousel became input-free
   (`drag`/`end`). Vertical swipes slide whole layers (home in the middle, app

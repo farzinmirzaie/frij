@@ -29,15 +29,20 @@ First-time SDL2 / PlatformIO setup: see the upstream
    with `build_glance` + `build_screen` (include only `app.h`).
 2. Register it with one line in `src/apps/apps.cpp`.
 
-See [docs/LAUNCHER.md](docs/LAUNCHER.md) for the full model.
+See [src/apps/README.md](src/apps/README.md) for the contract and the full model.
 
 ## Layout
 
-- `src/apps/` — the mini-apps; `src/apps/apps.cpp` registers them.
-- `src/launcher/` — carousel, navigation, and Back input.
-- `src/utility/` — the only board-specific code (LVGL ↔ M5GFX).
-- `docs/` — [launcher](docs/LAUNCHER.md), [architecture](docs/ARCHITECTURE.md),
-  [hardware](docs/HARDWARE.md), [roadmap](docs/ROADMAP.md).
+Each `src/` package has its own README:
+
+- [`src/apps/`](src/apps/README.md) — the mini-apps (+ settings).
+- [`src/launcher/`](src/launcher/README.md) — navigation shell.
+- [`src/ui/`](src/ui/README.md) — shared widgets (carousel; future components).
+- [`src/store/`](src/store/README.md) — key→JSON storage (local + Supabase).
+- [`src/utility/`](src/utility/README.md) — board-specific LVGL ↔ M5GFX bridge.
+
+Project docs: [architecture](docs/ARCHITECTURE.md), [storage/cloud](docs/STORAGE.md),
+[hardware](docs/HARDWARE.md), [roadmap](docs/ROADMAP.md).
 
 ## License
 

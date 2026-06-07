@@ -3,20 +3,9 @@
 Apps share one small key→value store so their data can also live in the cloud
 and be read by a future web app (a Google-Keep-style view of the same data).
 
-## The abstraction (`src/store/store.h`)
-
-```c
-void frij_store_init(void);
-bool frij_store_load(const char* key, char* buf, size_t buf_size);  // false if absent
-bool frij_store_save(const char* key, const char* json);
-```
-
-- **Key** = app name (`"counter"`, `"todo"`). One JSON blob per app.
-- Apps never know the backend. The backend is swappable, like the input layer:
-  - **Emulator** → local files `.frij_store/<key>.json` (works now, no cloud).
-  - **Device** → Supabase over HTTPS (TODO).
-- Apps choose their own serialization. Trivial values can be plain text;
-  structured data will use ArduinoJson (added when the first app needs it).
+The store API and backends are documented in
+[../src/store/README.md](../src/store/README.md). This doc covers the **cloud
+setup** (Supabase) and the longer-term plan.
 
 ## Chosen cloud backend: Supabase
 
@@ -46,16 +35,6 @@ REST and a web app reads the same rows.
 
 The anon key + RLS is what the device and web app use; the `service_role` key is
 admin-only and must never ship on the device.
-
-## How it works now (emulator)
-
-`src/store/store.cpp` (native): `load()` reads the local cache (fast), `save()`
-writes the cache **and** upserts to Supabase via libcurl, `pull()` GETs the
-latest from Supabase into the cache. Config comes from `.env`. Counter and Todo
-both use it; Todo's list is a JSON array (ArduinoJson).
-
-Known limitation: the HTTP calls are synchronous, so `save`/`pull` briefly block
-the UI. Fine on the emulator; the device phase needs async (or a worker).
 
 ## Phasing
 

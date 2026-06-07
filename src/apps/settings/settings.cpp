@@ -1,10 +1,9 @@
 #include "settings.h"
 
-// One entry per settings screen. Add more here later (brightness, wifi, …).
-int frij_settings_screen_count(void)
-{
-    return 2;
-}
+/*
+ * Settings — a normal app (glance unused; reached by swiping down). Each screen
+ * is one settings area. Add more screens here over time; with >1 it loops.
+ */
 
 static void title_and_hint(lv_obj_t* parent, const char* title, const char* hint)
 {
@@ -22,11 +21,17 @@ static void title_and_hint(lv_obj_t* parent, const char* title, const char* hint
     lv_obj_set_style_text_align(h, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
 }
 
-void frij_settings_build_screen(lv_obj_t* parent, int index)
+static void screen(lv_obj_t* parent, int index)
 {
     if (index == 0) {
         title_and_hint(parent, "Display", "brightness\n(soon)");
     } else {
         title_and_hint(parent, "About", "Frij\non-device UI");
     }
+}
+
+const frij_app_t* settings_app(void)
+{
+    static const frij_app_t app = {"Settings", 0x22262B, NULL, 2, screen};
+    return &app;
 }

@@ -4,9 +4,8 @@
 
 #include "lvgl.h"
 #include "lvgl_port_m5stack.hpp"
-#include "carousel.h"
+#include "ui/carousel.h"
 #include "registry.h"
-#include "settings.h"
 
 /*
  * Navigation model — a vertical stack with the home in the middle:
@@ -26,9 +25,8 @@
 
 typedef enum { HOME, APP, SETTINGS } layer_t;
 
-static const uint32_t COLOR_BG          = 0x101418;
-static const uint32_t COLOR_SETTINGS_BG = 0x22262B;
-static const int      VSNAP_PERCENT     = 30;
+static const uint32_t COLOR_BG      = 0x101418;
+static const int      VSNAP_PERCENT = 30;
 
 static lv_obj_t*       s_root     = NULL;
 static lv_obj_t*       s_home     = NULL;  // persistent
@@ -81,13 +79,6 @@ static void app_screen_builder(lv_obj_t* page, int index, void* user)
     }
 }
 
-static void settings_builder(lv_obj_t* page, int index, void* user)
-{
-    (void)user;
-    paint_bg(page, COLOR_SETTINGS_BG);
-    frij_settings_build_screen(page, index);
-}
-
 // ---- layers ---------------------------------------------------------------
 
 static lv_obj_t* make_layer(void)
@@ -124,9 +115,14 @@ static void ensure_settings_layer(void)
     if (s_settings) {
         return;
     }
+    const frij_app_t* app = frij_registry_settings();
+    if (!app) {
+        return;
+    }
     s_settings = make_layer();
     lv_obj_set_y(s_settings, -height());  // starts above the home
-    frij_carousel_init(&s_cset, s_settings, frij_settings_screen_count(), settings_builder, NULL);
+    int n = app->screen_count > 0 ? app->screen_count : 1;
+    frij_carousel_init(&s_cset, s_settings, n, app_screen_builder, (void*)app);
 }
 
 // ---- vertical-transition completions --------------------------------------
@@ -193,6 +189,9 @@ static void nav_vdrag(int dy)
             lv_obj_set_y(s_app, h + dy);
         } else if (dy > 0) {  // swipe down -> reveal settings from above
             ensure_settings_layer();
+            if (!s_settings) {
+                return;
+            }
             lv_obj_set_y(s_home, dy);
             lv_obj_set_y(s_settings, -h + dy);
         }

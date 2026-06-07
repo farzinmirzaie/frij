@@ -21,4 +21,9 @@ int frij_registry_count(void);
 // Get app number `index` (0-based), or NULL if out of range.
 const frij_app_t* frij_registry_get(int index);
 
+// The settings app — registered separately (the launcher shows it in the
+// settings slot, not the home carousel). NULL if none was set.
+void              frij_registry_set_settings(const frij_app_t* app);
+const frij_app_t* frij_registry_settings(void);
+
 #endif  // FRIJ_REGISTRY_H

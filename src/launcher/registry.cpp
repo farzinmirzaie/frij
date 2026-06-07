@@ -3,6 +3,7 @@
 // Fixed-size list — no dynamic memory, easy to reason about.
 static const frij_app_t* s_apps[FRIJ_MAX_APPS];
 static int s_count = 0;
+static const frij_app_t* s_settings = NULL;
 
 void frij_registry_add(const frij_app_t* app)
 {
@@ -23,4 +24,14 @@ const frij_app_t* frij_registry_get(int index)
         return NULL;
     }
     return s_apps[index];
+}
+
+void frij_registry_set_settings(const frij_app_t* app)
+{
+    s_settings = app;
+}
+
+const frij_app_t* frij_registry_settings(void)
+{
+    return s_settings;
 }

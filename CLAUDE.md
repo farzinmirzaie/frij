@@ -28,10 +28,13 @@ If `pio` is not on PATH, it ships with the VS Code PlatformIO extension at
 | `src/main.cpp` | Boot: init display + LVGL, call `user_app()` |
 | `src/user_app.cpp` | Entry: register apps + start launcher (thin wiring) |
 | `src/app.h` | App contract (`frij_app_t`: glance + screens) — all a mini-app needs |
-| `src/launcher/` | Nav (4-way finger-follow), carousel, settings, Back input, registry |
-| `src/apps/` | Mini-apps (one folder each) + `apps.cpp` where they register |
-| `src/store/` | Shared key→JSON store (file on emulator, Supabase on device TODO) |
-| `src/utility/` | LVGL↔M5GFX glue (the only board-specific code): `lvgl_port_m5stack.cpp` (device), `sdl_main.cpp` (emulator) |
+| `src/launcher/` | Nav (4-way finger-follow), registry, Back input — see its README |
+| `src/apps/` | Mini-apps + settings; `apps.cpp` registers them — see its README |
+| `src/ui/` | Shared app-agnostic widgets (carousel; future components) |
+| `src/store/` | Shared key→JSON store (file + Supabase) — see its README |
+| `src/utility/` | The only board-specific code (LVGL↔M5GFX bridge) — see its README |
+
+Each `src/*` folder has its own `README.md` with the details.
 | `include/lv_conf.h` | LVGL v9 config (LVGL's `lv_conf.h` template, trimmed) |
 | `support/sdl2_build_extra.py` | SDL2 build helper for the emulator |
 | `platformio.ini` | 2 envs: `emulator_Dial`, `device` (real board, WIP) |
@@ -42,18 +45,16 @@ If `pio` is not on PATH, it ships with the VS Code PlatformIO extension at
 - UI work must be wrapped in `lvgl_port_lock()` / `lvgl_port_unlock()`.
 - Use LVGL v9 API (`lv_screen_active()`, `lv_color_hex()`, etc.).
 - Round screen: keep key content centered.
-- **Adding an app:** build `src/apps/<name>/` (include only `app.h`, expose a
-  `const frij_app_t* <name>_app(void)` with `build_glance` + `build_screen`),
-  then add one line to `src/apps/apps.cpp`. Apps never include launcher code.
-  See `docs/LAUNCHER.md`.
+- **Adding an app:** see [src/apps/README.md](src/apps/README.md). Apps include
+  only `app.h`, never launcher code. Shared widgets go in `src/ui/`.
 
 ## Docs (read + UPDATE these every session)
 
 - [docs/CHANGELOG.md](docs/CHANGELOG.md) — **append an entry for every change you make.**
 - [docs/ROADMAP.md](docs/ROADMAP.md) — the app vision + what's next.
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how boot, render loop, and the port layer work.
-- [docs/LAUNCHER.md](docs/LAUNCHER.md) — launcher layers, gestures, and the app contract.
-- [docs/STORAGE.md](docs/STORAGE.md) — shared data store + cloud sync (Supabase) plan.
+- [docs/STORAGE.md](docs/STORAGE.md) — cloud setup (Supabase table, env, keys).
+- Per-package detail lives in `src/*/README.md` (launcher, apps, ui, store, utility).
 - [docs/HARDWARE.md](docs/HARDWARE.md) — board targets + how to add a new one.
 - [docs/SKILLS.md](docs/SKILLS.md) — Claude skills/tools worth using on this stack.
 

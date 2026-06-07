@@ -39,43 +39,20 @@ and a tick. It also exposes the **lock** you must use:
 This file is excluded from the emulator build (`build_src_filter` in
 `platformio.ini`); the emulator uses `sdl_main.cpp` instead.
 
-## Launcher + apps (the Frij model)
+## Launcher + apps
 
-Frij is a **launcher** (home screen) plus a set of **mini-apps**. The goal is
-that apps are isolated: an app knows nothing about the launcher or other apps,
-so you can add one without touching anything else.
+`user_app()` (`src/user_app.cpp`) inits the store, registers apps, and starts
+the launcher. From there:
 
-```
-user_app()                                  (src/user_app.cpp)
-  ├─ frij_register_apps()   ── apps.cpp adds each app to the registry
-  ├─ frij_launcher_start()  ── reads registry, shows the glance carousel
-  └─ frij_input_init()      ── wires the Back button / key
+- The **launcher** is the navigation shell (layers, gestures, registry) —
+  see [../src/launcher/README.md](../src/launcher/README.md).
+- **Apps** are isolated: each includes only `app.h`, never the launcher —
+  see [../src/apps/README.md](../src/apps/README.md).
+- Shared widgets live in [../src/ui/README.md](../src/ui/README.md); persistence
+  in [../src/store/README.md](../src/store/README.md).
 
-registry  (src/launcher/registry.*)   list of frij_app_t*
-carousel  (src/launcher/carousel.*)   generic looping pager
-launcher  (src/launcher/launcher.*)   layer state machine + gestures + back
-input     (src/launcher/input.*)      Back: key (emulator) / GPIO (device)
-contract  (src/app.h)                 frij_app_t { name, build_glance,
-                                                    screen_count, build_screen }
-apps      (src/apps/<name>/)          each exposes const frij_app_t* <name>_app()
-glue      (src/apps/apps.cpp)         the ONE file that knows every app
-```
-
-**Who knows whom (dependency direction):**
-
-- A mini-app includes only `app.h`. It never includes the launcher. It fills the
-  `parent` containers it is handed in `build_glance` / `build_screen`.
-- The launcher includes only `registry.h` + `carousel.h` + `app.h`. It iterates
-  the registry; no app names are baked in.
-- `apps.cpp` is the single glue point that wires apps into the registry.
-  Adding an app = new folder + one line here.
-
-Navigation, gestures, and Back are the launcher's job — see
-[LAUNCHER.md](LAUNCHER.md) for the layer/gesture model.
-
-**State:** the `counter` app keeps state in file-static vars (one instance on
-screen at a time). Apps that need persistence store their own state — that's
-the app's concern, not the launcher's.
+Dependency direction: apps → `app.h` (+ `ui/`, `store/`); the launcher reads the
+registry and hardcodes no app names; `apps.cpp` is the single glue point.
 
 ## Emulator vs device
 
