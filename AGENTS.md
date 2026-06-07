@@ -29,8 +29,11 @@ PlatformIO sidebar.
 
 | Path | Purpose |
 | --- | --- |
-| `src/user_app.cpp` | **Your code starts here** (`user_app()` builds the UI) |
 | `src/main.cpp` | Boot: init display + LVGL, call `user_app()` |
+| `src/user_app.cpp` | Entry: register apps + start launcher (thin wiring) |
+| `src/app.h` | Neutral app contract (`frij_app_t`) — all a mini-app needs |
+| `src/launcher/` | Home screen, navigation, back button, app registry |
+| `src/apps/` | Mini-apps (one folder each) + `apps.cpp` where they register |
 | `src/utility/` | LVGL↔M5GFX glue: `lvgl_port_m5stack.cpp` (device), `sdl_main.cpp` (emulator) |
 | `include/lv_conf*.h` | LVGL v9 config (`lv_conf.h` just includes `lv_conf_v9.h`) |
 | `support/sdl2_build_extra.py` | SDL2 build helper for the emulator |
@@ -42,6 +45,9 @@ PlatformIO sidebar.
 - UI work must be wrapped in `lvgl_port_lock()` / `lvgl_port_unlock()`.
 - Use LVGL v9 API (`lv_screen_active()`, `lv_color_hex()`, etc.).
 - Round screen: keep key content centered.
+- **Adding an app:** build `src/apps/<name>/` (include only `app.h`, expose a
+  `const frij_app_t* <name>_app(void)`), then add one line to
+  `src/apps/apps.cpp`. Apps never include launcher code. See `docs/ARCHITECTURE.md`.
 
 ## Docs (read + UPDATE these every session)
 

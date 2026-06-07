@@ -1,30 +1,17 @@
-#include "lvgl.h"
-#include "lvgl_port_m5stack.hpp"
+#include "apps/apps.h"
+#include "launcher/launcher.h"
 
 /*
- * user_app() is called once at startup, after the display + LVGL are ready.
- * This is YOUR entry point — build the Frij UI from here.
+ * Frij entry point — called once at startup after display + LVGL are ready.
  *
- * The screen is round, so keep important content near the center.
+ * Two steps:
+ *   1. register all mini-apps with the launcher
+ *   2. show the launcher (home screen)
  *
- * LVGL rule: any time you create/modify UI objects, wrap it in
- * lvgl_port_lock() / lvgl_port_unlock() so you don't fight the render task.
+ * To add an app, edit src/apps/apps.cpp — not this file.
  */
 void user_app(void)
 {
-    if (!lvgl_port_lock()) {
-        return;
-    }
-
-    // Fill the screen with a dark background.
-    lv_obj_t* screen = lv_screen_active();
-    lv_obj_set_style_bg_color(screen, lv_color_hex(0x101418), LV_PART_MAIN);
-
-    // A centered title label as a starting point.
-    lv_obj_t* title = lv_label_create(screen);
-    lv_label_set_text(title, "Frij");
-    lv_obj_set_style_text_color(title, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
-    lv_obj_align(title, LV_ALIGN_CENTER, 0, 0);
-
-    lvgl_port_unlock();
+    frij_register_apps();
+    frij_launcher_start();
 }

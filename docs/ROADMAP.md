@@ -15,9 +15,11 @@ A fridge-mounted touch screen running a small set of daily-life apps on a round
 
 ## Phases
 
-- [ ] **P0 — Foundation (now)**: minimal emulator build runs; single hello screen. ✅ build base done.
-- [ ] **P1 — App framework**: home screen with app icons; screen navigation (open app / back); shared theme. Round-layout helpers.
-- [ ] **P2 — First app (Todos)**: in-memory list, add/toggle/delete via touch.
+- [x] **P0 — Foundation**: minimal emulator build runs.
+- [x] **P1 — App framework**: launcher home screen with app tiles; open/back
+  navigation; isolated app contract (`app.h`) + registry; 2 demo apps
+  (Todo, Counter) wired via `apps.cpp`.
+- [ ] **P2 — Flesh out Todos**: real add/toggle/delete (the demo is read-only checkboxes).
 - [ ] **P3 — Persistence**: save state (NVS/flash on device; file on emulator).
 - [ ] **P4 — More apps**: grocery, reminders, photos.
 - [ ] **P5 — Device bring-up**: resolve M5GFX StopWatch board support, flash, test touch/buttons/IMU.
@@ -30,5 +32,5 @@ A fridge-mounted touch screen running a small set of daily-life apps on a round
 
 ## Next step
 
-Start **P1**: design the home screen + navigation pattern. Keep it simple and
-readable — owner is learning C/LVGL.
+**P2**: make the Todo app actually add/remove items (currently a fixed checkbox
+list). Then add persistence (P3) so todos survive a restart.
