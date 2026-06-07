@@ -4,6 +4,15 @@ Newest first. One short entry per change.
 
 ## 2026-06-08
 
+- Reworked navigation into a **4-direction finger-follow** model. The launcher
+  now owns one input handler and routes by axis; the carousel became input-free
+  (`drag`/`end`). Vertical swipes slide whole layers (home in the middle, app
+  below, settings above) and follow the finger like horizontal paging.
+- **Settings is now a multi-screen carousel** (`settings.*`, 2 screens) — same
+  loop behavior as apps. Layers with a single screen don't loop.
+
+## 2026-06-08
+
 - `frij_store` now talks to **Supabase** on the emulator (libcurl): `save`
   upserts + caches, `pull` fetches into the cache, `load` reads the cache.
   Config from `.env`. Added ArduinoJson + `-lcurl`.

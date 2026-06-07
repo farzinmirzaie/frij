@@ -28,7 +28,7 @@ If `pio` is not on PATH, it ships with the VS Code PlatformIO extension at
 | `src/main.cpp` | Boot: init display + LVGL, call `user_app()` |
 | `src/user_app.cpp` | Entry: register apps + start launcher (thin wiring) |
 | `src/app.h` | App contract (`frij_app_t`: glance + screens) — all a mini-app needs |
-| `src/launcher/` | Carousel, layer state machine, gestures, Back input, registry |
+| `src/launcher/` | Nav (4-way finger-follow), carousel, settings, Back input, registry |
 | `src/apps/` | Mini-apps (one folder each) + `apps.cpp` where they register |
 | `src/store/` | Shared key→JSON store (file on emulator, Supabase on device TODO) |
 | `src/utility/` | LVGL↔M5GFX glue (the only board-specific code): `lvgl_port_m5stack.cpp` (device), `sdl_main.cpp` (emulator) |
