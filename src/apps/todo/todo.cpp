@@ -1,10 +1,10 @@
 #include "todo.h"
 
 /*
- * Todo — a tiny demo app: a list of checkboxes you can tick off.
+ * Todo — a simple checklist.
  *
- * It only includes "app.h". It knows nothing about the launcher.
- * `open()` just fills the parent container it is handed.
+ * Includes only "app.h"; knows nothing about the launcher.
+ * open() fills the parent container it is handed.
  */
 
 static const char* ITEMS[] = {"Milk", "Eggs", "Bread", "Coffee"};
@@ -21,7 +21,7 @@ static void open(lv_obj_t* parent)
         lv_obj_t* item = lv_checkbox_create(parent);
         lv_checkbox_set_text(item, ITEMS[i]);
         lv_obj_set_style_text_color(item, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
-        // A checkbox toggles itself on tap — no extra code needed for the demo.
+        // A checkbox toggles itself when tapped.
     }
 }
 

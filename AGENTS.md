@@ -1,29 +1,25 @@
 # Frij — a multi-app launcher UI
 
-A small launcher + mini-apps (todos, reminders, lists, photos…) on a **round
-touch display**. Built on LVGL v9 + M5GFX. Develop on the PC emulator first;
-flash a real board later.
+A launcher with mini-apps (todos, reminders, lists, photos…) for a **round
+touch display**. Built on LVGL v9 + M5GFX.
 
 **Target-agnostic by design.** Apps are pure LVGL and don't know the board;
-only `src/utility/` is board-specific. The same apps can be compiled for
-different hardware. Board details live in [docs/HARDWARE.md](docs/HARDWARE.md).
+only `src/utility/` is board-specific, so the same apps compile for different
+hardware. Board details: [docs/HARDWARE.md](docs/HARDWARE.md).
 
-> **Owner is new to C and embedded.** Favor simple, readable code with comments
-> that teach. Explain *why*, not just *what*. No premature abstraction.
+> Favor simple, readable code with comments that explain *why*. No premature
+> abstraction.
 >
-> **Do NOT use any `sa-*` (StashAway) skills in this repo** — this is a personal
-> project, a totally different context. Ignore those skills here.
+> **Do not use `sa-*` (StashAway) skills in this repo.**
 
-## Quick start (PC emulator — no hardware needed)
+## Quick start
 
 ```bash
-brew install sdl2 pkg-config           # once
-~/.platformio/penv/bin/pio run -e emulator_Dial    # build + run
+pio run -e emulator_Dial   # build + run the SDL2 emulator
 ```
 
-`pio` is not on PATH; it lives at `~/.platformio/penv/bin/pio` (installed by the
-VS Code PlatformIO extension). In VS Code you can also click the env in the
-PlatformIO sidebar.
+If `pio` is not on PATH, it ships with the VS Code PlatformIO extension at
+`~/.platformio/penv/bin/pio`.
 
 ## Structure
 
@@ -61,16 +57,14 @@ PlatformIO sidebar.
 `docs/CHANGELOG.md` and update `docs/ROADMAP.md` if scope moved. This keeps
 context alive across sessions.
 
-## Working rhythm (commit / review loop)
+## Commit / review loop
 
-The owner reviews each round of changes to learn. So:
+Changes are reviewed before they are committed:
 
-1. **At the end of a round, leave changes UNCOMMITTED** for the owner to review.
-2. **At the start of the next round, commit the previous (now-reviewed) round
-   FIRST** — one clean Conventional Commit — *before* writing any new code.
-3. Then do the new round's work and again leave it unstaged.
-
-Never bundle two rounds into one commit. One reviewed round = one commit.
+1. At the end of a round, leave changes **uncommitted** for review.
+2. At the start of the next round, commit the previous round **first** — one
+   Conventional Commit — before writing new code.
+3. One reviewed round = one commit. Never bundle two rounds together.
 
 ## Gotchas
 

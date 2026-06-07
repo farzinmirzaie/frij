@@ -1,13 +1,12 @@
 #include "counter.h"
 
 /*
- * Counter — a tiny demo app: a number with - and + buttons.
+ * Counter — a number with - and + buttons.
  *
- * Only includes "app.h"; knows nothing about the launcher.
+ * Includes only "app.h"; knows nothing about the launcher.
  *
- * State is kept in file-static variables. That's fine here because only one
- * counter is ever on screen at a time, and open() resets it each time the app
- * is opened. (A real app would store state per-instance.)
+ * State is kept in file-static variables: only one counter is on screen at a
+ * time, and open() resets it each time the app is opened.
  */
 
 static int       s_count = 0;

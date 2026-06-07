@@ -18,9 +18,9 @@ target whatever board we run on (see [HARDWARE.md](HARDWARE.md)).
 
 - [x] **P0 — Foundation**: minimal emulator build runs.
 - [x] **P1 — App framework**: launcher home screen with app tiles; open/back
-  navigation; isolated app contract (`app.h`) + registry; 2 demo apps
+  navigation; isolated app contract (`app.h`) + registry; example apps
   (Todo, Counter) wired via `apps.cpp`.
-- [ ] **P2 — Flesh out Todos**: real add/toggle/delete (the demo is read-only checkboxes).
+- [ ] **P2 — Flesh out Todos**: real add/toggle/delete (currently a fixed checklist).
 - [ ] **P3 — Persistence**: save state (NVS/flash on device; file on emulator).
 - [ ] **P4 — More apps**: grocery, reminders, photos.
 - [ ] **P5 — Device bring-up**: confirm M5GFX panel support for the target board, flash, test touch/buttons.

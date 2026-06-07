@@ -71,9 +71,9 @@ create a full-screen page with a launcher-owned "Back" button, then calls the
 app's `open(content)` with the area below it. Back deletes the page and the
 home screen underneath returns. The app never sees the back button.
 
-**State:** the demo `counter` keeps state in file-static vars (one instance on
-screen at a time, reset on open). Real apps with persistence will store their
-own state — that's the app's concern, not the launcher's.
+**State:** the `counter` app keeps state in file-static vars (one instance on
+screen at a time, reset on open). Apps that need persistence store their own
+state — that's the app's concern, not the launcher's.
 
 ## Emulator vs device
 

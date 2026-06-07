@@ -15,8 +15,7 @@ PlatformIO project like this one.
   Best fix for the #1 risk here: LVGL v8-vs-v9 API drift. Prefer it over guessing
   API. (Already connected in this environment.)
 - **Built-in `/code-review` and `/simplify`** — a focused cleanup pass (remove
-  duplication, flatten nesting, clarify logic). Good fit for the "readable, I'm
-  learning" goal.
+  duplication, flatten nesting, clarify logic). Good fit for keeping the code readable.
 
 ## Worth evaluating (community, vet first)
 
