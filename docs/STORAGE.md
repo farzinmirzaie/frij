@@ -21,8 +21,31 @@ bool frij_store_save(const char* key, const char* json);
 ## Chosen cloud backend: Supabase
 
 Free Postgres + REST + a JS client/realtime — so the ESP32 writes rows over
-REST and a web app reads the same rows. One table is enough to start, e.g.
-`store(key text primary key, value jsonb, updated_at timestamptz)`.
+REST and a web app reads the same rows.
+
+### Setup
+
+1. Create a Supabase project. Copy `.env.example` to `.env` and fill in
+   `SUPABASE_URL` + `SUPABASE_ANON_KEY` (and `SUPABASE_TABLE`, default `store`).
+   `.env` is gitignored.
+2. Create the table (SQL editor, or via the Supabase MCP):
+   ```sql
+   create table store (
+     key        text primary key,
+     value      jsonb,
+     updated_at timestamptz default now()
+   );
+   alter table store enable row level security;
+   -- permissive to start (hobby); tighten later
+   create policy "anon all" on store for all to anon
+     using (true) with check (true);
+   ```
+3. Optional tooling: add the official **Supabase MCP** to Claude Code:
+   `claude mcp add --transport http supabase https://mcp.supabase.com/mcp`
+   then `/mcp` to authenticate. Lets the agent run SQL / inspect schema.
+
+The anon key + RLS is what the device and web app use; the `service_role` key is
+admin-only and must never ship on the device.
 
 ## Phasing
 

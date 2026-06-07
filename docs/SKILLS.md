@@ -17,6 +17,14 @@ PlatformIO project like this one.
 - **Built-in `/code-review` and `/simplify`** — a focused cleanup pass (remove
   duplication, flatten nesting, clarify logic). Good fit for keeping the code readable.
 
+## Supabase (our cloud backend)
+
+- **Official Supabase MCP** (HTTP, OAuth — no token in the repo): add with
+  `claude mcp add --transport http supabase https://mcp.supabase.com/mcp`, then
+  `/mcp` to authenticate. Run SQL, manage schema, inspect the project from
+  Claude. ([Supabase docs](https://supabase.com/docs/guides/getting-started/mcp),
+  [official connector](https://supabase.com/blog/supabase-is-now-an-official-claude-connector))
+
 ## Worth evaluating (community, vet first)
 
 - **PlatformIO build/flash skill** — automates `pio` build, flash, and serial

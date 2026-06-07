@@ -4,6 +4,11 @@ Newest first. One short entry per change.
 
 ## 2026-06-07
 
+- Added `.env.example` (Supabase config) and documented Supabase setup + the
+  official Supabase MCP in `docs/STORAGE.md` / `docs/SKILLS.md`. `.env` gitignored.
+
+## 2026-06-07
+
 - Added a shared **`frij_store`** key→JSON utility (`src/store/`): emulator
   file backend now, Supabase over HTTPS on device later. Counter persists its
   value through it. Design in `docs/STORAGE.md`; chosen cloud backend: Supabase.
