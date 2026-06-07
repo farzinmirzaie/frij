@@ -48,32 +48,34 @@ so you can add one without touching anything else.
 ```
 user_app()                                  (src/user_app.cpp)
   ├─ frij_register_apps()   ── apps.cpp adds each app to the registry
-  └─ frij_launcher_start()  ── reads registry, draws home tiles
+  ├─ frij_launcher_start()  ── reads registry, shows the glance carousel
+  └─ frij_input_init()      ── wires the Back button / key
 
-registry  (src/launcher/registry.*)   small list of frij_app_t*
-launcher  (src/launcher/launcher.*)   home grid + open/back navigation
-contract  (src/app.h)                 frij_app_t { name, color, open(parent) }
+registry  (src/launcher/registry.*)   list of frij_app_t*
+carousel  (src/launcher/carousel.*)   generic looping pager
+launcher  (src/launcher/launcher.*)   layer state machine + gestures + back
+input     (src/launcher/input.*)      Back: key (emulator) / GPIO (device)
+contract  (src/app.h)                 frij_app_t { name, build_glance,
+                                                    screen_count, build_screen }
 apps      (src/apps/<name>/)          each exposes const frij_app_t* <name>_app()
 glue      (src/apps/apps.cpp)         the ONE file that knows every app
 ```
 
 **Who knows whom (dependency direction):**
 
-- A mini-app includes only `app.h`. It never includes the launcher. It just
-  fills the `parent` container it is given in `open()`.
-- The launcher includes only `registry.h` + `app.h`. It iterates the registry;
-  it has no list of app names baked in.
-- `apps.cpp` is the single glue point that includes each app and the registry,
-  and wires them together. Adding an app = new folder + one line here.
+- A mini-app includes only `app.h`. It never includes the launcher. It fills the
+  `parent` containers it is handed in `build_glance` / `build_screen`.
+- The launcher includes only `registry.h` + `carousel.h` + `app.h`. It iterates
+  the registry; no app names are baked in.
+- `apps.cpp` is the single glue point that wires apps into the registry.
+  Adding an app = new folder + one line here.
 
-**Navigation is the launcher's job.** Tapping a home tile makes the launcher
-create a full-screen page with a launcher-owned "Back" button, then calls the
-app's `open(content)` with the area below it. Back deletes the page and the
-home screen underneath returns. The app never sees the back button.
+Navigation, gestures, and Back are the launcher's job — see
+[LAUNCHER.md](LAUNCHER.md) for the layer/gesture model.
 
 **State:** the `counter` app keeps state in file-static vars (one instance on
-screen at a time, reset on open). Apps that need persistence store their own
-state — that's the app's concern, not the launcher's.
+screen at a time). Apps that need persistence store their own state — that's
+the app's concern, not the launcher's.
 
 ## Emulator vs device
 

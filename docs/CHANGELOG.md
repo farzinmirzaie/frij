@@ -4,6 +4,14 @@ Newest first. One short entry per change.
 
 ## 2026-06-07
 
+- Reworked the launcher into a looping glance **carousel** (Launcher phase A):
+  swipe left/right between apps, swipe up to open an app's own screen carousel,
+  swipe down for a Settings stub, and Back via Backspace (emulator) / button GPIO
+  (device, TODO). New files: `launcher/carousel.*`, `launcher/input.*`; launcher
+  is now a layer state machine.
+- Evolved the app contract: `frij_app_t` is now `{ name, build_glance,
+  screen_count, build_screen }`. Updated Todo and Counter accordingly.
+- Added `docs/LAUNCHER.md` (layer/gesture design).
 - Trimmed `platformio.ini`: collapsed the header comment, dropped the redundant
   `LVGL_USE_V8=0` define, and tightened comments.
 - Made `CLAUDE.md` the single project-context file (dropped the `AGENTS.md` symlink).

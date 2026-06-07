@@ -27,8 +27,8 @@ If `pio` is not on PATH, it ships with the VS Code PlatformIO extension at
 | --- | --- |
 | `src/main.cpp` | Boot: init display + LVGL, call `user_app()` |
 | `src/user_app.cpp` | Entry: register apps + start launcher (thin wiring) |
-| `src/app.h` | Neutral app contract (`frij_app_t`) — all a mini-app needs |
-| `src/launcher/` | Home screen, navigation, back button, app registry |
+| `src/app.h` | App contract (`frij_app_t`: glance + screens) — all a mini-app needs |
+| `src/launcher/` | Carousel, layer state machine, gestures, Back input, registry |
 | `src/apps/` | Mini-apps (one folder each) + `apps.cpp` where they register |
 | `src/utility/` | LVGL↔M5GFX glue (the only board-specific code): `lvgl_port_m5stack.cpp` (device), `sdl_main.cpp` (emulator) |
 | `include/lv_conf.h` | LVGL v9 config (LVGL's `lv_conf.h` template, trimmed) |
@@ -42,14 +42,16 @@ If `pio` is not on PATH, it ships with the VS Code PlatformIO extension at
 - Use LVGL v9 API (`lv_screen_active()`, `lv_color_hex()`, etc.).
 - Round screen: keep key content centered.
 - **Adding an app:** build `src/apps/<name>/` (include only `app.h`, expose a
-  `const frij_app_t* <name>_app(void)`), then add one line to
-  `src/apps/apps.cpp`. Apps never include launcher code. See `docs/ARCHITECTURE.md`.
+  `const frij_app_t* <name>_app(void)` with `build_glance` + `build_screen`),
+  then add one line to `src/apps/apps.cpp`. Apps never include launcher code.
+  See `docs/LAUNCHER.md`.
 
 ## Docs (read + UPDATE these every session)
 
 - [docs/CHANGELOG.md](docs/CHANGELOG.md) — **append an entry for every change you make.**
 - [docs/ROADMAP.md](docs/ROADMAP.md) — the app vision + what's next.
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how boot, render loop, and the port layer work.
+- [docs/LAUNCHER.md](docs/LAUNCHER.md) — launcher layers, gestures, and the app contract.
 - [docs/HARDWARE.md](docs/HARDWARE.md) — board targets + how to add a new one.
 - [docs/SKILLS.md](docs/SKILLS.md) — Claude skills/tools worth using on this stack.
 

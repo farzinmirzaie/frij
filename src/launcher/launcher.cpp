@@ -2,100 +2,126 @@
 
 #include "lvgl.h"
 #include "lvgl_port_m5stack.hpp"
+#include "carousel.h"
 #include "registry.h"
 
 /*
- * Layout note: the screen is round, so we keep tiles in a centered, wrapping
- * grid and avoid the corners.
+ * Three layers, one screen-level gesture handler that routes by the current
+ * layer. The screen is round, so content is kept centered.
  *
- * Locking note: frij_launcher_start() runs OUTSIDE the LVGL task, so it locks.
- * The event callbacks below run INSIDE the LVGL task, so they must NOT lock
- * (that would deadlock).
+ * Locking: frij_launcher_start() runs outside the LVGL task (locks). Gesture
+ * callbacks and frij_back() run inside the LVGL task (no locking).
  */
+
+typedef enum { LAYER_LAUNCHER, LAYER_APP, LAYER_SETTINGS } layer_t;
 
 static const uint32_t COLOR_BG = 0x101418;
 
-// ---- Opening / closing an app -------------------------------------------
+static layer_t           s_layer = LAYER_LAUNCHER;
+static frij_carousel_t   s_apps;            // glance carousel (launcher home)
+static frij_carousel_t   s_screens;         // open app's screen carousel
+static lv_obj_t*         s_overlay = NULL;  // app/settings layer over the home
 
-// Back button: delete the whole app page; the home screen underneath returns.
-static void on_back_clicked(lv_event_t* e)
+// ---- carousel page builders ---------------------------------------------
+
+static void glance_builder(lv_obj_t* page, int index, void* user)
 {
-    lv_obj_t* page = (lv_obj_t*)lv_event_get_user_data(e);
-    lv_obj_delete(page);
+    (void)user;
+    const frij_app_t* app = frij_registry_get(index);
+    if (app && app->build_glance) {
+        app->build_glance(page);
+    }
 }
 
-static void open_app(int index)
+static void screen_builder(lv_obj_t* page, int index, void* user)
+{
+    const frij_app_t* app = (const frij_app_t*)user;
+    if (app && app->build_screen) {
+        app->build_screen(page, index);
+    }
+}
+
+// ---- layer transitions ----------------------------------------------------
+
+static lv_obj_t* make_layer(void)
+{
+    lv_obj_t* o = lv_obj_create(lv_screen_active());
+    lv_obj_set_size(o, LV_PCT(100), LV_PCT(100));
+    lv_obj_center(o);
+    lv_obj_set_style_bg_color(o, lv_color_hex(COLOR_BG), LV_PART_MAIN);
+    lv_obj_set_style_border_width(o, 0, LV_PART_MAIN);
+    lv_obj_set_style_radius(o, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(o, 0, LV_PART_MAIN);
+    lv_obj_clear_flag(o, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(o, LV_OBJ_FLAG_EVENT_BUBBLE);  // swipes bubble to the screen
+    return o;
+}
+
+static void enter_app(int index)
 {
     const frij_app_t* app = frij_registry_get(index);
-    if (app == NULL || app->open == NULL) {
+    if (app == NULL) {
         return;
     }
-
-    lv_obj_t* screen = lv_screen_active();
-
-    // Full-screen opaque page that sits on top of the home screen.
-    lv_obj_t* page = lv_obj_create(screen);
-    lv_obj_set_size(page, LV_PCT(100), LV_PCT(100));
-    lv_obj_center(page);
-    lv_obj_set_style_bg_color(page, lv_color_hex(COLOR_BG), LV_PART_MAIN);
-    lv_obj_set_style_border_width(page, 0, LV_PART_MAIN);
-    lv_obj_set_style_radius(page, 0, LV_PART_MAIN);
-    lv_obj_set_style_pad_all(page, 0, LV_PART_MAIN);
-
-    // Launcher-owned "Back" button, pinned near the top.
-    lv_obj_t* back = lv_button_create(page);
-    lv_obj_align(back, LV_ALIGN_TOP_MID, 0, 6);
-    lv_obj_add_event_cb(back, on_back_clicked, LV_EVENT_CLICKED, page);
-    lv_obj_t* back_label = lv_label_create(back);
-    lv_label_set_text(back_label, LV_SYMBOL_LEFT " Back");
-    lv_obj_center(back_label);
-
-    // The app draws into this content area; it never sees the back button.
-    lv_obj_t* content = lv_obj_create(page);
-    lv_obj_set_size(content, LV_PCT(100), LV_PCT(72));
-    lv_obj_align(content, LV_ALIGN_BOTTOM_MID, 0, 0);
-    lv_obj_set_style_bg_opa(content, LV_OPA_TRANSP, LV_PART_MAIN);
-    lv_obj_set_style_border_width(content, 0, LV_PART_MAIN);
-
-    app->open(content);
+    int screens = app->screen_count > 0 ? app->screen_count : 1;
+    s_overlay = make_layer();
+    frij_carousel_init(&s_screens, s_overlay, screens, screen_builder, (void*)app);
+    s_layer = LAYER_APP;
 }
 
-// ---- Home screen ---------------------------------------------------------
-
-static void on_tile_clicked(lv_event_t* e)
+static void open_settings(void)
 {
-    int index = (int)(intptr_t)lv_event_get_user_data(e);
-    open_app(index);
+    s_overlay = make_layer();
+    lv_obj_t* label = lv_label_create(s_overlay);
+    lv_label_set_text(label, "Settings\n(soon)");
+    lv_obj_set_style_text_color(label, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
+    lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    lv_obj_center(label);
+    s_layer = LAYER_SETTINGS;
 }
 
-static void build_home(void)
+void frij_back(void)
 {
-    lv_obj_t* screen = lv_screen_active();
-    lv_obj_set_style_bg_color(screen, lv_color_hex(COLOR_BG), LV_PART_MAIN);
+    if (s_layer == LAYER_LAUNCHER) {
+        return;
+    }
+    if (s_overlay) {
+        lv_obj_delete(s_overlay);
+        s_overlay = NULL;
+    }
+    s_layer = LAYER_LAUNCHER;
+}
 
-    // Centered, wrapping row of tiles.
-    lv_obj_t* grid = lv_obj_create(screen);
-    lv_obj_set_size(grid, LV_PCT(96), LV_PCT(96));
-    lv_obj_center(grid);
-    lv_obj_set_style_bg_opa(grid, LV_OPA_TRANSP, LV_PART_MAIN);
-    lv_obj_set_style_border_width(grid, 0, LV_PART_MAIN);
-    lv_obj_set_flex_flow(grid, LV_FLEX_FLOW_ROW_WRAP);
-    lv_obj_set_flex_align(grid, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
-                          LV_FLEX_ALIGN_CENTER);
+// ---- gestures --------------------------------------------------------------
 
-    for (int i = 0; i < frij_registry_count(); i++) {
-        const frij_app_t* app = frij_registry_get(i);
+static void on_gesture(lv_event_t* e)
+{
+    (void)e;
+    lv_dir_t dir = lv_indev_get_gesture_dir(lv_indev_active());
 
-        lv_obj_t* tile = lv_button_create(grid);
-        lv_obj_set_size(tile, 90, 90);
-        lv_obj_set_style_bg_color(tile, lv_color_hex(app->color), LV_PART_MAIN);
-        lv_obj_set_style_radius(tile, 16, LV_PART_MAIN);
-        lv_obj_add_event_cb(tile, on_tile_clicked, LV_EVENT_CLICKED,
-                            (void*)(intptr_t)i);
+    switch (s_layer) {
+        case LAYER_LAUNCHER:
+            if (dir == LV_DIR_LEFT) {
+                frij_carousel_next(&s_apps);
+            } else if (dir == LV_DIR_RIGHT) {
+                frij_carousel_prev(&s_apps);
+            } else if (dir == LV_DIR_TOP) {
+                enter_app(frij_carousel_index(&s_apps));
+            } else if (dir == LV_DIR_BOTTOM) {
+                open_settings();
+            }
+            break;
 
-        lv_obj_t* label = lv_label_create(tile);
-        lv_label_set_text(label, app->name);
-        lv_obj_center(label);
+        case LAYER_APP:
+            if (dir == LV_DIR_LEFT) {
+                frij_carousel_next(&s_screens);
+            } else if (dir == LV_DIR_RIGHT) {
+                frij_carousel_prev(&s_screens);
+            }
+            break;
+
+        case LAYER_SETTINGS:
+            break;
     }
 }
 
@@ -104,6 +130,14 @@ void frij_launcher_start(void)
     if (!lvgl_port_lock()) {
         return;
     }
-    build_home();
+
+    lv_obj_t* screen = lv_screen_active();
+    lv_obj_set_style_bg_color(screen, lv_color_hex(COLOR_BG), LV_PART_MAIN);
+    lv_obj_clear_flag(screen, LV_OBJ_FLAG_SCROLLABLE);
+
+    frij_carousel_init(&s_apps, screen, frij_registry_count(), glance_builder, NULL);
+    lv_obj_add_event_cb(screen, on_gesture, LV_EVENT_GESTURE, NULL);
+    s_layer = LAYER_LAUNCHER;
+
     lvgl_port_unlock();
 }

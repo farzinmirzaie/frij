@@ -6,19 +6,24 @@
 /*
  * The contract between a mini-app and Frij.
  *
- * A mini-app knows ONLY this header. It does not know about the launcher,
- * the registry, or other apps. It just describes itself and provides one
- * function that builds its UI inside a parent container it is handed.
+ * An app knows ONLY this header — not the launcher, the registry, or other
+ * apps. It declares two things:
  *
- * Navigation (opening, the back button) is the launcher's job — an app never
- * has to think about it.
+ *   build_glance : fills a full-screen card shown in the launcher carousel.
+ *                  Informational, minimal interactivity.
+ *   build_screen : fills screen `index` of the app's own left/right carousel,
+ *                  opened when the user swipes up on the glance. Interactive.
+ *
+ * The launcher provides the carousel, gestures, and the Back button; an app
+ * just fills the container it is handed.
  */
 typedef struct {
-    const char* name;   // shown on the launcher tile
-    uint32_t    color;  // tile color, 0xRRGGBB
+    const char* name;
 
-    // Build the app's UI inside `parent`. Called each time the app is opened.
-    void (*open)(lv_obj_t* parent);
+    void (*build_glance)(lv_obj_t* parent);
+
+    int  screen_count;                            // app's own screens (>= 1)
+    void (*build_screen)(lv_obj_t* parent, int index);
 } frij_app_t;
 
 #endif  // FRIJ_APP_H
