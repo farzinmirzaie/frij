@@ -11,5 +11,6 @@ Each package has its own README:
 | `apps/` | the mini-apps (+ settings) and where they register |
 | `launcher/` | the navigation shell (layers, gestures, registry) |
 | `ui/` | shared, app-agnostic UI building blocks |
-| `store/` | shared key→JSON storage (local cache + Supabase) |
+| `store/` | shared key→JSON storage (local cache + Supabase, off-thread) |
+| `system/` | neutral board-service interfaces (brightness, …) |
 | `utility/` | the board-specific LVGL ↔ M5GFX bridge |

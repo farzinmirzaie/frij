@@ -4,6 +4,17 @@ Newest first. One short entry per change.
 
 ## 2026-06-08
 
+- Fixed carousel/nav lag: **cloud I/O moved off the UI thread**. `frij_store`
+  now pushes on a background thread and adds `pull_async`; the cache is written
+  atomically. Todo/Counter pull async on open, so swipes/toggles never block on
+  the network (the real cause of the stutter). Added `-pthread`.
+- Polish pass: **brightness now works** via a neutral `src/system/brightness`
+  interface (board impl) — slider applies live + saved value applied at boot.
+- Polish pass: **Home watch face** got a seconds ring, 12h AM/PM, and no leading zero.
+- Polish pass: tactile **press-pop** on Counter buttons; Todo long text ellipsizes.
+
+## 2026-06-08
+
 - Per-app **color scheme**: `app.color` is now the app's accent (from the ui
   palette); the page background is uniform Surface-1. Todo amber, Counter blue,
   Home/Settings purple. Added `FRIJ_YELLOW` + `frij_slider`/`frij_toggle`/`frij_page`.

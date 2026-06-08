@@ -18,6 +18,7 @@
 static const uint32_t ACCENT = FRIJ_PRIMARY;
 
 typedef struct {
+    lv_obj_t* arc;   // seconds ring
     lv_obj_t* time;
     lv_obj_t* date;
     bool      h24;
@@ -35,15 +36,21 @@ static void render(clock_ctx_t* c)
     struct tm tmv;
     localtime_r(&now, &tmv);
 
-    char t[16];
+    char t[8];
     strftime(t, sizeof(t), c->h24 ? "%H:%M" : "%I:%M", &tmv);
+    const char* tp = (!c->h24 && t[0] == '0') ? t + 1 : t;  // drop 12h leading zero
     if (c->time) {
-        lv_label_set_text(c->time, t);
+        lv_label_set_text(c->time, tp);
     }
-    char d[32];
-    strftime(d, sizeof(d), "%a %d %b", &tmv);
+
+    char d[40];
+    strftime(d, sizeof(d), c->h24 ? "%a %d %b" : "%a %d %b  %p", &tmv);
     if (c->date) {
         lv_label_set_text(c->date, d);
+    }
+
+    if (c->arc) {
+        lv_arc_set_value(c->arc, tmv.tm_sec);  // sweep once a minute
     }
 }
 
@@ -65,8 +72,14 @@ static void build_clock(lv_obj_t* parent)
     lv_obj_t*    col = frij_page(parent);
     clock_ctx_t* c   = (clock_ctx_t*)lv_malloc(sizeof(clock_ctx_t));
     c->h24           = read_clock24();
-    c->time          = frij_label(col, "--:--", FRIJ_FONT_DISPLAY, FRIJ_TEXT);
-    c->date          = frij_label(col, "", FRIJ_FONT_BODY, FRIJ_TEXT_2);
+
+    // seconds ring with the time centered inside
+    c->arc = frij_progress_ring(col, 150, 0, ACCENT);
+    lv_arc_set_range(c->arc, 0, 60);
+    c->time = frij_label(c->arc, "--:--", FRIJ_FONT_DISPLAY, FRIJ_TEXT);
+    lv_obj_center(c->time);
+
+    c->date = frij_label(col, "", FRIJ_FONT_BODY, FRIJ_TEXT_2);
     render(c);
 
     lv_timer_t* timer = lv_timer_create(tick, 1000, c);

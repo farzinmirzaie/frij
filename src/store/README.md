@@ -23,7 +23,9 @@ Key = app name; one JSON blob per app. Apps choose their own serialization
 
 ## Notes
 
-- HTTP calls are synchronous, so `save`/`pull` briefly block the UI. Fine on the
-  emulator; the device phase needs async.
+- **Cloud I/O never blocks the UI.** `save` writes the cache then pushes on a
+  background thread; `pull_async` fetches on a thread. The cache is written
+  atomically (temp + rename), so UI reads never see a half-written file. Use
+  `pull_async` when opening a screen; the blocking `pull` is for boot only.
 - Cloud setup (Supabase table, env vars, keys, RLS): see
   [`docs/STORAGE.md`](../../docs/STORAGE.md).

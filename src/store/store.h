@@ -22,9 +22,13 @@ bool frij_store_load(const char* key, char* buf, size_t buf_size);
 // cache write fails.
 bool frij_store_save(const char* key, const char* json);
 
-// Pull the latest value from the cloud into the local cache. Call before
-// load() when you want fresh data (e.g. when opening a screen). False if the
-// cloud has no value or is unreachable.
+// Pull the latest value from the cloud into the local cache (blocking). Use at
+// boot, not on the UI path. False if the cloud has no value or is unreachable.
 bool frij_store_pull(const char* key);
+
+// Like pull(), but runs on a background thread and returns immediately. The
+// cache updates when it finishes (visible on the next read). Use this when
+// opening a screen so the gesture stays smooth.
+void frij_store_pull_async(const char* key);
 
 #endif  // FRIJ_STORE_H

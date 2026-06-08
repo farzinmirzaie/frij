@@ -3,6 +3,7 @@
 #include <stdlib.h>  // atoi
 
 #include "store/store.h"
+#include "system/brightness.h"
 #include "ui/components.h"
 #include "ui/theme.h"
 
@@ -50,7 +51,7 @@ static void on_brightness(lv_event_t* e)
     lv_obj_t* slider = (lv_obj_t*)lv_event_get_target(e);
     int       v      = lv_slider_get_value(slider);
     save_int("brightness", v);
-    // TODO(device): apply to the backlight (e.g. M5.Display.setBrightness).
+    frij_set_brightness((uint8_t)v);
 }
 
 static void on_clock24(lv_event_t* e)

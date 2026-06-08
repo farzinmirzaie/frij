@@ -139,6 +139,7 @@ static void build_list(lv_obj_t* parent)
         lv_obj_t* label = frij_label(row, s_text[i], FRIJ_FONT_BODY,
                                      s_done[i] ? FRIJ_TEXT_2 : FRIJ_TEXT);
         lv_obj_set_flex_grow(label, 1);
+        lv_label_set_long_mode(label, LV_LABEL_LONG_DOT);  // ellipsize long text
 
         frij_anim_enter(row, i * 45);  // staggered fade + rise
     }
@@ -164,7 +165,7 @@ static void glance(lv_obj_t* parent)
 static void screen(lv_obj_t* parent, int index)
 {
     if (index == 0) {
-        frij_store_pull(STORE_KEY);
+        frij_store_pull_async(STORE_KEY);
         load_todo();
         build_list(parent);
     } else if (index == 1) {

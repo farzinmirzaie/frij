@@ -14,14 +14,17 @@
 // Emulator backend: local file cache (.frij_store/) + Supabase over HTTPS.
 //
 //   load() : reads the local cache (fast, no network)
-//   save() : writes the cache, then upserts to Supabase (best effort)
-//   pull() : GETs from Supabase into the cache
+//   save() : writes the cache atomically, then pushes to Supabase on a thread
+//   pull() : blocking GET (boot only); pull_async() does it on a thread
 //
-// Supabase config is read once from the .env file in the working directory.
+// Network never runs on the UI thread — threads do the libcurl work and the
+// cache is updated atomically (write temp + rename), so UI reads never block
+// or see a half-written file. Supabase config is read once from .env.
 // ============================================================================
 #include <sys/stat.h>
 
 #include <string>
+#include <thread>
 
 #include <curl/curl.h>
 
@@ -29,11 +32,11 @@
 
 #define STORE_DIR ".frij_store"
 
-static std::string s_url;    // e.g. https://xxx.supabase.co
-static std::string s_key;    // publishable / anon key
-static std::string s_table;  // e.g. store
+static std::string s_url;
+static std::string s_key;
+static std::string s_table;
 
-// ---- .env parsing ---------------------------------------------------------
+// ---- .env -----------------------------------------------------------------
 
 static std::string trim(const std::string& s)
 {
@@ -79,7 +82,7 @@ static bool cloud_ready(void)
     return !s_url.empty() && !s_key.empty();
 }
 
-// ---- local cache ----------------------------------------------------------
+// ---- local cache (atomic) -------------------------------------------------
 
 static void path_for(const char* key, char* out, size_t n)
 {
@@ -88,18 +91,21 @@ static void path_for(const char* key, char* out, size_t n)
 
 static bool cache_write(const char* key, const char* text)
 {
-    char path[128];
+    char path[160];
+    char tmp[176];
     path_for(key, path, sizeof(path));
-    FILE* f = fopen(path, "wb");
+    snprintf(tmp, sizeof(tmp), "%s.tmp", path);
+
+    FILE* f = fopen(tmp, "wb");
     if (f == NULL) {
         return false;
     }
     fputs(text, f);
     fclose(f);
-    return true;
+    return rename(tmp, path) == 0;  // atomic swap
 }
 
-// ---- libcurl helpers ------------------------------------------------------
+// ---- libcurl --------------------------------------------------------------
 
 static size_t collect(void* data, size_t size, size_t nmemb, void* user)
 {
@@ -116,68 +122,8 @@ static struct curl_slist* auth_headers(struct curl_slist* h)
     return h;
 }
 
-// ---- public API -----------------------------------------------------------
-
-void frij_store_init(void)
-{
-    mkdir(STORE_DIR, 0755);
-    load_env();
-    curl_global_init(CURL_GLOBAL_DEFAULT);
-}
-
-bool frij_store_load(const char* key, char* buf, size_t buf_size)
-{
-    char path[128];
-    path_for(key, path, sizeof(path));
-    FILE* f = fopen(path, "rb");
-    if (f == NULL) {
-        return false;
-    }
-    size_t n = fread(buf, 1, buf_size - 1, f);
-    buf[n]   = '\0';
-    fclose(f);
-    return true;
-}
-
-static void cloud_push(const char* key, const char* json)
-{
-    if (!cloud_ready()) {
-        return;
-    }
-    CURL* curl = curl_easy_init();
-    if (curl == NULL) {
-        return;
-    }
-    // PostgREST upsert: POST a row, merge on the primary key.
-    std::string url  = s_url + "/rest/v1/" + s_table + "?on_conflict=key";
-    std::string body = std::string("{\"key\":\"") + key + "\",\"value\":" + json + "}";
-
-    struct curl_slist* h = NULL;
-    h                    = auth_headers(h);
-    h                    = curl_slist_append(h, "Content-Type: application/json");
-    h                    = curl_slist_append(h, "Prefer: resolution=merge-duplicates,return=minimal");
-
-    std::string resp;
-    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, h);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body.c_str());
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, collect);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &resp);
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5L);
-    curl_easy_perform(curl);  // best effort; cache already holds the value
-
-    curl_slist_free_all(h);
-    curl_easy_cleanup(curl);
-}
-
-bool frij_store_save(const char* key, const char* json)
-{
-    bool ok = cache_write(key, json);
-    cloud_push(key, json);
-    return ok;
-}
-
-bool frij_store_pull(const char* key)
+// Runs on a worker thread. GET the row, cache the value text. Returns success.
+static bool cloud_fetch_to_cache(const std::string& key)
 {
     if (!cloud_ready()) {
         return false;
@@ -188,15 +134,13 @@ bool frij_store_pull(const char* key)
     }
     std::string url = s_url + "/rest/v1/" + s_table + "?key=eq." + key + "&select=value";
 
-    struct curl_slist* h = NULL;
-    h                    = auth_headers(h);
-
-    std::string resp;
+    struct curl_slist* h = auth_headers(NULL);
+    std::string        resp;
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, h);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, collect);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &resp);
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5L);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 6L);
     CURLcode rc = curl_easy_perform(curl);
     curl_slist_free_all(h);
     curl_easy_cleanup(curl);
@@ -204,7 +148,6 @@ bool frij_store_pull(const char* key)
         return false;
     }
 
-    // Response is [{"value": <X>}]. Pull X back out and cache it as text.
     JsonDocument doc;
     if (deserializeJson(doc, resp) != DeserializationError::Ok) {
         return false;
@@ -218,12 +161,84 @@ bool frij_store_pull(const char* key)
     }
     std::string text;
     serializeJson(value, text);
-    return cache_write(key, text.c_str());
+    return cache_write(key.c_str(), text.c_str());
+}
+
+// Runs on a worker thread. Upsert the row.
+static void cloud_push_body(const std::string& key, const std::string& json)
+{
+    CURL* curl = curl_easy_init();
+    if (curl == NULL) {
+        return;
+    }
+    std::string url  = s_url + "/rest/v1/" + s_table + "?on_conflict=key";
+    std::string body = std::string("{\"key\":\"") + key + "\",\"value\":" + json + "}";
+
+    struct curl_slist* h = auth_headers(NULL);
+    h                    = curl_slist_append(h, "Content-Type: application/json");
+    h                    = curl_slist_append(h, "Prefer: resolution=merge-duplicates,return=minimal");
+
+    std::string resp;
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, h);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, collect);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &resp);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 6L);
+    curl_easy_perform(curl);
+    curl_slist_free_all(h);
+    curl_easy_cleanup(curl);
+}
+
+// ---- public API -----------------------------------------------------------
+
+void frij_store_init(void)
+{
+    mkdir(STORE_DIR, 0755);
+    load_env();
+    curl_global_init(CURL_GLOBAL_DEFAULT);
+}
+
+bool frij_store_load(const char* key, char* buf, size_t buf_size)
+{
+    char path[160];
+    path_for(key, path, sizeof(path));
+    FILE* f = fopen(path, "rb");
+    if (f == NULL) {
+        return false;
+    }
+    size_t n = fread(buf, 1, buf_size - 1, f);
+    buf[n]   = '\0';
+    fclose(f);
+    return true;
+}
+
+bool frij_store_save(const char* key, const char* json)
+{
+    bool ok = cache_write(key, json);
+    if (cloud_ready()) {
+        std::thread([k = std::string(key), j = std::string(json)] { cloud_push_body(k, j); }).detach();
+    }
+    return ok;
+}
+
+bool frij_store_pull(const char* key)
+{
+    return cloud_fetch_to_cache(std::string(key));
+}
+
+void frij_store_pull_async(const char* key)
+{
+    if (!cloud_ready()) {
+        return;
+    }
+    std::thread([k = std::string(key)] { cloud_fetch_to_cache(k); }).detach();
 }
 
 #else
 // ============================================================================
-// Device backend: TODO — Supabase over WiFiClientSecure + NVS/LittleFS cache.
+// Device backend: TODO — Supabase over WiFiClientSecure + NVS/LittleFS cache,
+// the network calls dispatched to a FreeRTOS task (same "never block UI" rule).
 // ============================================================================
 void frij_store_init(void) {}
 
@@ -246,5 +261,10 @@ bool frij_store_pull(const char* key)
 {
     (void)key;
     return false;
+}
+
+void frij_store_pull_async(const char* key)
+{
+    (void)key;
 }
 #endif
