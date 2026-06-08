@@ -2,6 +2,17 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-09
+
+- Added a shared **`frij_header`** component (back + centered title + optional
+  action button), round-safe; Todo's screen now uses it (back + "+" action).
+- **Back** on the home layer now jumps to the default tile (the clock); from an
+  app/settings it returns home as before (added `frij_carousel_goto`).
+- The Home/clock tile is **glance-only** now — swiping up on it does nothing
+  (apps with no `build_screen` can't be opened).
+- Added [docs/TESTING.md](TESTING.md): how to build + visually verify via the
+  headless snapshot tool.
+
 ## 2026-06-08
 
 - Sized the SF Pro Rounded fonts up for the 466px screen (body 18, title 26,

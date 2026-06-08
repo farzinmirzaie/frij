@@ -19,6 +19,8 @@ theme, list rows, …) as patterns repeat.
   - `frij_slider` / `frij_toggle` — themed slider + switch (take an accent).
   - `frij_progress_ring` — thin arc gauge.
   - `frij_empty_state` — round "nothing here" placeholder.
+  - `frij_header` — shared app top bar: back button (returns to the launcher) +
+    centered title + optional right action button. Round-safe placement.
   - `frij_anim_enter` — fade + rise entrance (stagger lists with a delay).
 - `carousel.*` — a horizontal, looping, finger-following pager. Input-free: the
   owner calls `drag(dx)` / `end(dx)`. No loop when `count <= 1`. Shows an

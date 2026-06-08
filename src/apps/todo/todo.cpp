@@ -117,13 +117,19 @@ static void on_toggle(lv_event_t* e)
     save_todo();
 }
 
+static void on_add(lv_event_t* e)
+{
+    (void)e;  // TODO: add-item flow (on-device keyboard or via the web app)
+}
+
 static void build_list(lv_obj_t* parent)
 {
-    lv_obj_t* col = frij_page(parent);
+    frij_header(parent, "Todo", LV_SYMBOL_PLUS, on_add);
 
-    frij_label(col, "Todo", FRIJ_FONT_TITLE, FRIJ_TEXT);
-    lv_obj_t* sub = frij_label(col, "", FRIJ_FONT_BODY, FRIJ_TEXT_2);
-    lv_label_set_text_fmt(sub, "%d of %d done", done_count(), s_n);
+    // list below the header, top-aligned so it doesn't drift into the round edge
+    lv_obj_t* col = frij_col(parent, FRIJ_SP_S);
+    lv_obj_set_width(col, LV_PCT(82));
+    lv_obj_align(col, LV_ALIGN_TOP_MID, 0, frij_screen_min() * 27 / 100);
 
     if (s_n == 0) {
         frij_empty_state(col, "Nothing yet");

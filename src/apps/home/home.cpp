@@ -127,14 +127,9 @@ static void glance(lv_obj_t* parent)
     build_clock(parent);
 }
 
-static void screen(lv_obj_t* parent, int index)
-{
-    (void)index;
-    build_clock(parent);
-}
-
 const frij_app_t* home_app(void)
 {
-    static const frij_app_t app = {"Home", ACCENT, glance, 1, screen};
+    // glance-only (watch face): no screens, so it can't be opened by swiping up.
+    static const frij_app_t app = {"Home", ACCENT, glance, 0, NULL};
     return &app;
 }

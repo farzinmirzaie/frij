@@ -265,6 +265,67 @@ lv_obj_t* frij_toggle(lv_obj_t* parent, bool on, uint32_t accent)
     return sw;
 }
 
+// loose coupling: the launcher provides this; we don't include launcher.h
+extern void frij_back(void);
+
+static void on_header_back(lv_event_t* e)
+{
+    (void)e;
+    frij_back();
+}
+
+static lv_obj_t* icon_button(lv_obj_t* parent, const char* sym)
+{
+    lv_obj_t* b = lv_button_create(parent);
+    lv_obj_set_size(b, 36, 36);
+    lv_obj_set_style_radius(b, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(b, lv_color_hex(FRIJ_SURFACE_2), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(b, lv_color_hex(FRIJ_SURFACE_3), LV_STATE_PRESSED);
+    lv_obj_set_style_shadow_width(b, 0, LV_PART_MAIN);
+    frij_haptic_attach(b);
+    lv_obj_t* l = lv_label_create(b);
+    lv_label_set_text(l, sym);
+    lv_obj_set_style_text_font(l, FRIJ_FONT_SYMBOL, LV_PART_MAIN);
+    lv_obj_set_style_text_color(l, lv_color_hex(FRIJ_TEXT), LV_PART_MAIN);
+    lv_obj_center(l);
+    return b;
+}
+
+lv_obj_t* frij_header(lv_obj_t* parent, const char* title, const char* action_symbol,
+                      lv_event_cb_t action_cb)
+{
+    lv_obj_t* bar = lv_obj_create(parent);
+    lv_obj_set_size(bar, LV_PCT(78), LV_SIZE_CONTENT);
+    lv_obj_align(bar, LV_ALIGN_TOP_MID, 0, frij_screen_min() * 15 / 100);  // inside the circle
+    lv_obj_set_style_bg_opa(bar, LV_OPA_TRANSP, LV_PART_MAIN);
+    lv_obj_set_style_border_width(bar, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(bar, 0, LV_PART_MAIN);
+    lv_obj_clear_flag(bar, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_flex_flow(bar, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(bar, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(bar, FRIJ_SP_S, LV_PART_MAIN);
+
+    lv_obj_t* back = icon_button(bar, LV_SYMBOL_LEFT);
+    lv_obj_add_event_cb(back, on_header_back, LV_EVENT_CLICKED, NULL);
+
+    lv_obj_t* t = frij_label(bar, title, FRIJ_FONT_TITLE, FRIJ_TEXT);
+    lv_obj_set_flex_grow(t, 1);
+    lv_obj_set_style_text_align(t, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    lv_label_set_long_mode(t, LV_LABEL_LONG_DOT);
+
+    if (action_symbol) {
+        lv_obj_t* a = icon_button(bar, action_symbol);
+        if (action_cb) {
+            lv_obj_add_event_cb(a, action_cb, LV_EVENT_CLICKED, NULL);
+        }
+    } else {
+        lv_obj_t* spacer = lv_obj_create(bar);  // keep the title centered
+        lv_obj_remove_style_all(spacer);
+        lv_obj_set_size(spacer, 36, 36);
+    }
+    return bar;
+}
+
 void frij_anim_enter(lv_obj_t* obj, uint32_t delay_ms)
 {
     lv_obj_set_style_opa(obj, LV_OPA_TRANSP, LV_PART_MAIN);

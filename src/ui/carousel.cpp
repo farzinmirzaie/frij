@@ -242,6 +242,21 @@ void frij_carousel_end(frij_carousel_t* c, int dx)
     }
 }
 
+void frij_carousel_goto(frij_carousel_t* c, int index)
+{
+    if (c->busy) {
+        return;
+    }
+    if (c->adj) {
+        lv_obj_delete(c->adj);
+        c->adj = NULL;
+    }
+    c->index = wrap(index, c->count);
+    lv_obj_set_x(c->cur, 0);
+    build_into(c, c->cur, c->index);
+    refresh_dots(c);
+}
+
 int frij_carousel_index(const frij_carousel_t* c)
 {
     return c->index;

@@ -31,6 +31,11 @@ settings come from the registry (see [`../apps/`](../apps/README.md)).
 
 ## Notes
 
+- **Back** (`frij_back`): from an app/settings layer it returns to home; when
+  already on home it jumps the carousel to the default tile (the clock, index 0).
+- The Home tile is **glance-only** (`screen_count 0`, `build_screen NULL`), so
+  swiping up on the clock does nothing. Any app can opt out of opening this way.
+- Apps get a back button via the shared `frij_header` (see `../ui/`).
 - Layers with a single screen don't loop.
 - Home is persistent; app/settings layers are built on entry and destroyed on
   the way back.

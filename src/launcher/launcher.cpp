@@ -98,13 +98,13 @@ static void ensure_app_layer(void)
         return;
     }
     const frij_app_t* app = frij_registry_get(frij_carousel_index(&s_chome));
-    if (!app) {
+    // glance-only apps (e.g. the Home watch face) can't be opened
+    if (!app || app->build_screen == NULL || app->screen_count < 1) {
         return;
     }
     s_app = make_layer();
     lv_obj_set_y(s_app, height());  // starts below the home
-    int n = app->screen_count > 0 ? app->screen_count : 1;
-    frij_carousel_init(&s_capp, s_app, n, app_screen_builder, (void*)app, app->color);
+    frij_carousel_init(&s_capp, s_app, app->screen_count, app_screen_builder, (void*)app, app->color);
 }
 
 static void ensure_settings_layer(void)
@@ -288,7 +288,14 @@ static void on_input(lv_event_t* e)
 
 void frij_back(void)
 {
-    if (s_anim || s_cur == HOME) {
+    if (s_anim) {
+        return;
+    }
+    if (s_cur == HOME) {
+        // already home: jump to the default screen (the clock, index 0)
+        if (frij_carousel_index(&s_chome) != 0) {
+            frij_carousel_goto(&s_chome, 0);
+        }
         return;
     }
     int h  = height();

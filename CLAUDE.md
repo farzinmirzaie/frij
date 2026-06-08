@@ -54,6 +54,7 @@ Each `src/*` folder has its own `README.md` with the details.
 - [docs/CHANGELOG.md](docs/CHANGELOG.md) — **append an entry for every change you make.**
 - [docs/ROADMAP.md](docs/ROADMAP.md) — the app vision + what's next.
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how boot, render loop, and the port layer work.
+- [docs/TESTING.md](docs/TESTING.md) — **how to build + visually verify changes (snapshot tool).**
 - [docs/STORAGE.md](docs/STORAGE.md) — cloud setup (Supabase table, env, keys).
 - Per-package detail lives in `src/*/README.md` (launcher, apps, ui, store, utility).
 - [docs/HARDWARE.md](docs/HARDWARE.md) — board targets + how to add a new one.

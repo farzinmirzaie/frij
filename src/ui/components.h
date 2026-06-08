@@ -42,6 +42,12 @@ lv_obj_t* frij_progress_ring(lv_obj_t* parent, int size, int pct, uint32_t accen
 // A round "nothing here" placeholder with an icon + text.
 lv_obj_t* frij_empty_state(lv_obj_t* parent, const char* text);
 
+// A shared app header near the top: a back button (left, returns to the
+// launcher), a centered `title`, and an optional right action button. Pass
+// `action_symbol = NULL` for no action. Round-screen-safe placement.
+lv_obj_t* frij_header(lv_obj_t* parent, const char* title,
+                      const char* action_symbol, lv_event_cb_t action_cb);
+
 // A themed slider (full width). Attach your own LV_EVENT_VALUE_CHANGED handler.
 lv_obj_t* frij_slider(lv_obj_t* parent, int min, int max, int value, uint32_t accent);
 
