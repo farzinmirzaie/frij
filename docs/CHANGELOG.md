@@ -4,6 +4,12 @@ Newest first. One short entry per change.
 
 ## 2026-06-08
 
+- Carousel now shows an **auto-fading page-dot indicator** at the bottom: fades
+  in on swipe, idles out after ~1.4s, active dot uses the layer's accent, hidden
+  for single-page layers. Per-instance timer cleaned up on viewport delete.
+
+## 2026-06-08
+
 - Added **haptics** as a board service (`src/system/haptics`): UI components
   fire a tap/success pulse on interactions (`frij_haptic_attach`); Counter
   buttons too. Settings → General → **Vibration** toggles it (persisted, applied

@@ -21,7 +21,9 @@ theme, list rows, …) as patterns repeat.
   - `frij_empty_state` — round "nothing here" placeholder.
   - `frij_anim_enter` — fade + rise entrance (stagger lists with a delay).
 - `carousel.*` — a horizontal, looping, finger-following pager. Input-free: the
-  owner calls `drag(dx)` / `end(dx)`. No loop when `count <= 1`.
+  owner calls `drag(dx)` / `end(dx)`. No loop when `count <= 1`. Shows an
+  auto-fading **page-dot indicator** at the bottom (active dot uses the accent
+  passed to `init`; hidden entirely for a single page).
 
 ## Guideline
 

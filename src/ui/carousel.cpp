@@ -2,12 +2,102 @@
 
 #include <stdlib.h>  // abs
 
-static const int SNAP_PERCENT = 35;  // drag past this % of width to commit
+#include "theme.h"
+
+static const int SNAP_PERCENT = 35;   // drag past this % of width to commit
 static const int ANIM_MS      = 160;
+static const int DOT          = 6;    // inactive dot diameter
+static const int DOT_ACTIVE_W = 16;   // active dot width (pill)
+static const int DOTS_IDLE_MS = 1400; // hide the indicator after this idle time
+static const int DOTS_FADE_MS = 200;
 
 static int wrap(int i, int n)
 {
     return ((i % n) + n) % n;
+}
+
+static void set_opa(void* obj, int32_t v)
+{
+    lv_obj_set_style_opa((lv_obj_t*)obj, (lv_opa_t)v, LV_PART_MAIN);
+}
+
+// ---- page indicator (auto-fading dots) ------------------------------------
+
+static void refresh_dots(frij_carousel_t* c)
+{
+    if (!c->dots) {
+        return;
+    }
+    for (int i = 0; i < c->count; i++) {
+        lv_obj_t* d      = lv_obj_get_child(c->dots, i);
+        bool      active = (i == c->index);
+        lv_obj_set_width(d, active ? DOT_ACTIVE_W : DOT);
+        lv_obj_set_style_bg_color(d, lv_color_hex(active ? c->accent : FRIJ_TEXT_2), LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(d, active ? LV_OPA_COVER : LV_OPA_40, LV_PART_MAIN);
+    }
+}
+
+static void dots_hide_cb(lv_timer_t* t)
+{
+    frij_carousel_t* c = (frij_carousel_t*)lv_timer_get_user_data(t);
+    lv_anim_t        a;
+    lv_anim_init(&a);
+    lv_anim_set_var(&a, c->dots);
+    lv_anim_set_exec_cb(&a, set_opa);
+    lv_anim_set_values(&a, lv_obj_get_style_opa(c->dots, LV_PART_MAIN), LV_OPA_TRANSP);
+    lv_anim_set_duration(&a, DOTS_FADE_MS);
+    lv_anim_start(&a);
+    lv_timer_pause(t);
+}
+
+// Show the indicator (fade in) and restart the idle-hide timer.
+static void dots_show(frij_carousel_t* c)
+{
+    if (!c->dots) {
+        return;
+    }
+    lv_anim_t a;
+    lv_anim_init(&a);
+    lv_anim_set_var(&a, c->dots);
+    lv_anim_set_exec_cb(&a, set_opa);
+    lv_anim_set_values(&a, lv_obj_get_style_opa(c->dots, LV_PART_MAIN), LV_OPA_COVER);
+    lv_anim_set_duration(&a, DOTS_FADE_MS);
+    lv_anim_start(&a);
+    lv_timer_reset(c->hide_timer);
+    lv_timer_resume(c->hide_timer);
+}
+
+static void make_dots(frij_carousel_t* c)
+{
+    c->dots = lv_obj_create(c->viewport);
+    lv_obj_remove_style_all(c->dots);
+    lv_obj_set_size(c->dots, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_align(c->dots, LV_ALIGN_BOTTOM_MID, 0, -10);
+    lv_obj_set_flex_flow(c->dots, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(c->dots, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(c->dots, 6, LV_PART_MAIN);
+    lv_obj_clear_flag(c->dots, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_flag(c->dots, LV_OBJ_FLAG_EVENT_BUBBLE);
+    lv_obj_set_style_opa(c->dots, LV_OPA_TRANSP, LV_PART_MAIN);
+
+    for (int i = 0; i < c->count; i++) {
+        lv_obj_t* d = lv_obj_create(c->dots);
+        lv_obj_remove_style_all(d);
+        lv_obj_set_size(d, DOT, DOT);
+        lv_obj_set_style_radius(d, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+        lv_obj_clear_flag(d, LV_OBJ_FLAG_CLICKABLE);
+    }
+    refresh_dots(c);
+}
+
+static void on_viewport_delete(lv_event_t* e)
+{
+    frij_carousel_t* c = (frij_carousel_t*)lv_event_get_user_data(e);
+    if (c->hide_timer) {
+        lv_timer_delete(c->hide_timer);
+        c->hide_timer = NULL;
+    }
+    c->dots = NULL;
 }
 
 static void build_into(frij_carousel_t* c, lv_obj_t* page, int index)
@@ -58,6 +148,7 @@ static void commit_done(lv_anim_t* a)
     c->adj   = NULL;
     c->index = c->adj_index;
     c->busy  = false;
+    refresh_dots(c);  // active dot follows the new page
 }
 
 static void revert_done(lv_anim_t* a)
@@ -86,16 +177,19 @@ static void ensure_neighbor(frij_carousel_t* c, int sign)
 }
 
 void frij_carousel_init(frij_carousel_t* c, lv_obj_t* parent, int count,
-                        frij_page_builder builder, void* user)
+                        frij_page_builder builder, void* user, uint32_t accent)
 {
-    c->count     = count < 1 ? 1 : count;
-    c->index     = 0;
-    c->adj_index = 0;
-    c->dir_sign  = 0;
-    c->busy      = false;
-    c->builder   = builder;
-    c->user      = user;
-    c->adj       = NULL;
+    c->count      = count < 1 ? 1 : count;
+    c->index      = 0;
+    c->adj_index  = 0;
+    c->dir_sign   = 0;
+    c->busy       = false;
+    c->builder    = builder;
+    c->user       = user;
+    c->adj        = NULL;
+    c->dots       = NULL;
+    c->hide_timer = NULL;
+    c->accent     = accent;
 
     c->viewport = lv_obj_create(parent);
     lv_obj_set_size(c->viewport, LV_PCT(100), LV_PCT(100));
@@ -109,6 +203,13 @@ void frij_carousel_init(frij_carousel_t* c, lv_obj_t* parent, int count,
 
     c->cur = make_page(c);
     build_into(c, c->cur, 0);
+
+    if (c->count > 1) {
+        make_dots(c);
+        c->hide_timer = lv_timer_create(dots_hide_cb, DOTS_IDLE_MS, c);
+        lv_timer_pause(c->hide_timer);
+        lv_obj_add_event_cb(c->viewport, on_viewport_delete, LV_EVENT_DELETE, c);
+    }
 }
 
 void frij_carousel_drag(frij_carousel_t* c, int dx)
@@ -121,10 +222,12 @@ void frij_carousel_drag(frij_carousel_t* c, int dx)
     ensure_neighbor(c, sign);
     lv_obj_set_x(c->cur, dx);
     lv_obj_set_x(c->adj, (sign < 0 ? w : -w) + dx);
+    dots_show(c);
 }
 
 void frij_carousel_end(frij_carousel_t* c, int dx)
 {
+    dots_show(c);  // keep the indicator up through the snap, then it idles out
     if (c->busy || c->adj == NULL) {
         return;
     }

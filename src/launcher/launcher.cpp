@@ -103,7 +103,7 @@ static void ensure_app_layer(void)
     s_app = make_layer();
     lv_obj_set_y(s_app, height());  // starts below the home
     int n = app->screen_count > 0 ? app->screen_count : 1;
-    frij_carousel_init(&s_capp, s_app, n, app_screen_builder, (void*)app);
+    frij_carousel_init(&s_capp, s_app, n, app_screen_builder, (void*)app, app->color);
 }
 
 static void ensure_settings_layer(void)
@@ -118,7 +118,7 @@ static void ensure_settings_layer(void)
     s_settings = make_layer();
     lv_obj_set_y(s_settings, -height());  // starts above the home
     int n = app->screen_count > 0 ? app->screen_count : 1;
-    frij_carousel_init(&s_cset, s_settings, n, app_screen_builder, (void*)app);
+    frij_carousel_init(&s_cset, s_settings, n, app_screen_builder, (void*)app, app->color);
 }
 
 // ---- vertical-transition completions --------------------------------------
@@ -310,7 +310,7 @@ void frij_launcher_start(void)
 
     s_home = make_layer();
     lv_obj_set_y(s_home, 0);
-    frij_carousel_init(&s_chome, s_home, frij_registry_count(), glance_builder, NULL);
+    frij_carousel_init(&s_chome, s_home, frij_registry_count(), glance_builder, NULL, FRIJ_TEXT);
 
     s_active = &s_chome;
     s_cur    = HOME;
