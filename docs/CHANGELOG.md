@@ -4,6 +4,14 @@ Newest first. One short entry per change.
 
 ## 2026-06-08
 
+- Sized the SF Pro Rounded fonts up for the 466px screen (body 18, title 26,
+  display 34, clock 64; symbols on Montserrat 20) — legible at device resolution.
+- Home clock face: added a dimmer concentric **minute ring** inside the seconds ring.
+- Snapshot tool can now capture a specific screen (`FRIJ_SNAP=todo|counter|settings`);
+  verified Todo/Settings/Counter render correctly at 466 (no overflow, slider unclipped).
+
+## 2026-06-08
+
 - Fixed a black screen in the LVGL-SDL emulator: it had no tick source, so
   nothing rendered. Set `lv_tick_set_cb(SDL_GetTicks)` in `sdl_lvgl_main.cpp`.
 - Switched LVGL to the **system allocator** (`LV_STDLIB_CLIB`); the built-in

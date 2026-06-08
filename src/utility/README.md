@@ -11,7 +11,9 @@ The only **board-specific** code: the LVGL ↔ M5GFX bridge.
 - `snapshot_main.cpp` — headless `main()` for the `snapshot` env: renders the UI
   offscreen and writes `/tmp/frij_snapshot.bmp` (no window). Guarded by
   `FRIJ_SNAPSHOT`. Run: `pio run -e snapshot && .pio/build/snapshot/program`,
-  then `sips -s format png /tmp/frij_snapshot.bmp --out out.png`.
+  then `sips -s format png /tmp/frij_snapshot.bmp --out out.png`. Capture a
+  specific screen with `FRIJ_SNAP=todo|counter|settings .pio/build/snapshot/program`
+  (default renders the launcher/home).
 
 `build_src_filter` in `platformio.ini` excludes the device-only files from the
 emulator (paths are src-relative, e.g. `-<main.cpp>`).

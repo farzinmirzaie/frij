@@ -12,11 +12,36 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <unistd.h>
 
 #include "lvgl.h"
 
+#include "apps/counter/counter.h"
+#include "apps/settings/settings.h"
+#include "apps/todo/todo.h"
+#include "ui/components.h"
+#include "ui/theme.h"
+
 extern void user_app(void);
+
+// Render one app screen, round-clipped like the launcher does (for verifying a
+// specific screen via FRIJ_SNAP=todo|counter|settings).
+static void build_app_screen(const frij_app_t* app)
+{
+    lv_obj_t* s = lv_screen_active();
+    lv_obj_set_style_bg_color(s, lv_color_hex(FRIJ_OUTSIDE), LV_PART_MAIN);
+    lv_obj_t* root = lv_obj_create(s);
+    lv_obj_set_size(root, LV_PCT(100), LV_PCT(100));
+    lv_obj_set_style_border_width(root, 0, LV_PART_MAIN);
+    lv_obj_set_style_radius(root, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+    lv_obj_set_style_clip_corner(root, true, LV_PART_MAIN);
+    lv_obj_clear_flag(root, LV_OBJ_FLAG_SCROLLABLE);
+    frij_apply_bg(root);
+    if (app && app->build_screen) {
+        app->build_screen(root, 0);
+    }
+}
 
 extern "C" {
 bool lvgl_port_lock(void)
@@ -87,8 +112,19 @@ int main(int, char**)
     lv_display_set_buffers(disp, s_buf, NULL, sizeof(s_buf), LV_DISPLAY_RENDER_MODE_FULL);
     lv_display_set_flush_cb(disp, flush_cb);
 
-    lv_timer_handler();     // warm the draw units (first render is slow)
-    user_app();
+    lv_timer_handler();  // warm the draw units (first render is slow)
+
+    const char* scr = getenv("FRIJ_SNAP");
+    if (scr && strcmp(scr, "todo") == 0) {
+        build_app_screen(todo_app());
+    } else if (scr && strcmp(scr, "counter") == 0) {
+        build_app_screen(counter_app());
+    } else if (scr && strcmp(scr, "settings") == 0) {
+        build_app_screen(settings_app());
+    } else {
+        user_app();  // default: the launcher (home)
+    }
+
     s_tick_offset += 3000;  // jump past entrance animations
     lv_refr_now(disp);      // render the settled UI once
 

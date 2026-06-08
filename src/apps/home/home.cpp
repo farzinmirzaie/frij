@@ -18,7 +18,8 @@
 static const uint32_t ACCENT = FRIJ_PRIMARY;
 
 typedef struct {
-    lv_obj_t* arc;   // seconds ring
+    lv_obj_t* arc;      // seconds ring (outer)
+    lv_obj_t* arc_min;  // minutes ring (inner, dimmer)
     lv_obj_t* time;
     lv_obj_t* date;
     bool      h24;
@@ -63,6 +64,9 @@ static void render(clock_ctx_t* c)
     if (c->arc) {
         lv_arc_set_value(c->arc, tmv.tm_sec);  // seconds sweep once a minute
     }
+    if (c->arc_min) {
+        lv_arc_set_value(c->arc_min, tmv.tm_min);  // minutes sweep once an hour
+    }
 }
 
 static void tick(lv_timer_t* t)
@@ -90,6 +94,21 @@ static void build_clock(lv_obj_t* parent)
     lv_arc_set_range(c->arc, 0, 60);
     lv_obj_set_style_arc_width(c->arc, 5, LV_PART_MAIN);
     lv_obj_set_style_arc_width(c->arc, 5, LV_PART_INDICATOR);
+
+    // ...a dimmer inner ring tracks the minutes...
+    c->arc_min = lv_arc_create(c->arc);
+    lv_obj_set_size(c->arc_min, ring * 80 / 100, ring * 80 / 100);
+    lv_obj_center(c->arc_min);
+    lv_arc_set_rotation(c->arc_min, 270);
+    lv_arc_set_bg_angles(c->arc_min, 0, 360);
+    lv_arc_set_range(c->arc_min, 0, 60);
+    lv_obj_remove_style(c->arc_min, NULL, LV_PART_KNOB);
+    lv_obj_clear_flag(c->arc_min, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_style_arc_opa(c->arc_min, LV_OPA_TRANSP, LV_PART_MAIN);  // no track
+    lv_obj_set_style_arc_width(c->arc_min, 3, LV_PART_INDICATOR);
+    lv_obj_set_style_arc_color(c->arc_min, lv_color_hex(ACCENT), LV_PART_INDICATOR);
+    lv_obj_set_style_arc_opa(c->arc_min, LV_OPA_50, LV_PART_INDICATOR);
+    lv_obj_set_style_arc_rounded(c->arc_min, true, LV_PART_INDICATOR);
 
     // ...with the big time + date stacked dead-center inside it.
     lv_obj_t* inner = frij_col(c->arc, 2);

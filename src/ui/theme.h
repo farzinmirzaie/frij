@@ -34,12 +34,12 @@
 #define FRIJ_OUTSIDE    0xCED0D5  // outside the round panel (emulator bezel area)
 
 // ---- Type (SF Pro Rounded, converted via lv_font_conv) --------------------
-#define FRIJ_FONT_CLOCK   (&frij_sf_clock)    // 46 Semibold (digits + colon)
-#define FRIJ_FONT_DISPLAY (&frij_sf_display)  // 26 Semibold
-#define FRIJ_FONT_TITLE   (&frij_sf_title)    // 20 Semibold
-#define FRIJ_FONT_BODY    (&frij_sf_body)     // 14 Regular
+#define FRIJ_FONT_CLOCK   (&frij_sf_clock)    // 64 Semibold (digits + colon)
+#define FRIJ_FONT_DISPLAY (&frij_sf_display)  // 34 Semibold
+#define FRIJ_FONT_TITLE   (&frij_sf_title)    // 26 Semibold
+#define FRIJ_FONT_BODY    (&frij_sf_body)     // 18 Regular
 // Symbols (✓ ± +) aren't in the SF subset — symbol labels use this.
-#define FRIJ_FONT_SYMBOL  (&lv_font_montserrat_14)
+#define FRIJ_FONT_SYMBOL  (&lv_font_montserrat_20)
 
 // ---- Spacing (4pt grid) ---------------------------------------------------
 #define FRIJ_SP_XS  4
