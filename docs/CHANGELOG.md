@@ -4,6 +4,15 @@ Newest first. One short entry per change.
 
 ## 2026-06-08
 
+- Added a design system to `src/ui/`: `theme.h` (colors, type, spacing, radius,
+  motion tokens from the Frij design system) and `components.*` (themed row,
+  circular check with pop, progress ring, empty state, entrance animation).
+- Polished **Todo** with them: dark surface, rounded rows, purple checks, a
+  progress ring on the glance/stats, staggered fade-in rows, animated toggle,
+  and press feedback. Type maps to Montserrat until a rounded font is added.
+
+## 2026-06-08
+
 - Filled in real M5Stack StopWatch (C152) hardware details in `docs/HARDWARE.md`
   from the official docs: CO5300 QSPI panel (reset via M5IOE1), CST820B touch,
   Key A=G2 / Key B=G1, BMI270, RX8130CE, ES8311, M5PM1; `esp32s3box` board +

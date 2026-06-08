@@ -6,18 +6,18 @@
 #include <ArduinoJson.h>
 
 #include "store/store.h"
+#include "ui/components.h"
+#include "ui/theme.h"
 
 /*
- * Todo — a checklist backed by the shared store (so it syncs to Supabase).
+ * Todo — a checklist backed by the shared store (so it syncs to Supabase),
+ * styled with the Frij design system.
  *
  * Data: a JSON array under the key "todo": [{"t":"Milk","d":false}, ...].
- *   glance   : "<done>/<total> done"
- *   screen 0 : the checklist; toggling a box saves (cache + cloud)
- *   screen 1 : add-item placeholder (on-device editing is a later step)
+ *   glance   : progress ring + "<done> of <total>"
+ *   screen 0 : the checklist (tap a row to toggle; animated)
+ *   screen 1 : add-item placeholder
  *   screen 2 : stats
- *
- * Items come from the cloud (edit them from a web app later); the device
- * shows them and syncs the done state.
  */
 
 #define MAX_ITEMS 16
@@ -27,6 +27,8 @@
 static char s_text[MAX_ITEMS][TEXT_LEN];
 static bool s_done[MAX_ITEMS];
 static int  s_n = 0;
+
+// ---- data -----------------------------------------------------------------
 
 static void save_todo(void)
 {
@@ -91,30 +93,62 @@ static int done_count(void)
     return c;
 }
 
-// ---- UI helpers -----------------------------------------------------------
-
-static void center_column(lv_obj_t* parent)
+static int done_pct(void)
 {
-    lv_obj_set_flex_flow(parent, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(parent, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
-                          LV_FLEX_ALIGN_CENTER);
+    return s_n > 0 ? (done_count() * 100 / s_n) : 0;
 }
 
-static lv_obj_t* tinted_label(lv_obj_t* parent, const char* text)
+// ---- centered column that fits a round screen -----------------------------
+
+static lv_obj_t* page_column(lv_obj_t* parent)
 {
-    lv_obj_t* l = lv_label_create(parent);
-    lv_label_set_text(l, text);
-    lv_obj_set_style_text_color(l, lv_color_hex(0xBFD8C9), LV_PART_MAIN);
-    return l;
+    lv_obj_t* col = frij_col(parent, FRIJ_SP_S);
+    lv_obj_set_width(col, LV_PCT(86));
+    lv_obj_center(col);
+    return col;
 }
+
+// ---- the checklist screen --------------------------------------------------
 
 static void on_toggle(lv_event_t* e)
 {
-    lv_obj_t* cb = (lv_obj_t*)lv_event_get_target(e);
-    int       i  = (int)(intptr_t)lv_event_get_user_data(e);
-    if (i >= 0 && i < s_n) {
-        s_done[i] = lv_obj_has_state(cb, LV_STATE_CHECKED);
-        save_todo();
+    lv_obj_t* row = (lv_obj_t*)lv_event_get_current_target(e);
+    int       i   = (int)(intptr_t)lv_obj_get_user_data(row);
+    if (i < 0 || i >= s_n) {
+        return;
+    }
+    s_done[i]         = !s_done[i];
+    lv_obj_t* check   = lv_obj_get_child(row, 0);
+    lv_obj_t* label   = lv_obj_get_child(row, 1);
+    frij_check_set(check, s_done[i], true);
+    lv_obj_set_style_text_color(label, lv_color_hex(s_done[i] ? FRIJ_TEXT_2 : FRIJ_TEXT), LV_PART_MAIN);
+    save_todo();
+}
+
+static void build_list(lv_obj_t* parent)
+{
+    lv_obj_t* col = page_column(parent);
+
+    frij_label(col, "Todo", FRIJ_FONT_TITLE, FRIJ_TEXT);
+    lv_obj_t* sub = frij_label(col, "", FRIJ_FONT_BODY, FRIJ_TEXT_2);
+    lv_label_set_text_fmt(sub, "%d of %d done", done_count(), s_n);
+
+    if (s_n == 0) {
+        frij_empty_state(col, "Nothing yet");
+        return;
+    }
+
+    for (int i = 0; i < s_n; i++) {
+        lv_obj_t* row = frij_surface_row(col);
+        lv_obj_set_user_data(row, (void*)(intptr_t)i);
+        lv_obj_add_event_cb(row, on_toggle, LV_EVENT_CLICKED, NULL);
+
+        frij_check(row, s_done[i], FRIJ_PRIMARY);
+        lv_obj_t* label = frij_label(row, s_text[i], FRIJ_FONT_BODY,
+                                     s_done[i] ? FRIJ_TEXT_2 : FRIJ_TEXT);
+        lv_obj_set_flex_grow(label, 1);
+
+        frij_anim_enter(row, i * 45);  // staggered fade + rise
     }
 }
 
@@ -123,51 +157,41 @@ static void on_toggle(lv_event_t* e)
 static void glance(lv_obj_t* parent)
 {
     load_todo();
-    center_column(parent);
+    lv_obj_t* col = page_column(parent);
 
-    lv_obj_t* title = lv_label_create(parent);
-    lv_label_set_text(title, "Todo");
-    lv_obj_set_style_text_color(title, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
+    lv_obj_t* ring  = frij_progress_ring(col, 72, done_pct(), FRIJ_PRIMARY);
+    lv_obj_t* ringl = frij_label(ring, "", FRIJ_FONT_BODY, FRIJ_TEXT);
+    lv_label_set_text_fmt(ringl, "%d%%", done_pct());
+    lv_obj_center(ringl);
 
-    lv_obj_t* sub = lv_label_create(parent);
-    lv_label_set_text_fmt(sub, "%d/%d done", done_count(), s_n);
-    lv_obj_set_style_text_color(sub, lv_color_hex(0xBFD8C9), LV_PART_MAIN);
+    frij_label(col, "Todo", FRIJ_FONT_TITLE, FRIJ_TEXT);
+    lv_obj_t* sub = frij_label(col, "", FRIJ_FONT_BODY, FRIJ_TEXT_2);
+    lv_label_set_text_fmt(sub, "%d of %d", done_count(), s_n);
 }
 
 static void screen(lv_obj_t* parent, int index)
 {
-    center_column(parent);
-
     if (index == 0) {
-        frij_store_pull(STORE_KEY);  // fetch latest from the cloud
+        frij_store_pull(STORE_KEY);
         load_todo();
-        for (int i = 0; i < s_n; i++) {
-            lv_obj_t* item = lv_checkbox_create(parent);
-            lv_checkbox_set_text(item, s_text[i]);
-            lv_obj_set_style_text_color(item, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
-            if (s_done[i]) {
-                lv_obj_add_state(item, LV_STATE_CHECKED);
-            }
-            lv_obj_add_event_cb(item, on_toggle, LV_EVENT_CLICKED, (void*)(intptr_t)i);
-        }
+        build_list(parent);
     } else if (index == 1) {
-        lv_obj_t* t = lv_label_create(parent);
-        lv_label_set_text(t, LV_SYMBOL_PLUS "  Add item");
-        lv_obj_set_style_text_color(t, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
-        tinted_label(parent, "(from the web app)");
+        frij_empty_state(page_column(parent), "Add from\nthe web app");
     } else {
         load_todo();
-        lv_obj_t* t = lv_label_create(parent);
-        lv_label_set_text(t, "Stats");
-        lv_obj_set_style_text_color(t, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
-        lv_obj_t* s = tinted_label(parent, "");
-        lv_label_set_text_fmt(s, "%d items\n%d done", s_n, done_count());
-        lv_obj_set_style_text_align(s, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+        lv_obj_t* col   = page_column(parent);
+        lv_obj_t* ring  = frij_progress_ring(col, 84, done_pct(), FRIJ_PRIMARY);
+        lv_obj_t* ringl = frij_label(ring, "", FRIJ_FONT_TITLE, FRIJ_TEXT);
+        lv_label_set_text_fmt(ringl, "%d%%", done_pct());
+        lv_obj_center(ringl);
+        frij_label(col, "Stats", FRIJ_FONT_TITLE, FRIJ_TEXT);
+        lv_obj_t* s = frij_label(col, "", FRIJ_FONT_BODY, FRIJ_TEXT_2);
+        lv_label_set_text_fmt(s, "%d items  -  %d done", s_n, done_count());
     }
 }
 
 const frij_app_t* todo_app(void)
 {
-    static const frij_app_t app = {"Todo", 0x14512F, glance, 3, screen};
+    static const frij_app_t app = {"Todo", FRIJ_SURFACE_1, glance, 3, screen};
     return &app;
 }

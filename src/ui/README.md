@@ -6,11 +6,23 @@ theme, list rows, …) as patterns repeat.
 
 ## Now
 
+- `theme.h` — design tokens: colors (`FRIJ_PRIMARY`, `FRIJ_SURFACE_*`, …),
+  fonts, 4pt spacing, radius, motion. Use these instead of hardcoding values.
+- `components.*` — themed widgets:
+  - `frij_col` / `frij_label` — layout + typed text.
+  - `frij_surface_row` — rounded Surface-2 row with press feedback.
+  - `frij_check` / `frij_check_set` — circular check with a pop animation.
+  - `frij_progress_ring` — thin arc gauge.
+  - `frij_empty_state` — round "nothing here" placeholder.
+  - `frij_anim_enter` — fade + rise entrance (stagger lists with a delay).
 - `carousel.*` — a horizontal, looping, finger-following pager. Input-free: the
-  owner calls `drag(dx)` during a drag and `end(dx)` on release. No loop when
-  `count <= 1`.
+  owner calls `drag(dx)` / `end(dx)`. No loop when `count <= 1`.
 
 ## Guideline
 
-A component here takes an `lv_obj_t* parent` (and plain data), never app
-specifics. If two apps would copy the same widget, put it here instead.
+A component takes an `lv_obj_t* parent` (and plain data), never app specifics,
+and styles itself from `theme.h`. If two apps would copy the same widget or
+look, put it here. Motion stays subtle: ~200–250ms, ease-out.
+
+No real font yet for "SF Pro Rounded" — we map the design's type scale onto
+LVGL's Montserrat (14/20/26). Swap in a rounded font later in one place (theme.h).
