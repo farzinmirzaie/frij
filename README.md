@@ -14,8 +14,7 @@ Built with [LVGL](https://github.com/lvgl/lvgl) v9 and
 Runs on your computer via SDL2 — no hardware required (Apple Silicon macOS):
 
 ```sh
-pio run -e emulator_Dial        # quick 240px round emulator (M5GFX SDL)
-pio run -e emulator_StopWatch    # 466x466 round, device resolution (LVGL SDL)
+pio run    # 466x466 round emulator at device resolution (emulator_StopWatch)
 ```
 
 Navigate: **drag** to swipe (left/right between apps, up to open an app),

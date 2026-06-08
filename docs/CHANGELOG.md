@@ -4,6 +4,22 @@ Newest first. One short entry per change.
 
 ## 2026-06-08
 
+- Fixed a black screen in the LVGL-SDL emulator: it had no tick source, so
+  nothing rendered. Set `lv_tick_set_cb(SDL_GetTicks)` in `sdl_lvgl_main.cpp`.
+- Switched LVGL to the **system allocator** (`LV_STDLIB_CLIB`); the built-in
+  64KB pool was far too small for 466×466 (render layers, clip masks, snapshots
+  failed/hung). Important for the device too (it has 8MB PSRAM).
+- Added a headless **snapshot tool** (`snapshot` env, `src/utility/snapshot_main.cpp`)
+  that renders the UI offscreen to a BMP — lets the UI be checked visually where
+  `screencapture` can't reach the display.
+- Round-clipped the UI: the launcher clips `s_root` to a circle, fills the
+  corners with a light-gray "outside" color (`FRIJ_OUTSIDE`), and **ignores
+  touches outside the circle**. Removed the emulator bezel overlay (clip handles it).
+- Cleanup: **dropped `emulator_Dial`** (and `sdl_main.cpp`). `emulator_StopWatch`
+  is now the default and only emulator. Updated all docs.
+
+## 2026-06-08
+
 - Added a **466×466 round emulator** (`emulator_StopWatch`) on LVGL's own SDL
   driver — previews the UI at the real device resolution + round bezel, app code
   unchanged (`src/utility/sdl_lvgl_main.cpp`; `LV_USE_SDL` gated by

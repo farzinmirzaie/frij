@@ -15,7 +15,7 @@ hardware. Board details: [docs/HARDWARE.md](docs/HARDWARE.md).
 ## Quick start
 
 ```bash
-pio run -e emulator_Dial   # build + run the SDL2 emulator
+pio run   # build + run the 466x466 round SDL emulator (emulator_StopWatch, default)
 ```
 
 If `pio` is not on PATH, it ships with the VS Code PlatformIO extension at
@@ -38,7 +38,7 @@ If `pio` is not on PATH, it ships with the VS Code PlatformIO extension at
 Each `src/*` folder has its own `README.md` with the details.
 | `include/lv_conf.h` | LVGL v9 config (LVGL's `lv_conf.h` template, trimmed) |
 | `support/sdl2_build_extra.py` | SDL2 build helper for the emulator |
-| `platformio.ini` | envs: `emulator_Dial` (240), `emulator_StopWatch` (466 round, LVGL-SDL), `device` (WIP) |
+| `platformio.ini` | envs: `emulator_StopWatch` (466 round, LVGL-SDL, default), `device` (WIP) |
 | `docs/` | Living project docs — see below |
 
 ## Key patterns

@@ -25,29 +25,16 @@ void lvgl_port_unlock(void) {}
 
 static const int FRIJ_RES = 466;  // StopWatch round AMOLED
 
-static void add_round_bezel(void)
-{
-    // A thin circle on the top layer marks where the round panel clips content.
-    lv_obj_t* ring = lv_obj_create(lv_layer_top());
-    lv_obj_remove_style_all(ring);
-    lv_obj_set_size(ring, FRIJ_RES, FRIJ_RES);
-    lv_obj_center(ring);
-    lv_obj_set_style_radius(ring, LV_RADIUS_CIRCLE, LV_PART_MAIN);
-    lv_obj_set_style_border_width(ring, 2, LV_PART_MAIN);
-    lv_obj_set_style_border_color(ring, lv_color_hex(0x2A2A33), LV_PART_MAIN);
-    lv_obj_remove_flag(ring, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_remove_flag(ring, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_remove_flag(lv_layer_top(), LV_OBJ_FLAG_CLICKABLE);  // let input pass through
-}
-
 int main(int, char**)
 {
     SDL_SetMainReady();
     lv_init();
+    lv_tick_set_cb(SDL_GetTicks);  // give LVGL a millisecond clock (else nothing renders)
     lv_sdl_window_create(FRIJ_RES, FRIJ_RES);
     lv_sdl_mouse_create();  // drag = touch
 
-    add_round_bezel();
+    // The launcher clips its UI to a circle and fills the corners with the
+    // "outside" color, so the round shape is simulated here automatically.
     user_app();
 
     while (true) {

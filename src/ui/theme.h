@@ -31,6 +31,7 @@
 #define FRIJ_BORDER     0x2A2A33
 #define FRIJ_TEXT       0xF2F2F7  // primary text
 #define FRIJ_TEXT_2     0xA1A1AA  // secondary / muted
+#define FRIJ_OUTSIDE    0xCED0D5  // outside the round panel (emulator bezel area)
 
 // ---- Type (SF Pro Rounded, converted via lv_font_conv) --------------------
 #define FRIJ_FONT_CLOCK   (&frij_sf_clock)    // 46 Semibold (digits + colon)

@@ -40,8 +40,9 @@ static layer_t          s_cur    = HOME;
 
 // input / animation state
 static lv_point_t s_start;
-static int        s_axis = 0;       // 0 undecided, 1 horizontal, 2 vertical
-static bool       s_anim = false;   // a vertical transition is animating
+static int        s_axis    = 0;     // 0 undecided, 1 horizontal, 2 vertical
+static bool       s_anim    = false; // a vertical transition is animating
+static bool       s_outside = false; // press began outside the round area
 
 static int height(void)
 {
@@ -243,6 +244,19 @@ static void on_input(lv_event_t* e)
     if (code == LV_EVENT_PRESSED) {
         lv_indev_get_point(indev, &s_start);
         s_axis = 0;
+        // ignore touches outside the round panel
+        int w  = lv_obj_get_width(s_root);
+        int h  = lv_obj_get_height(s_root);
+        int r  = (w < h ? w : h) / 2;
+        int dx = s_start.x - w / 2;
+        int dy = s_start.y - h / 2;
+        s_outside = (dx * dx + dy * dy) > (r * r);
+        return;
+    }
+    if (s_outside) {
+        if (code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST) {
+            s_outside = false;
+        }
         return;
     }
     if (code == LV_EVENT_PRESSING) {
@@ -294,8 +308,11 @@ void frij_launcher_start(void)
         return;
     }
 
+    // The panel is round: clip everything to a circle and show a neutral
+    // "outside" color in the corners (only visible in the square emulator
+    // window; the real panel has no corners).
     lv_obj_t* screen = lv_screen_active();
-    lv_obj_set_style_bg_color(screen, lv_color_hex(COLOR_BG), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(screen, lv_color_hex(FRIJ_OUTSIDE), LV_PART_MAIN);
     lv_obj_clear_flag(screen, LV_OBJ_FLAG_SCROLLABLE);
 
     s_root = lv_obj_create(screen);
@@ -303,7 +320,8 @@ void frij_launcher_start(void)
     lv_obj_set_pos(s_root, 0, 0);
     lv_obj_set_style_bg_color(s_root, lv_color_hex(COLOR_BG), LV_PART_MAIN);
     lv_obj_set_style_border_width(s_root, 0, LV_PART_MAIN);
-    lv_obj_set_style_radius(s_root, 0, LV_PART_MAIN);
+    lv_obj_set_style_radius(s_root, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+    lv_obj_set_style_clip_corner(s_root, true, LV_PART_MAIN);  // clip children to the circle
     lv_obj_set_style_pad_all(s_root, 0, LV_PART_MAIN);
     lv_obj_clear_flag(s_root, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_event_cb(s_root, on_input, LV_EVENT_ALL, NULL);

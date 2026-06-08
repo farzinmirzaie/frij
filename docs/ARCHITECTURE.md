@@ -19,13 +19,12 @@ M5GFX (draws pixels)                      (lib dep: M5GFX)
 
 ## Boot flow
 
-1. **Emulator only:** `sdl_main.cpp` provides `main()` → opens the SDL2 window
-   and calls `setup()` then `loop()` repeatedly. On real hardware, Arduino
-   provides `main()` and calls the same `setup()`/`loop()`.
-2. `setup()` (`src/main.cpp`): `gfx.init()` → `lvgl_port_init(gfx)` → `user_app()`.
-3. `loop()` just idles; LVGL renders on its own task/timer inside the port.
+1. **Emulator:** `sdl_lvgl_main.cpp` provides `main()` → creates a 466×466 LVGL
+   SDL window + mouse input, then calls `user_app()` and runs `lv_timer_handler`.
+2. **Device:** `main.cpp` `setup()` does `gfx.init()` → `lvgl_port_init(gfx)` →
+   `user_app()`; `loop()` idles while LVGL renders on its own task.
 
-So you almost never touch `main.cpp` — build the UI in `user_app()`.
+Either way the UI is built in `user_app()` — you almost never touch the entry files.
 
 ## The port layer (`src/utility/lvgl_port_m5stack.cpp`)
 
@@ -36,8 +35,8 @@ and a tick. It also exposes the **lock** you must use:
   from `user_app()` or callbacks, because LVGL renders on a separate task and is
   not thread-safe.
 
-This file is excluded from the emulator build (`build_src_filter` in
-`platformio.ini`); the emulator uses `sdl_main.cpp` instead.
+This file is the device path; the emulator excludes it (`build_src_filter`) and
+uses `sdl_lvgl_main.cpp` instead.
 
 ## Launcher + apps
 
@@ -56,11 +55,11 @@ registry and hardcodes no app names; `apps.cpp` is the single glue point.
 
 ## Emulator vs device
 
-| | Emulator (`emulator_Dial`) | Device (`device`) |
+| | Emulator (`emulator_StopWatch`) | Device (`device`) |
 | --- | --- | --- |
-| Platform | `native` + SDL2 | `espressif32` + Arduino |
-| Screen | round 240×240 frame | round AMOLED (see HARDWARE.md) |
-| Entry | `sdl_main.cpp` `main()` | Arduino runtime |
+| Platform | `native` + LVGL SDL | `espressif32` + Arduino |
+| Screen | 466×466, clipped to a circle | round AMOLED (see HARDWARE.md) |
+| Entry | `sdl_lvgl_main.cpp` `main()` | Arduino runtime via `main.cpp` |
 | Status | works now | WIP — placeholder env |
 
 Because resolutions differ, **don't hardcode pixel positions** — center / align
