@@ -78,6 +78,7 @@ static lv_obj_t* round_button(lv_obj_t* parent, const char* sym, lv_event_cb_t c
     lv_obj_set_style_transform_scale_x(btn, 236, LV_STATE_PRESSED);
     lv_obj_set_style_transform_scale_y(btn, 236, LV_STATE_PRESSED);
     lv_obj_set_style_transition(btn, &tr, LV_PART_MAIN);
+    frij_haptic_attach(btn);
     lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, NULL);
 
     lv_obj_t* label = lv_label_create(btn);

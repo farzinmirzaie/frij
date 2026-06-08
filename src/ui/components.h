@@ -11,6 +11,10 @@
 // Shorter side of the active display, in px. Use to size things responsively.
 int frij_screen_min(void);
 
+// Give any object a light haptic tap when pressed (used by the components;
+// apps can call it on their own custom widgets).
+void frij_haptic_attach(lv_obj_t* obj);
+
 // Apply the standard subtle page-background gradient to an object's MAIN part.
 void frij_apply_bg(lv_obj_t* obj);
 

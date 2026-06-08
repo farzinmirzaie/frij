@@ -2,7 +2,14 @@
 
 #include <stdint.h>
 
+#include "system/haptics.h"
 #include "theme.h"
+
+static void on_press_haptic(lv_event_t* e)
+{
+    (void)e;
+    frij_haptic(FRIJ_HAPTIC_TAP);
+}
 
 // ---- animation exec callbacks ---------------------------------------------
 
@@ -56,6 +63,11 @@ void frij_apply_bg(lv_obj_t* obj)
 {
     // calm dark page wash, slightly darker toward the bottom
     grad_v(obj, FRIJ_SURFACE_1, 0x07070A);
+}
+
+void frij_haptic_attach(lv_obj_t* obj)
+{
+    lv_obj_add_event_cb(obj, on_press_haptic, LV_EVENT_PRESSED, NULL);
 }
 
 lv_obj_t* frij_col(lv_obj_t* parent, int gap)
@@ -114,6 +126,7 @@ lv_obj_t* frij_surface_row(lv_obj_t* parent)
     // press feedback: lift to Surface-3 with a quick fade
     lv_obj_set_style_bg_color(r, lv_color_hex(FRIJ_SURFACE_3), LV_STATE_PRESSED);
     lv_obj_set_style_transition(r, &tr, LV_PART_MAIN);
+    frij_haptic_attach(r);
     return r;
 }
 
@@ -170,6 +183,7 @@ void frij_check_set(lv_obj_t* check, bool checked, bool animate)
         lv_anim_set_duration(&a, 180);
         lv_anim_set_path_cb(&a, lv_anim_path_overshoot);
         lv_anim_start(&a);
+        frij_haptic(FRIJ_HAPTIC_SUCCESS);
     }
 }
 
@@ -234,6 +248,7 @@ lv_obj_t* frij_slider(lv_obj_t* parent, int min, int max, int value, uint32_t ac
     lv_obj_set_style_radius(s, LV_RADIUS_CIRCLE, LV_PART_INDICATOR);
     lv_obj_set_style_bg_color(s, lv_color_hex(0xFFFFFF), LV_PART_KNOB);
     lv_obj_set_style_pad_all(s, 5, LV_PART_KNOB);  // knob size
+    frij_haptic_attach(s);
     return s;
 }
 
@@ -246,6 +261,7 @@ lv_obj_t* frij_toggle(lv_obj_t* parent, bool on, uint32_t accent)
     if (on) {
         lv_obj_add_state(sw, LV_STATE_CHECKED);
     }
+    frij_haptic_attach(sw);
     return sw;
 }
 

@@ -12,5 +12,6 @@
 LV_FONT_DECLARE(frij_sf_body)     // 14 px, Regular
 LV_FONT_DECLARE(frij_sf_title)    // 20 px, Semibold
 LV_FONT_DECLARE(frij_sf_display)  // 26 px, Semibold
+LV_FONT_DECLARE(frij_sf_clock)    // 46 px, Semibold (digits + colon only)
 
 #endif  // FRIJ_FONTS_H

@@ -4,6 +4,7 @@
 
 #include "store/store.h"
 #include "system/brightness.h"
+#include "system/haptics.h"
 #include "ui/components.h"
 #include "ui/theme.h"
 
@@ -67,6 +68,14 @@ static void on_volume(lv_event_t* e)
     // TODO(device): apply to the ES8311 codec.
 }
 
+static void on_vibration(lv_event_t* e)
+{
+    lv_obj_t* sw = (lv_obj_t*)lv_event_get_target(e);
+    bool      on = lv_obj_has_state(sw, LV_STATE_CHECKED);
+    frij_haptics_set_enabled(on);
+    save_bool("haptics", on);
+}
+
 // ---- screens ---------------------------------------------------------------
 
 static void toggle_row(lv_obj_t* col, const char* text, const char* key, bool def, lv_event_cb_t cb)
@@ -104,6 +113,7 @@ static void screen(lv_obj_t* parent, int index)
         case 2:  // General
             frij_label(col, "General", FRIJ_FONT_TITLE, FRIJ_TEXT);
             toggle_row(col, "24-hour time", "clock24", true, on_clock24);
+            toggle_row(col, "Vibration", "haptics", true, on_vibration);
             break;
 
         case 3:  // Network

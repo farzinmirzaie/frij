@@ -11,3 +11,7 @@ Apps call these instead of touching `utility/`, keeping app isolation.
 
 - `brightness.*` — `frij_set_brightness(pct)`. No-op on the emulator; sets the
   panel backlight on device.
+- `haptics.*` — `frij_haptic(kind)` + an enable flag. UI components call it on
+  interactions (`frij_haptic_attach`); Settings → General → Vibration toggles it
+  (persisted). No-op on the emulator; pulses the motor on device (TODO: wire the
+  StopWatch motor).

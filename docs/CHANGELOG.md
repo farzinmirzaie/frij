@@ -4,6 +4,16 @@ Newest first. One short entry per change.
 
 ## 2026-06-08
 
+- Added **haptics** as a board service (`src/system/haptics`): UI components
+  fire a tap/success pulse on interactions (`frij_haptic_attach`); Counter
+  buttons too. Settings → General → **Vibration** toggles it (persisted, applied
+  at boot). No-op on the emulator; motor pulse on device is a TODO.
+- Redesigned the **Home clock face**: a thin seconds ring (scales to 80% of the
+  screen) with large SF Pro Rounded numerals + a refined date (no leading zero,
+  AM/PM in 12h) centered inside. Added a 46px `frij_sf_clock` font.
+
+## 2026-06-08
+
 - **SF Pro Rounded** is now the UI font (converted via lv_font_conv, in
   `src/ui/fonts/`; symbols stay on Montserrat via `FRIJ_FONT_SYMBOL`). See the
   fonts README for regen + the license caveat.

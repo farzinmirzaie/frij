@@ -43,14 +43,25 @@ static void render(clock_ctx_t* c)
         lv_label_set_text(c->time, tp);
     }
 
-    char d[40];
-    strftime(d, sizeof(d), c->h24 ? "%a %d %b" : "%a %d %b  %p", &tmv);
+    // date: "Wed 8 Jun" (+ AM/PM in 12h), day with no leading zero
+    char wd[8];
+    char mo[8];
+    strftime(wd, sizeof(wd), "%a", &tmv);
+    strftime(mo, sizeof(mo), "%b", &tmv);
+    char d[48];
+    if (c->h24) {
+        lv_snprintf(d, sizeof(d), "%s %d %s", wd, tmv.tm_mday, mo);
+    } else {
+        char ap[4];
+        strftime(ap, sizeof(ap), "%p", &tmv);
+        lv_snprintf(d, sizeof(d), "%s %d %s  %s", wd, tmv.tm_mday, mo, ap);
+    }
     if (c->date) {
         lv_label_set_text(c->date, d);
     }
 
     if (c->arc) {
-        lv_arc_set_value(c->arc, tmv.tm_sec);  // sweep once a minute
+        lv_arc_set_value(c->arc, tmv.tm_sec);  // seconds sweep once a minute
     }
 }
 
@@ -73,14 +84,19 @@ static void build_clock(lv_obj_t* parent)
     clock_ctx_t* c   = (clock_ctx_t*)lv_malloc(sizeof(clock_ctx_t));
     c->h24           = read_clock24();
 
-    // seconds ring with the time centered inside (scales with the screen)
-    int ring = frij_screen_min() * 62 / 100;
+    // A thin seconds ring fills most of the face (scales with the screen)...
+    int ring = frij_screen_min() * 80 / 100;
     c->arc   = frij_progress_ring(col, ring, 0, ACCENT);
     lv_arc_set_range(c->arc, 0, 60);
-    c->time = frij_label(c->arc, "--:--", FRIJ_FONT_DISPLAY, FRIJ_TEXT);
-    lv_obj_center(c->time);
+    lv_obj_set_style_arc_width(c->arc, 5, LV_PART_MAIN);
+    lv_obj_set_style_arc_width(c->arc, 5, LV_PART_INDICATOR);
 
-    c->date = frij_label(col, "", FRIJ_FONT_BODY, FRIJ_TEXT_2);
+    // ...with the big time + date stacked dead-center inside it.
+    lv_obj_t* inner = frij_col(c->arc, 2);
+    lv_obj_set_width(inner, LV_SIZE_CONTENT);
+    lv_obj_center(inner);
+    c->time = frij_label(inner, "--:--", FRIJ_FONT_CLOCK, FRIJ_TEXT);
+    c->date = frij_label(inner, "", FRIJ_FONT_BODY, FRIJ_TEXT_2);
     render(c);
 
     lv_timer_t* timer = lv_timer_create(tick, 1000, c);

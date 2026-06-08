@@ -33,6 +33,7 @@
 #define FRIJ_TEXT_2     0xA1A1AA  // secondary / muted
 
 // ---- Type (SF Pro Rounded, converted via lv_font_conv) --------------------
+#define FRIJ_FONT_CLOCK   (&frij_sf_clock)    // 46 Semibold (digits + colon)
 #define FRIJ_FONT_DISPLAY (&frij_sf_display)  // 26 Semibold
 #define FRIJ_FONT_TITLE   (&frij_sf_title)    // 20 Semibold
 #define FRIJ_FONT_BODY    (&frij_sf_body)     // 14 Regular
