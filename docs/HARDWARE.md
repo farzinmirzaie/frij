@@ -7,10 +7,14 @@ untouched.
 
 This file is just reference notes for whichever boards we actually run on.
 
-## Emulator (daily driver)
+## Emulators (PC, no hardware)
 
-- PC + SDL2, env `emulator_Dial`. No hardware needed.
-- Uses a round 240×240 frame as a stand-in. Design for a **round** screen.
+- **`emulator_Dial`** — M5GFX SDL, round 240×240 frame. The lightweight daily driver.
+- **`emulator_StopWatch`** — LVGL's own SDL driver at the real **466×466** with a
+  round-bezel outline. Use it to check the UI at device resolution + round shape.
+  It bypasses M5GFX (`src/utility/sdl_lvgl_main.cpp`); app code is unchanged.
+
+Design for a **round** screen either way.
 
 ## First dev board (current) — M5Stack StopWatch (C152)
 

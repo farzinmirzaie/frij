@@ -4,6 +4,13 @@ Newest first. One short entry per change.
 
 ## 2026-06-08
 
+- Added a **466×466 round emulator** (`emulator_StopWatch`) on LVGL's own SDL
+  driver — previews the UI at the real device resolution + round bezel, app code
+  unchanged (`src/utility/sdl_lvgl_main.cpp`; `LV_USE_SDL` gated by
+  `FRIJ_USE_LV_SDL`). Fixed `build_src_filter` paths to be src-relative.
+
+## 2026-06-08
+
 - Carousel now shows an **auto-fading page-dot indicator** at the bottom: fades
   in on swipe, idles out after ~1.4s, active dot uses the layer's accent, hidden
   for single-page layers. Per-instance timer cleaned up on viewport delete.

@@ -38,7 +38,7 @@ If `pio` is not on PATH, it ships with the VS Code PlatformIO extension at
 Each `src/*` folder has its own `README.md` with the details.
 | `include/lv_conf.h` | LVGL v9 config (LVGL's `lv_conf.h` template, trimmed) |
 | `support/sdl2_build_extra.py` | SDL2 build helper for the emulator |
-| `platformio.ini` | 2 envs: `emulator_Dial`, `device` (real board, WIP) |
+| `platformio.ini` | envs: `emulator_Dial` (240), `emulator_StopWatch` (466 round, LVGL-SDL), `device` (WIP) |
 | `docs/` | Living project docs — see below |
 
 ## Key patterns
