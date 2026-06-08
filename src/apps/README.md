@@ -31,8 +31,16 @@ That's it — the launcher reads the registry; no app names are hardcoded there.
 `frij_registry_set_settings(...)`, so the launcher shows it in the **settings
 slot** (swipe down) instead of the home carousel. Its `build_glance` is unused.
 
+## Color scheme
+
+Each app picks an accent from `ui/theme.h` as its `color` and passes it to
+components (checks, rings, sliders…). The page background stays Surface-1, so
+every app shares the look but has its own scheme.
+
 ## Examples
 
-- `todo/` — a checklist; list is JSON synced to the cloud (3 screens).
-- `counter/` — a number with ±; value persists (1 screen).
-- `settings/` — device settings (2 screens).
+- `home/` — watch face (time + date), registered first so it's the landing tile. Purple.
+- `todo/` — cloud-synced checklist, 3 screens. Amber.
+- `counter/` — a number with ±, persists. Blue.
+- `settings/` — brightness slider + 24-hour toggle + about, 3 screens. Purple.
+  Registered in the settings slot (swipe down), not the home carousel.

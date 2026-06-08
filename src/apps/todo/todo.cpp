@@ -24,6 +24,8 @@
 #define TEXT_LEN  40
 #define STORE_KEY "todo"
 
+static const uint32_t ACCENT = FRIJ_YELLOW;  // Todo's color scheme
+
 static char s_text[MAX_ITEMS][TEXT_LEN];
 static bool s_done[MAX_ITEMS];
 static int  s_n = 0;
@@ -98,16 +100,6 @@ static int done_pct(void)
     return s_n > 0 ? (done_count() * 100 / s_n) : 0;
 }
 
-// ---- centered column that fits a round screen -----------------------------
-
-static lv_obj_t* page_column(lv_obj_t* parent)
-{
-    lv_obj_t* col = frij_col(parent, FRIJ_SP_S);
-    lv_obj_set_width(col, LV_PCT(86));
-    lv_obj_center(col);
-    return col;
-}
-
 // ---- the checklist screen --------------------------------------------------
 
 static void on_toggle(lv_event_t* e)
@@ -127,7 +119,7 @@ static void on_toggle(lv_event_t* e)
 
 static void build_list(lv_obj_t* parent)
 {
-    lv_obj_t* col = page_column(parent);
+    lv_obj_t* col = frij_page(parent);
 
     frij_label(col, "Todo", FRIJ_FONT_TITLE, FRIJ_TEXT);
     lv_obj_t* sub = frij_label(col, "", FRIJ_FONT_BODY, FRIJ_TEXT_2);
@@ -143,7 +135,7 @@ static void build_list(lv_obj_t* parent)
         lv_obj_set_user_data(row, (void*)(intptr_t)i);
         lv_obj_add_event_cb(row, on_toggle, LV_EVENT_CLICKED, NULL);
 
-        frij_check(row, s_done[i], FRIJ_PRIMARY);
+        frij_check(row, s_done[i], ACCENT);
         lv_obj_t* label = frij_label(row, s_text[i], FRIJ_FONT_BODY,
                                      s_done[i] ? FRIJ_TEXT_2 : FRIJ_TEXT);
         lv_obj_set_flex_grow(label, 1);
@@ -157,9 +149,9 @@ static void build_list(lv_obj_t* parent)
 static void glance(lv_obj_t* parent)
 {
     load_todo();
-    lv_obj_t* col = page_column(parent);
+    lv_obj_t* col = frij_page(parent);
 
-    lv_obj_t* ring  = frij_progress_ring(col, 72, done_pct(), FRIJ_PRIMARY);
+    lv_obj_t* ring  = frij_progress_ring(col, 72, done_pct(), ACCENT);
     lv_obj_t* ringl = frij_label(ring, "", FRIJ_FONT_BODY, FRIJ_TEXT);
     lv_label_set_text_fmt(ringl, "%d%%", done_pct());
     lv_obj_center(ringl);
@@ -176,11 +168,11 @@ static void screen(lv_obj_t* parent, int index)
         load_todo();
         build_list(parent);
     } else if (index == 1) {
-        frij_empty_state(page_column(parent), "Add from\nthe web app");
+        frij_empty_state(frij_page(parent), "Add from\nthe web app");
     } else {
         load_todo();
-        lv_obj_t* col   = page_column(parent);
-        lv_obj_t* ring  = frij_progress_ring(col, 84, done_pct(), FRIJ_PRIMARY);
+        lv_obj_t* col   = frij_page(parent);
+        lv_obj_t* ring  = frij_progress_ring(col, 84, done_pct(), ACCENT);
         lv_obj_t* ringl = frij_label(ring, "", FRIJ_FONT_TITLE, FRIJ_TEXT);
         lv_label_set_text_fmt(ringl, "%d%%", done_pct());
         lv_obj_center(ringl);
@@ -192,6 +184,6 @@ static void screen(lv_obj_t* parent, int index)
 
 const frij_app_t* todo_app(void)
 {
-    static const frij_app_t app = {"Todo", FRIJ_SURFACE_1, glance, 3, screen};
+    static const frij_app_t app = {"Todo", ACCENT, glance, 3, screen};
     return &app;
 }

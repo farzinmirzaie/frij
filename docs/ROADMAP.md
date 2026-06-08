@@ -20,8 +20,10 @@ target whatever board we run on (see [HARDWARE.md](HARDWARE.md)).
 - [x] **P1 — App framework**: isolated app contract (`app.h`) + registry.
 - [x] **Launcher A**: looping glance carousel, swipe-up to open an app, Back
   via key/button, layer state machine. See [../src/launcher/README.md](../src/launcher/README.md).
-- [ ] **Launcher B**: real Settings layer (swipe-down) — brightness; wifi is device-only.
-- [ ] **Launcher C**: multi-screen app carousels + glance data refresh (`on_show`).
+- [x] **Launcher B**: Settings (brightness slider + 24h toggle + about, persisted).
+- [x] **Home app**: watch-face tile (time + date) registered first as the landing glance.
+- [x] **Design system**: `ui/theme.h` tokens + components; per-app accent colors.
+- [ ] **Launcher C**: glance data refresh / live tiles (`on_show` hook).
 - [ ] **P2 — Flesh out Todos**: real add/toggle/delete (currently a fixed checklist).
 - [x] **Storage 1**: shared `frij_store` (key→JSON) + emulator file backend;
   Counter persists. See [STORAGE.md](STORAGE.md).

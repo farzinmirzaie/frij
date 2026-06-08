@@ -3,21 +3,19 @@
 #include <stdlib.h>  // atoi
 
 #include "store/store.h"
+#include "ui/components.h"
+#include "ui/theme.h"
 
 /*
- * Counter — a number with - and + buttons.
- *
- * Includes only "app.h" (+ the shared store); knows nothing about the launcher.
- *   glance : shows the current value
- *   screen : the value plus -/+ buttons (one screen)
- *
- * The value persists via the shared store under the key "counter".
+ * Counter — a number with - and + buttons. Persists via the store ("counter").
+ * Color scheme: blue.
  */
 
-static const char* STORE_KEY = "counter";
+static const char*    STORE_KEY = "counter";
+static const uint32_t ACCENT    = FRIJ_ACCENT;  // blue
 
 static int       s_count = 0;
-static lv_obj_t* s_value = NULL;  // the big number label on the app screen
+static lv_obj_t* s_value = NULL;
 
 static void load_count(void)
 {
@@ -57,13 +55,19 @@ static void on_plus(lv_event_t* e)
     save_count();
 }
 
-static lv_obj_t* make_button(lv_obj_t* parent, const char* text, lv_event_cb_t cb)
+static lv_obj_t* round_button(lv_obj_t* parent, const char* sym, lv_event_cb_t cb)
 {
     lv_obj_t* btn = lv_button_create(parent);
     lv_obj_set_size(btn, 56, 56);
+    lv_obj_set_style_radius(btn, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(btn, lv_color_hex(FRIJ_SURFACE_2), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(btn, lv_color_hex(FRIJ_SURFACE_3), LV_STATE_PRESSED);
+    lv_obj_set_style_shadow_width(btn, 0, LV_PART_MAIN);
     lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, NULL);
+
     lv_obj_t* label = lv_label_create(btn);
-    lv_label_set_text(label, text);
+    lv_label_set_text(label, sym);
+    lv_obj_set_style_text_color(label, lv_color_hex(ACCENT), LV_PART_MAIN);
     lv_obj_center(label);
     return btn;
 }
@@ -71,48 +75,38 @@ static lv_obj_t* make_button(lv_obj_t* parent, const char* text, lv_event_cb_t c
 static void glance(lv_obj_t* parent)
 {
     load_count();
+    lv_obj_t* col = frij_page(parent);
 
-    lv_obj_set_flex_flow(parent, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(parent, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
-                          LV_FLEX_ALIGN_CENTER);
-
-    lv_obj_t* title = lv_label_create(parent);
-    lv_label_set_text(title, "Counter");
-    lv_obj_set_style_text_color(title, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
-
-    lv_obj_t* value = lv_label_create(parent);
+    lv_obj_t* value = frij_label(col, "", FRIJ_FONT_DISPLAY, ACCENT);
     lv_label_set_text_fmt(value, "%d", s_count);
-    lv_obj_set_style_text_color(value, lv_color_hex(0x8A93A0), LV_PART_MAIN);
+    frij_label(col, "Counter", FRIJ_FONT_BODY, FRIJ_TEXT_2);
 }
 
 static void screen(lv_obj_t* parent, int index)
 {
-    (void)index;  // single screen
+    (void)index;
     frij_store_pull(STORE_KEY);
     load_count();
 
-    s_value = lv_label_create(parent);
-    lv_obj_set_style_text_color(s_value, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
-    lv_obj_set_style_text_font(s_value, &lv_font_montserrat_26, LV_PART_MAIN);
-    lv_obj_align(s_value, LV_ALIGN_CENTER, 0, -10);
+    lv_obj_t* col = frij_page(parent);
+    s_value       = frij_label(col, "", FRIJ_FONT_DISPLAY, FRIJ_TEXT);
     refresh();
 
-    lv_obj_t* row = lv_obj_create(parent);
+    lv_obj_t* row = lv_obj_create(col);
     lv_obj_set_size(row, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-    lv_obj_align(row, LV_ALIGN_CENTER, 0, 40);
     lv_obj_set_style_bg_opa(row, LV_OPA_TRANSP, LV_PART_MAIN);
     lv_obj_set_style_border_width(row, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(row, 0, LV_PART_MAIN);
     lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(row, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
-                          LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_column(row, 16, LV_PART_MAIN);
+    lv_obj_set_flex_align(row, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(row, FRIJ_SP_XL, LV_PART_MAIN);
 
-    make_button(row, LV_SYMBOL_MINUS, on_minus);
-    make_button(row, LV_SYMBOL_PLUS, on_plus);
+    round_button(row, LV_SYMBOL_MINUS, on_minus);
+    round_button(row, LV_SYMBOL_PLUS, on_plus);
 }
 
 const frij_app_t* counter_app(void)
 {
-    static const frij_app_t app = {"Counter", 0x123A6B, glance, 1, screen};
+    static const frij_app_t app = {"Counter", ACCENT, glance, 1, screen};
     return &app;
 }

@@ -5,6 +5,7 @@
 #include "lvgl.h"
 #include "lvgl_port_m5stack.hpp"
 #include "ui/carousel.h"
+#include "ui/theme.h"
 #include "registry.h"
 
 /*
@@ -25,7 +26,7 @@
 
 typedef enum { HOME, APP, SETTINGS } layer_t;
 
-static const uint32_t COLOR_BG      = 0x101418;
+static const uint32_t COLOR_BG      = FRIJ_SURFACE_1;
 static const int      VSNAP_PERCENT = 30;
 
 static lv_obj_t*       s_root     = NULL;
@@ -61,7 +62,7 @@ static void glance_builder(lv_obj_t* page, int index, void* user)
     if (!app) {
         return;
     }
-    paint_bg(page, app->color);
+    paint_bg(page, FRIJ_SURFACE_1);  // uniform dark; apps use their accent inside
     if (app->build_glance) {
         app->build_glance(page);
     }
@@ -73,7 +74,7 @@ static void app_screen_builder(lv_obj_t* page, int index, void* user)
     if (!app) {
         return;
     }
-    paint_bg(page, app->color);
+    paint_bg(page, FRIJ_SURFACE_1);
     if (app->build_screen) {
         app->build_screen(page, index);
     }

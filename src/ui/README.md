@@ -9,9 +9,11 @@ theme, list rows, …) as patterns repeat.
 - `theme.h` — design tokens: colors (`FRIJ_PRIMARY`, `FRIJ_SURFACE_*`, …),
   fonts, 4pt spacing, radius, motion. Use these instead of hardcoding values.
 - `components.*` — themed widgets:
-  - `frij_col` / `frij_label` — layout + typed text.
+  - `frij_col` / `frij_page` / `frij_label` — layout + typed text (`frij_page` is
+    the standard centered, round-screen-friendly body).
   - `frij_surface_row` — rounded Surface-2 row with press feedback.
   - `frij_check` / `frij_check_set` — circular check with a pop animation.
+  - `frij_slider` / `frij_toggle` — themed slider + switch (take an accent).
   - `frij_progress_ring` — thin arc gauge.
   - `frij_empty_state` — round "nothing here" placeholder.
   - `frij_anim_enter` — fade + rise entrance (stagger lists with a delay).

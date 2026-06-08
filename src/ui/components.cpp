@@ -46,6 +46,14 @@ lv_obj_t* frij_col(lv_obj_t* parent, int gap)
     return c;
 }
 
+lv_obj_t* frij_page(lv_obj_t* parent)
+{
+    lv_obj_t* col = frij_col(parent, FRIJ_SP_S);
+    lv_obj_set_width(col, LV_PCT(86));
+    lv_obj_center(col);
+    return col;
+}
+
 lv_obj_t* frij_label(lv_obj_t* parent, const char* text, const lv_font_t* font, uint32_t color)
 {
     lv_obj_t* l = lv_label_create(parent);
@@ -180,6 +188,35 @@ lv_obj_t* frij_empty_state(lv_obj_t* parent, const char* text)
 
     frij_label(box, text, FRIJ_FONT_BODY, FRIJ_TEXT_2);
     return box;
+}
+
+lv_obj_t* frij_slider(lv_obj_t* parent, int min, int max, int value, uint32_t accent)
+{
+    lv_obj_t* s = lv_slider_create(parent);
+    lv_obj_set_width(s, LV_PCT(100));
+    lv_obj_set_style_height(s, 6, LV_PART_MAIN);
+    lv_slider_set_range(s, min, max);
+    lv_slider_set_value(s, value, LV_ANIM_OFF);
+
+    lv_obj_set_style_bg_color(s, lv_color_hex(FRIJ_SURFACE_3), LV_PART_MAIN);
+    lv_obj_set_style_radius(s, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(s, lv_color_hex(accent), LV_PART_INDICATOR);
+    lv_obj_set_style_radius(s, LV_RADIUS_CIRCLE, LV_PART_INDICATOR);
+    lv_obj_set_style_bg_color(s, lv_color_hex(0xFFFFFF), LV_PART_KNOB);
+    lv_obj_set_style_pad_all(s, 6, LV_PART_KNOB);  // knob size
+    return s;
+}
+
+lv_obj_t* frij_toggle(lv_obj_t* parent, bool on, uint32_t accent)
+{
+    lv_obj_t* sw = lv_switch_create(parent);
+    lv_obj_set_style_bg_color(sw, lv_color_hex(FRIJ_SURFACE_3), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(sw, lv_color_hex(accent), LV_PART_INDICATOR | LV_STATE_CHECKED);
+    lv_obj_set_style_bg_color(sw, lv_color_hex(0xFFFFFF), LV_PART_KNOB);
+    if (on) {
+        lv_obj_add_state(sw, LV_STATE_CHECKED);
+    }
+    return sw;
 }
 
 void frij_anim_enter(lv_obj_t* obj, uint32_t delay_ms)

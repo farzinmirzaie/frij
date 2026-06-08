@@ -16,6 +16,12 @@
 #define FRIJ_ACCENT     0x38BDF8  // blue
 #define FRIJ_WARNING    0xFB8C00  // orange
 #define FRIJ_INFO       0x7C3AED  // violet
+#define FRIJ_YELLOW     0xFACC15  // amber
+
+// Per-app accent palette. Each app picks ONE of these as its `color` and uses
+// it for its checks/rings/highlights; the page background stays Surface-1, so
+// every app shares the look but has its own scheme (e.g. Todo amber, Counter
+// blue, Home purple).
 
 #define FRIJ_SURFACE_1  0x0D0D10  // app background
 #define FRIJ_SURFACE_2  0x16161B  // cards / rows

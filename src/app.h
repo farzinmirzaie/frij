@@ -19,7 +19,9 @@
  */
 typedef struct {
     const char* name;
-    uint32_t    color;                            // page background, 0xRRGGBB
+    uint32_t    color;                            // the app's accent (0xRRGGBB),
+                                                  // picked from ui/theme.h; the
+                                                  // page background stays Surface-1
 
     void (*build_glance)(lv_obj_t* parent);
 

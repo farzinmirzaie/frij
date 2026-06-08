@@ -11,6 +11,9 @@
 // A vertical, centered flex column with `gap` px between children.
 lv_obj_t* frij_col(lv_obj_t* parent, int gap);
 
+// A centered column at 86% width — the standard page body for a round screen.
+lv_obj_t* frij_page(lv_obj_t* parent);
+
 // A label using a theme font + color (0xRRGGBB).
 lv_obj_t* frij_label(lv_obj_t* parent, const char* text, const lv_font_t* font, uint32_t color);
 
@@ -28,6 +31,12 @@ lv_obj_t* frij_progress_ring(lv_obj_t* parent, int size, int pct, uint32_t accen
 
 // A round "nothing here" placeholder with an icon + text.
 lv_obj_t* frij_empty_state(lv_obj_t* parent, const char* text);
+
+// A themed slider (full width). Attach your own LV_EVENT_VALUE_CHANGED handler.
+lv_obj_t* frij_slider(lv_obj_t* parent, int min, int max, int value, uint32_t accent);
+
+// A themed on/off switch. Attach your own LV_EVENT_VALUE_CHANGED handler.
+lv_obj_t* frij_toggle(lv_obj_t* parent, bool on, uint32_t accent);
 
 // Entrance animation: fade in + rise. `delay_ms` lets callers stagger a list.
 void frij_anim_enter(lv_obj_t* obj, uint32_t delay_ms);

@@ -4,6 +4,16 @@ Newest first. One short entry per change.
 
 ## 2026-06-08
 
+- Per-app **color scheme**: `app.color` is now the app's accent (from the ui
+  palette); the page background is uniform Surface-1. Todo amber, Counter blue,
+  Home/Settings purple. Added `FRIJ_YELLOW` + `frij_slider`/`frij_toggle`/`frij_page`.
+- Added a **Home** watch-face app (time + date, ticks each second, reads the
+  24-hour setting) and registered it first → it's the default landing glance.
+- Fleshed out **Settings**: brightness slider + 24-hour toggle (both persisted
+  via the store) + about. Counter restyled to the theme.
+
+## 2026-06-08
+
 - Added a design system to `src/ui/`: `theme.h` (colors, type, spacing, radius,
   motion tokens from the Frij design system) and `components.*` (themed row,
   circular check with pop, progress ring, empty state, entrance animation).
