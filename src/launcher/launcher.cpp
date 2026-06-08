@@ -5,6 +5,7 @@
 #include "lvgl.h"
 #include "lvgl_port_m5stack.hpp"
 #include "ui/carousel.h"
+#include "ui/components.h"
 #include "ui/theme.h"
 #include "registry.h"
 
@@ -49,12 +50,6 @@ static int height(void)
 
 // ---- page builders --------------------------------------------------------
 
-static void paint_bg(lv_obj_t* page, uint32_t color)
-{
-    lv_obj_set_style_bg_color(page, lv_color_hex(color), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(page, LV_OPA_COVER, LV_PART_MAIN);
-}
-
 static void glance_builder(lv_obj_t* page, int index, void* user)
 {
     (void)user;
@@ -62,7 +57,7 @@ static void glance_builder(lv_obj_t* page, int index, void* user)
     if (!app) {
         return;
     }
-    paint_bg(page, FRIJ_SURFACE_1);  // uniform dark; apps use their accent inside
+    frij_apply_bg(page);  // subtle dark gradient; apps use their accent inside
     if (app->build_glance) {
         app->build_glance(page);
     }
@@ -74,7 +69,7 @@ static void app_screen_builder(lv_obj_t* page, int index, void* user)
     if (!app) {
         return;
     }
-    paint_bg(page, FRIJ_SURFACE_1);
+    frij_apply_bg(page);
     if (app->build_screen) {
         app->build_screen(page, index);
     }

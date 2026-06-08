@@ -82,6 +82,7 @@ static lv_obj_t* round_button(lv_obj_t* parent, const char* sym, lv_event_cb_t c
 
     lv_obj_t* label = lv_label_create(btn);
     lv_label_set_text(label, sym);
+    lv_obj_set_style_text_font(label, FRIJ_FONT_SYMBOL, LV_PART_MAIN);
     lv_obj_set_style_text_color(label, lv_color_hex(ACCENT), LV_PART_MAIN);
     lv_obj_center(label);
     return btn;

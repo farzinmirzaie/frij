@@ -73,8 +73,9 @@ static void build_clock(lv_obj_t* parent)
     clock_ctx_t* c   = (clock_ctx_t*)lv_malloc(sizeof(clock_ctx_t));
     c->h24           = read_clock24();
 
-    // seconds ring with the time centered inside
-    c->arc = frij_progress_ring(col, 150, 0, ACCENT);
+    // seconds ring with the time centered inside (scales with the screen)
+    int ring = frij_screen_min() * 62 / 100;
+    c->arc   = frij_progress_ring(col, ring, 0, ACCENT);
     lv_arc_set_range(c->arc, 0, 60);
     c->time = frij_label(c->arc, "--:--", FRIJ_FONT_DISPLAY, FRIJ_TEXT);
     lv_obj_center(c->time);

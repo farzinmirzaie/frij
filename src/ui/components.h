@@ -8,6 +8,12 @@
  * Each takes a parent (and plain data) — no app specifics.
  */
 
+// Shorter side of the active display, in px. Use to size things responsively.
+int frij_screen_min(void);
+
+// Apply the standard subtle page-background gradient to an object's MAIN part.
+void frij_apply_bg(lv_obj_t* obj);
+
 // A vertical, centered flex column with `gap` px between children.
 lv_obj_t* frij_col(lv_obj_t* parent, int gap);
 

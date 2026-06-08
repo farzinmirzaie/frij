@@ -33,7 +33,30 @@ static void strip(lv_obj_t* o)
     lv_obj_clear_flag(o, LV_OBJ_FLAG_SCROLLABLE);
 }
 
+// Apply a subtle top-to-bottom gradient between two colors to an object's MAIN.
+static void grad_v(lv_obj_t* o, uint32_t top, uint32_t bottom)
+{
+    lv_obj_set_style_bg_color(o, lv_color_hex(top), LV_PART_MAIN);
+    lv_obj_set_style_bg_grad_color(o, lv_color_hex(bottom), LV_PART_MAIN);
+    lv_obj_set_style_bg_grad_dir(o, LV_GRAD_DIR_VER, LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(o, LV_OPA_COVER, LV_PART_MAIN);
+}
+
 // ---- public ---------------------------------------------------------------
+
+int frij_screen_min(void)
+{
+    lv_display_t* d = lv_display_get_default();
+    int32_t       w = lv_display_get_horizontal_resolution(d);
+    int32_t       h = lv_display_get_vertical_resolution(d);
+    return (int)(w < h ? w : h);
+}
+
+void frij_apply_bg(lv_obj_t* obj)
+{
+    // calm dark page wash, slightly darker toward the bottom
+    grad_v(obj, FRIJ_SURFACE_1, 0x07070A);
+}
 
 lv_obj_t* frij_col(lv_obj_t* parent, int gap)
 {
@@ -76,8 +99,7 @@ lv_obj_t* frij_surface_row(lv_obj_t* parent)
     lv_obj_t* r = lv_obj_create(parent);
     lv_obj_set_width(r, LV_PCT(100));
     lv_obj_set_height(r, LV_SIZE_CONTENT);
-    lv_obj_set_style_bg_color(r, lv_color_hex(FRIJ_SURFACE_2), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(r, LV_OPA_COVER, LV_PART_MAIN);
+    grad_v(r, FRIJ_SURFACE_2, 0x101216);  // subtle depth
     lv_obj_set_style_radius(r, FRIJ_RADIUS_M, LV_PART_MAIN);
     lv_obj_set_style_border_width(r, 0, LV_PART_MAIN);
     lv_obj_set_style_pad_top(r, FRIJ_SP_M, LV_PART_MAIN);
@@ -111,7 +133,7 @@ lv_obj_t* frij_check(lv_obj_t* parent, bool checked, uint32_t accent)
 
     lv_obj_t* tick = lv_label_create(c);
     lv_label_set_text(tick, LV_SYMBOL_OK);
-    lv_obj_set_style_text_font(tick, FRIJ_FONT_BODY, LV_PART_MAIN);
+    lv_obj_set_style_text_font(tick, FRIJ_FONT_SYMBOL, LV_PART_MAIN);
     lv_obj_set_style_text_color(tick, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
     lv_obj_center(tick);
 
@@ -183,6 +205,7 @@ lv_obj_t* frij_empty_state(lv_obj_t* parent, const char* text)
 
     lv_obj_t* icon = lv_label_create(circle);
     lv_label_set_text(icon, LV_SYMBOL_PLUS);
+    lv_obj_set_style_text_font(icon, FRIJ_FONT_SYMBOL, LV_PART_MAIN);
     lv_obj_set_style_text_color(icon, lv_color_hex(FRIJ_PRIMARY), LV_PART_MAIN);
     lv_obj_center(icon);
 
@@ -198,12 +221,19 @@ lv_obj_t* frij_slider(lv_obj_t* parent, int min, int max, int value, uint32_t ac
     lv_slider_set_range(s, min, max);
     lv_slider_set_value(s, value, LV_ANIM_OFF);
 
+    // Inset the track so the round knob never overflows (and gets clipped by)
+    // the parent at the ends — the bug in the earlier version.
+    lv_obj_set_style_margin_left(s, 10, LV_PART_MAIN);
+    lv_obj_set_style_margin_right(s, 10, LV_PART_MAIN);
+    lv_obj_set_style_margin_top(s, 10, LV_PART_MAIN);
+    lv_obj_set_style_margin_bottom(s, 10, LV_PART_MAIN);
+
     lv_obj_set_style_bg_color(s, lv_color_hex(FRIJ_SURFACE_3), LV_PART_MAIN);
     lv_obj_set_style_radius(s, LV_RADIUS_CIRCLE, LV_PART_MAIN);
     lv_obj_set_style_bg_color(s, lv_color_hex(accent), LV_PART_INDICATOR);
     lv_obj_set_style_radius(s, LV_RADIUS_CIRCLE, LV_PART_INDICATOR);
     lv_obj_set_style_bg_color(s, lv_color_hex(0xFFFFFF), LV_PART_KNOB);
-    lv_obj_set_style_pad_all(s, 6, LV_PART_KNOB);  // knob size
+    lv_obj_set_style_pad_all(s, 5, LV_PART_KNOB);  // knob size
     return s;
 }
 

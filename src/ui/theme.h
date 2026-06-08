@@ -3,6 +3,8 @@
 
 #include "lvgl.h"
 
+#include "fonts/fonts.h"
+
 /*
  * Frij design tokens — colors, type, spacing, radius, motion.
  *
@@ -30,10 +32,12 @@
 #define FRIJ_TEXT       0xF2F2F7  // primary text
 #define FRIJ_TEXT_2     0xA1A1AA  // secondary / muted
 
-// ---- Type (closest LVGL built-ins to "SF Pro Rounded") --------------------
-#define FRIJ_FONT_DISPLAY (&lv_font_montserrat_26)
-#define FRIJ_FONT_TITLE   (&lv_font_montserrat_20)
-#define FRIJ_FONT_BODY    (&lv_font_montserrat_14)
+// ---- Type (SF Pro Rounded, converted via lv_font_conv) --------------------
+#define FRIJ_FONT_DISPLAY (&frij_sf_display)  // 26 Semibold
+#define FRIJ_FONT_TITLE   (&frij_sf_title)    // 20 Semibold
+#define FRIJ_FONT_BODY    (&frij_sf_body)     // 14 Regular
+// Symbols (✓ ± +) aren't in the SF subset — symbol labels use this.
+#define FRIJ_FONT_SYMBOL  (&lv_font_montserrat_14)
 
 // ---- Spacing (4pt grid) ---------------------------------------------------
 #define FRIJ_SP_XS  4

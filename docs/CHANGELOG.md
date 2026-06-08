@@ -4,6 +4,18 @@ Newest first. One short entry per change.
 
 ## 2026-06-08
 
+- **SF Pro Rounded** is now the UI font (converted via lv_font_conv, in
+  `src/ui/fonts/`; symbols stay on Montserrat via `FRIJ_FONT_SYMBOL`). See the
+  fonts README for regen + the license caveat.
+- Fixed the **clipped slider** at the component level (knob inset with margins).
+- Added **subtle gradients** at the ui level: page background (`frij_apply_bg`)
+  and surface rows. Added `frij_screen_min()` and made the Home ring scale with
+  the screen → layouts stay correct on the larger device.
+- **Settings** grew to 5 screens: Display (brightness), Sound (volume), General
+  (24h), Network (Wi-Fi placeholder), About. Volume persists.
+
+## 2026-06-08
+
 - Fixed carousel/nav lag: **cloud I/O moved off the UI thread**. `frij_store`
   now pushes on a background thread and adds `pull_async`; the cache is written
   atomically. Todo/Counter pull async on open, so swipes/toggles never block on
