@@ -38,6 +38,10 @@ static frij_carousel_t s_chome, s_capp, s_cset;
 static frij_carousel_t* s_active = NULL;
 static layer_t          s_cur    = HOME;
 
+// persistent header for the open app/settings layer (above its content carousel)
+static const frij_app_t* s_layer_app    = NULL;
+static lv_obj_t*         s_layer_header = NULL;
+
 // input / animation state
 static lv_point_t s_start;
 static int        s_axis    = 0;     // 0 undecided, 1 horizontal, 2 vertical
@@ -92,6 +96,38 @@ static lv_obj_t* make_layer(void)
     return o;
 }
 
+// The persistent header (above the content carousel) calls this on tap; it
+// dispatches to the app's action handler for the current screen.
+static void header_action_clicked(lv_event_t* e)
+{
+    (void)e;
+    if (s_layer_app && s_layer_app->on_action && s_active) {
+        s_layer_app->on_action(frij_carousel_index(s_active));
+    }
+}
+
+// Update the header's action icon when the content screen changes.
+static void layer_change_cb(int index, void* user)
+{
+    (void)user;
+    if (!s_layer_header) {
+        return;
+    }
+    const char* sym = (s_layer_app && s_layer_app->action_symbol)
+                          ? s_layer_app->action_symbol(index)
+                          : NULL;
+    frij_header_set_action(s_layer_header, sym);
+}
+
+// Add the shared header above a layer's content carousel.
+static void add_layer_header(lv_obj_t* layer, const frij_app_t* app, frij_carousel_t* car)
+{
+    s_layer_app = app;
+    frij_carousel_set_change_cb(car, layer_change_cb, NULL);
+    s_layer_header = frij_header(layer, app->name, header_action_clicked);
+    layer_change_cb(frij_carousel_index(car), NULL);
+}
+
 static void ensure_app_layer(void)
 {
     if (s_app) {
@@ -105,6 +141,7 @@ static void ensure_app_layer(void)
     s_app = make_layer();
     lv_obj_set_y(s_app, height());  // starts below the home
     frij_carousel_init(&s_capp, s_app, app->screen_count, app_screen_builder, (void*)app, app->color);
+    add_layer_header(s_app, app, &s_capp);  // header on top, persists across screens
 }
 
 static void ensure_settings_layer(void)
@@ -120,6 +157,7 @@ static void ensure_settings_layer(void)
     lv_obj_set_y(s_settings, -height());  // starts above the home
     int n = app->screen_count > 0 ? app->screen_count : 1;
     frij_carousel_init(&s_cset, s_settings, n, app_screen_builder, (void*)app, app->color);
+    add_layer_header(s_settings, app, &s_cset);
 }
 
 // ---- vertical-transition completions --------------------------------------
@@ -151,6 +189,7 @@ static void done_home_from_app(lv_anim_t* a)
 {
     (void)a;
     if (s_app) { lv_obj_delete(s_app); s_app = NULL; }
+    s_layer_app = NULL; s_layer_header = NULL;
     s_cur = HOME; s_active = &s_chome; s_anim = false;
 }
 
@@ -158,6 +197,7 @@ static void done_home_from_settings(lv_anim_t* a)
 {
     (void)a;
     if (s_settings) { lv_obj_delete(s_settings); s_settings = NULL; }
+    s_layer_app = NULL; s_layer_header = NULL;
     s_cur = HOME; s_active = &s_chome; s_anim = false;
 }
 
@@ -166,7 +206,8 @@ static void done_revert_to_home(lv_anim_t* a)
     (void)a;  // a partial open from home was cancelled: drop the transient layer
     if (s_app)      { lv_obj_delete(s_app);      s_app = NULL; }
     if (s_settings) { lv_obj_delete(s_settings); s_settings = NULL; }
-    s_anim = false;
+    s_layer_app = NULL; s_layer_header = NULL;
+    s_cur = HOME; s_active = &s_chome; s_anim = false;
 }
 
 static void done_revert_simple(lv_anim_t* a) { (void)a; s_anim = false; }

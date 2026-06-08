@@ -41,6 +41,13 @@ static void build_app_screen(const frij_app_t* app)
     if (app && app->build_screen) {
         app->build_screen(root, 0);
     }
+    // mimic the launcher's persistent header for a faithful preview
+    if (app) {
+        lv_obj_t* hdr = frij_header(root, app->name, NULL);
+        if (app->action_symbol) {
+            frij_header_set_action(hdr, app->action_symbol(0));
+        }
+    }
 }
 
 extern "C" {

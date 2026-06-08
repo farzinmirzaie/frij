@@ -13,9 +13,16 @@ frij_app_t {
   color;                         // page background 0xRRGGBB
   build_glance(parent);          // full-screen card in the home carousel
   screen_count;                  // app's own screens (>= 1)
-  build_screen(parent, index);   // build screen `index`
+  build_screen(parent, index);   // build screen `index` (content only)
+
+  action_symbol(index);          // optional: header action icon, or NULL
+  on_action(index);              // optional: header action tapped
 }
 ```
+
+The launcher draws the shared header (back + app name + the per-screen action);
+`build_screen` builds only the content below it. Leave `action_symbol`/`on_action`
+NULL for no action.
 
 ## Add an app
 

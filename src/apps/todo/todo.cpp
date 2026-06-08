@@ -117,15 +117,9 @@ static void on_toggle(lv_event_t* e)
     save_todo();
 }
 
-static void on_add(lv_event_t* e)
-{
-    (void)e;  // TODO: add-item flow (on-device keyboard or via the web app)
-}
-
 static void build_list(lv_obj_t* parent)
 {
-    frij_header(parent, "Todo", LV_SYMBOL_PLUS, on_add);
-
+    // The shared header (back + "Todo" + "+") is provided by the launcher.
     // list below the header, top-aligned so it doesn't drift into the round edge
     lv_obj_t* col = frij_col(parent, FRIJ_SP_S);
     lv_obj_set_width(col, LV_PCT(82));
@@ -189,8 +183,19 @@ static void screen(lv_obj_t* parent, int index)
     }
 }
 
+// Header action: a "+" on the list screen (add item — TODO).
+static const char* td_action(int index)
+{
+    return index == 0 ? LV_SYMBOL_PLUS : NULL;
+}
+
+static void td_on_action(int index)
+{
+    (void)index;  // TODO: add-item flow (on-device keyboard or via the web app)
+}
+
 const frij_app_t* todo_app(void)
 {
-    static const frij_app_t app = {"Todo", ACCENT, glance, 3, screen};
+    static const frij_app_t app = {"Todo", ACCENT, glance, 3, screen, td_action, td_on_action};
     return &app;
 }

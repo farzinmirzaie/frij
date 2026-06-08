@@ -35,7 +35,10 @@ settings come from the registry (see [`../apps/`](../apps/README.md)).
   already on home it jumps the carousel to the default tile (the clock, index 0).
 - The Home tile is **glance-only** (`screen_count 0`, `build_screen NULL`), so
   swiping up on the clock does nothing. Any app can opt out of opening this way.
-- Apps get a back button via the shared `frij_header` (see `../ui/`).
+- When an app opens, the launcher puts a **persistent `frij_header`** above the
+  content carousel (so the header stays put while screens swipe under it). The
+  header's action icon updates per screen from the app's `action_symbol(index)`,
+  and taps call `on_action(index)`. The page dots stay visible (kept on top).
 - Layers with a single screen don't loop.
 - Home is persistent; app/settings layers are built on entry and destroyed on
   the way back.

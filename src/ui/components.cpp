@@ -291,8 +291,7 @@ static lv_obj_t* icon_button(lv_obj_t* parent, const char* sym)
     return b;
 }
 
-lv_obj_t* frij_header(lv_obj_t* parent, const char* title, const char* action_symbol,
-                      lv_event_cb_t action_cb)
+lv_obj_t* frij_header(lv_obj_t* parent, const char* title, lv_event_cb_t action_cb)
 {
     lv_obj_t* bar = lv_obj_create(parent);
     lv_obj_set_size(bar, LV_PCT(78), LV_SIZE_CONTENT);
@@ -313,17 +312,28 @@ lv_obj_t* frij_header(lv_obj_t* parent, const char* title, const char* action_sy
     lv_obj_set_style_text_align(t, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     lv_label_set_long_mode(t, LV_LABEL_LONG_DOT);
 
-    if (action_symbol) {
-        lv_obj_t* a = icon_button(bar, action_symbol);
-        if (action_cb) {
-            lv_obj_add_event_cb(a, action_cb, LV_EVENT_CLICKED, NULL);
-        }
-    } else {
-        lv_obj_t* spacer = lv_obj_create(bar);  // keep the title centered
-        lv_obj_remove_style_all(spacer);
-        lv_obj_set_size(spacer, 36, 36);
+    // Right action — always present (keeps the title centered), hidden until set.
+    lv_obj_t* action = icon_button(bar, "");
+    if (action_cb) {
+        lv_obj_add_event_cb(action, action_cb, LV_EVENT_CLICKED, NULL);
     }
+    lv_obj_set_style_opa(action, LV_OPA_TRANSP, LV_PART_MAIN);
+    lv_obj_remove_flag(action, LV_OBJ_FLAG_CLICKABLE);
     return bar;
+}
+
+void frij_header_set_action(lv_obj_t* header, const char* symbol)
+{
+    lv_obj_t* action = lv_obj_get_child(header, lv_obj_get_child_count(header) - 1);
+    lv_obj_t* label  = lv_obj_get_child(action, 0);
+    if (symbol && symbol[0]) {
+        lv_label_set_text(label, symbol);
+        lv_obj_set_style_opa(action, LV_OPA_COVER, LV_PART_MAIN);
+        lv_obj_add_flag(action, LV_OBJ_FLAG_CLICKABLE);
+    } else {
+        lv_obj_set_style_opa(action, LV_OPA_TRANSP, LV_PART_MAIN);
+        lv_obj_remove_flag(action, LV_OBJ_FLAG_CLICKABLE);
+    }
 }
 
 void frij_anim_enter(lv_obj_t* obj, uint32_t delay_ms)

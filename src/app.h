@@ -27,6 +27,10 @@ typedef struct {
 
     int  screen_count;                            // app's own screens (>= 1)
     void (*build_screen)(lv_obj_t* parent, int index);
+
+    // Optional header action (shown on the right of the shared app header):
+    const char* (*action_symbol)(int index);     // icon for screen `index`, or NULL
+    void (*on_action)(int index);                 // tapped while on screen `index`
 } frij_app_t;
 
 #endif  // FRIJ_APP_H

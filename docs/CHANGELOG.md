@@ -4,6 +4,15 @@ Newest first. One short entry per change.
 
 ## 2026-06-09
 
+- Page dots are now **always visible** (kept above the pages with
+  `lv_obj_move_foreground`; dropped the idle auto-fade). Verified on home.
+- The app **header is now persistent**, owned by the launcher above the content
+  carousel — it no longer swipes with the screens. The action icon updates per
+  screen via the app's new `action_symbol(index)` / `on_action(index)` contract;
+  `build_screen` is content-only. Carousel gained a `set_change_cb` hook.
+
+## 2026-06-09
+
 - Added a shared **`frij_header`** component (back + centered title + optional
   action button), round-safe; Todo's screen now uses it (back + "+" action).
 - **Back** on the home layer now jumps to the default tile (the clock); from an

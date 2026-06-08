@@ -26,14 +26,18 @@ typedef struct {
     frij_page_builder builder;
     void*             user;
     lv_obj_t*         dots;        // page indicator (NULL when count <= 1)
-    lv_timer_t*       hide_timer;  // idle timer that fades the dots out
     uint32_t          accent;      // active-dot color (0xRRGGBB)
+    void (*on_change)(int index, void* user);  // called when the page settles
+    void*             change_user;
 } frij_carousel_t;
 
-// `accent` colors the active page dot. The indicator auto-shows on a swipe and
-// fades out when idle; it's omitted entirely when count <= 1.
+// `accent` colors the active page dot. The dot indicator stays visible (on top
+// of the pages); it's omitted entirely when count <= 1.
 void frij_carousel_init(frij_carousel_t* c, lv_obj_t* parent, int count,
                         frij_page_builder builder, void* user, uint32_t accent);
+
+// Optional: notified with the new index whenever the visible page changes.
+void frij_carousel_set_change_cb(frij_carousel_t* c, void (*cb)(int, void*), void* user);
 
 void frij_carousel_drag(frij_carousel_t* c, int dx);  // live horizontal offset
 void frij_carousel_end(frij_carousel_t* c, int dx);   // release: commit or revert
