@@ -4,6 +4,14 @@ Newest first. One short entry per change.
 
 ## 2026-06-08
 
+- Filled in real M5Stack StopWatch (C152) hardware details in `docs/HARDWARE.md`
+  from the official docs: CO5300 QSPI panel (reset via M5IOE1), CST820B touch,
+  Key A=G2 / Key B=G1, BMI270, RX8130CE, ES8311, M5PM1; `esp32s3box` board +
+  M5Unified. Confirmed M5GFX/M5Unified support the board (no longer "blocked"),
+  and updated the P5 bring-up plan.
+
+## 2026-06-08
+
 - Restructured `src/` into self-documenting packages: each folder now has its
   own `README.md` (apps, launcher, ui, store, utility) and a top `src/README.md`.
 - Extracted a shared **`src/ui/`** package; moved the carousel there.

@@ -29,11 +29,11 @@ target whatever board we run on (see [HARDWARE.md](HARDWARE.md)).
 - [ ] **Storage 3**: web app reading the same data (Google-Keep-style).
 - [ ] **P3 — Persistence**: migrate remaining app state onto `frij_store`.
 - [ ] **P4 — More apps**: grocery, reminders, photos.
-- [ ] **P5 — Device bring-up**: confirm M5GFX panel support for the target board, flash, test touch/buttons.
+- [ ] **P5 — Device bring-up**: `esp32s3box` board + M5Unified; init the M5IOE1
+  expander (panel reset) around `gfx.init()`; map Back to Key A (G2); flash, test
+  touch/buttons. M5GFX/M5Unified support the board — see [HARDWARE.md](HARDWARE.md).
 
 ## Open questions
-
-- Does M5GFX support the target's round panel yet? Blocks P5 (see [HARDWARE.md](HARDWARE.md)).
 - Where do photos/data live? On-device flash vs Wi-Fi sync vs SD.
 
 ## Next step
