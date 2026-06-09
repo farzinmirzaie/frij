@@ -4,6 +4,22 @@ Newest first. One short entry per change.
 
 ## 2026-06-09
 
+- **Wi-Fi settings** — new `system/wifi` service (interface + emulator mock) and
+  a real **Network** screen: master toggle, scanned network list (signal /
+  Connected / Saved), and a tap **action sheet** to Connect / Disconnect /
+  Forget. Device backend is a stub for later (esp_wifi).
+- New **`frij_action_sheet`** component (animated modal, stacked options +
+  Cancel). **Modals now animate** in (dim fades, card rises).
+- **Header glow** is now a wide, short ellipse behind the title (was a square).
+- **Slider cards show their value** on the right (e.g. `80%`, `5 min`).
+- Fixed **Brightness disappearing**: a centered, overflowing list hid its top
+  rows. Pages now center only when they fit and top-align when they overflow
+  (new `frij_page_settle`). Added `frij_page_under_header` safe-area helper +
+  a little breathing room under the header.
+- Moved **Sync now** to About (next to Reset); Network is Wi-Fi only.
+
+## 2026-06-09
+
 - **Smaller header glow** — the accent halo behind the title is now compact
   (~52% of the screen) instead of a big wash.
 - **App-page content is screen-centered** — the header no longer pushes content

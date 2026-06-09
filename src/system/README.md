@@ -15,3 +15,7 @@ Apps call these instead of touching `utility/`, keeping app isolation.
   interactions (`frij_haptic_attach`); Settings → General → Vibration toggles it
   (persisted). No-op on the emulator; pulses the motor on device (TODO: wire the
   StopWatch motor).
+- `wifi.*` — scan / connect / disconnect / forget + a master enable, behind a
+  neutral interface. The emulator ships a working **in-memory mock** (a fake
+  neighbourhood with connected/saved state) so Settings → Network is fully
+  interactive; the device backend is a stub (TODO: `esp_wifi` + NVS creds).

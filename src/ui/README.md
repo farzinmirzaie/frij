@@ -11,19 +11,26 @@ theme, list rows, …) as patterns repeat.
 - `fonts/` — SF Pro Rounded converted to LVGL fonts (see its README + license note).
 - `components.*` — themed widgets:
   - `frij_col` / `frij_label` — layout + typed text.
-  - `frij_page` — the standard page body: a centered, **vertically scrollable**
-    column (short content centers; taller content scrolls). The launcher turns a
-    swipe past the scroll edge into Back.
+  - `frij_page` — the standard page body: a **vertically scrollable** column.
+    After adding children call `frij_page_settle` to finalize it (centers when
+    the content fits, top-aligns when it overflows so the first row stays
+    visible). The launcher turns a swipe past the scroll edge into Back.
+  - `frij_page_under_header` — reusable "safe area": insets a page beneath a top
+    bar so its centered content still lands at the screen's true center.
   - `frij_apply_bg` — the subtle page-background gradient; `frij_screen_min` —
     shorter screen side, for responsive sizing.
   - `frij_surface_row` — rounded row with a subtle gradient + press feedback.
   - `frij_check` / `frij_check_set` — circular check with a pop animation.
   - `frij_slider_row` — a full-width card that IS the slider: drag anywhere to
-    set, accent fill shows the amount, label on top.
+    set, accent fill shows the amount, label on the left and a live value
+    readout (with a unit, e.g. `80%`) on the right.
   - `frij_toggle` — themed switch (takes an accent).
   - `frij_action_row` — a tappable card row (label + chevron) for actions.
   - `frij_confirm` — a modal confirmation dialog (dimmed backdrop + centered
     card with Cancel / accent-Confirm). Use it before destructive actions.
+  - `frij_action_sheet` — a modal with a stacked list of options (first is the
+    accent/primary) + Cancel; the callback gets the chosen index. Both modals
+    animate in (dim fades, card rises) and dismiss on a backdrop tap.
   - `frij_glow` — soft radial accent halo; **FLOATING** (doesn't scroll or grow
     the scroll area). Returns the object so it can be repositioned (e.g. behind a header).
   - `frij_progress_ring` — thin arc gauge.

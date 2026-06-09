@@ -27,7 +27,7 @@ extern void user_app(void);
 
 // Render one app screen, round-clipped like the launcher does (for verifying a
 // specific screen via FRIJ_SNAP=todo|counter|settings).
-static void build_app_screen(const frij_app_t* app)
+static void build_app_screen(const frij_app_t* app, int index)
 {
     lv_obj_t* s = lv_screen_active();
     lv_obj_set_style_bg_color(s, lv_color_hex(FRIJ_OUTSIDE), LV_PART_MAIN);
@@ -41,11 +41,12 @@ static void build_app_screen(const frij_app_t* app)
     if (!app) {
         return;
     }
-    // compact glow behind the header title (mirrors the launcher)
-    int       sz = 466 * 52 / 100;
+    // wide, short glow behind the header title (mirrors the launcher)
+    int       gw = 466 * 64 / 100;
+    int       gh = 466 * 26 / 100;
     lv_obj_t* g  = frij_glow(root, app->color);
-    lv_obj_set_size(g, sz, sz);
-    lv_obj_align(g, LV_ALIGN_TOP_MID, 0, 466 * 13 / 100 - sz / 2);
+    lv_obj_set_size(g, gw, gh);
+    lv_obj_align(g, LV_ALIGN_TOP_MID, 0, 466 * 14 / 100 - gh / 2);
     lv_obj_move_background(g);
 
     // mirror the launcher: header on the layer, content in an area below it
@@ -57,15 +58,14 @@ static void build_app_screen(const frij_app_t* app)
     lv_obj_set_style_border_width(content, 0, LV_PART_MAIN);
     lv_obj_clear_flag(content, LV_OBJ_FLAG_SCROLLABLE);
     if (app->build_screen) {
-        app->build_screen(content, 0);
-        // balance the header with bottom padding (mirrors app_screen_builder)
-        int pad_top = lv_obj_get_style_pad_top(content, LV_PART_MAIN);
-        lv_obj_set_style_pad_bottom(content, pad_top + hz, LV_PART_MAIN);
+        app->build_screen(content, index);
+        frij_page_under_header(content, hz);  // mirrors app_screen_builder
+        frij_page_settle(content);
     }
 
     lv_obj_t* hdr = frij_header(root, app->name, NULL);
     if (app->action_symbol) {
-        frij_header_set_action(hdr, app->action_symbol(0));
+        frij_header_set_action(hdr, app->action_symbol(index));
     }
 }
 
@@ -142,13 +142,19 @@ int main(int, char**)
 
     const char* scr = getenv("FRIJ_SNAP");
     if (scr && strcmp(scr, "todo") == 0) {
-        build_app_screen(todo_app());
+        build_app_screen(todo_app(), 0);
     } else if (scr && strcmp(scr, "counter") == 0) {
-        build_app_screen(counter_app());
+        build_app_screen(counter_app(), 0);
     } else if (scr && strcmp(scr, "settings") == 0) {
-        build_app_screen(settings_app());
+        build_app_screen(settings_app(), 0);
+    } else if (scr && strcmp(scr, "network") == 0) {
+        build_app_screen(settings_app(), 1);
+    } else if (scr && strcmp(scr, "sheet") == 0) {
+        build_app_screen(settings_app(), 1);
+        static const char* opts[] = {"Connect", "Forget"};
+        frij_action_sheet("Linksys-5G", opts, 2, FRIJ_PRIMARY, NULL, NULL);
     } else if (scr && strcmp(scr, "confirm") == 0) {
-        build_app_screen(settings_app());
+        build_app_screen(settings_app(), 2);
         frij_confirm("Reset settings?", "Restore everything to defaults.", "Reset",
                      FRIJ_PRIMARY, NULL);
     } else {

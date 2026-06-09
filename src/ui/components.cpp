@@ -29,6 +29,11 @@ static void set_scale_cb(void* o, int32_t v)
     lv_obj_set_style_transform_scale_y((lv_obj_t*)o, v, LV_PART_MAIN);
 }
 
+static void set_bg_opa_cb(void* o, int32_t v)
+{
+    lv_obj_set_style_bg_opa((lv_obj_t*)o, (lv_opa_t)v, LV_PART_MAIN);
+}
+
 // ---- helpers ---------------------------------------------------------------
 
 static void strip(lv_obj_t* o)
@@ -135,6 +140,30 @@ lv_obj_t* frij_page(lv_obj_t* parent)
     lv_obj_remove_flag(parent, LV_OBJ_FLAG_SCROLL_ELASTIC);  // firm edges for the back gesture
     lv_obj_set_scrollbar_mode(parent, LV_SCROLLBAR_MODE_OFF);
     return parent;
+}
+
+void frij_page_under_header(lv_obj_t* page, int header_px)
+{
+    // The page lives in the area below the header. Add breathing room under the
+    // bar, then a matching bottom inset so the *centered* content still lands at
+    // the screen's true middle (not the middle of the shorter area). Reusable
+    // "safe area" for any screen that sits beneath a top bar.
+    int pad_top = lv_obj_get_style_pad_top(page, LV_PART_MAIN) + FRIJ_SP_M;
+    lv_obj_set_style_pad_top(page, pad_top, LV_PART_MAIN);
+    lv_obj_set_style_pad_bottom(page, pad_top + header_px, LV_PART_MAIN);
+}
+
+void frij_page_settle(lv_obj_t* page)
+{
+    // Center the content when it fits; top-align it when it overflows so the
+    // first row stays visible (a centered overflowing list hides its top items).
+    lv_obj_set_flex_align(page, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_update_layout(page);
+    if (lv_obj_get_scroll_bottom(page) <= 0) {
+        lv_obj_set_flex_align(page, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    } else {
+        lv_obj_scroll_to_y(page, 0, LV_ANIM_OFF);  // start at the top
+    }
 }
 
 lv_obj_t* frij_label(lv_obj_t* parent, const char* text, const lv_font_t* font, uint32_t color)
@@ -275,8 +304,17 @@ lv_obj_t* frij_empty_state(lv_obj_t* parent, const char* text)
     return box;
 }
 
+// Keep the slider-card's right-hand value readout in sync as it's dragged.
+static void slider_value_cb(lv_event_t* e)
+{
+    lv_obj_t*   s   = (lv_obj_t*)lv_event_get_target(e);
+    lv_obj_t*   val = lv_obj_get_child(s, 1);  // [0] = label, [1] = value readout
+    const char* unit = (const char*)lv_obj_get_user_data(val);
+    lv_label_set_text_fmt(val, "%d%s", lv_slider_get_value(s), unit ? unit : "");
+}
+
 lv_obj_t* frij_slider_row(lv_obj_t* parent, const char* label, int min, int max,
-                          int value, uint32_t accent)
+                          int value, uint32_t accent, const char* unit)
 {
     lv_obj_t* s = lv_slider_create(parent);
     lv_obj_set_width(s, LV_PCT(100));
@@ -293,11 +331,19 @@ lv_obj_t* frij_slider_row(lv_obj_t* parent, const char* label, int min, int max,
     lv_obj_set_style_bg_opa(s, LV_OPA_TRANSP, LV_PART_KNOB);
     lv_obj_set_style_pad_all(s, 0, LV_PART_KNOB);
 
-    lv_obj_t* l = lv_label_create(s);
+    lv_obj_t* l = lv_label_create(s);  // child [0]: title on the left
     lv_label_set_text(l, label);
     lv_obj_set_style_text_color(l, lv_color_hex(FRIJ_TEXT), LV_PART_MAIN);
     lv_obj_set_style_text_font(l, FRIJ_FONT_BODY, LV_PART_MAIN);
     lv_obj_align(l, LV_ALIGN_LEFT_MID, FRIJ_SP_M, 0);
+
+    lv_obj_t* val = lv_label_create(s);  // child [1]: live value on the right
+    lv_obj_set_style_text_color(val, lv_color_hex(FRIJ_TEXT_2), LV_PART_MAIN);
+    lv_obj_set_style_text_font(val, FRIJ_FONT_BODY, LV_PART_MAIN);
+    lv_obj_align(val, LV_ALIGN_RIGHT_MID, -FRIJ_SP_M, 0);
+    lv_obj_set_user_data(val, (void*)unit);  // read back by slider_value_cb
+    lv_label_set_text_fmt(val, "%d%s", value, unit ? unit : "");
+    lv_obj_add_event_cb(s, slider_value_cb, LV_EVENT_VALUE_CHANGED, NULL);
 
     frij_haptic_attach(s);
     return s;
@@ -316,29 +362,58 @@ lv_obj_t* frij_action_row(lv_obj_t* parent, const char* label, lv_event_cb_t on_
     return row;
 }
 
-// ---- confirmation dialog ---------------------------------------------------
+// ---- modals (shared) -------------------------------------------------------
 
-static void confirm_backdrop_cb(lv_event_t* e)
+// Tap on the backdrop itself (not a child) closes the modal.
+static void modal_dismiss_cb(lv_event_t* e)
 {
-    // cancel only when the backdrop itself is tapped, not a child button
     if (lv_event_get_target(e) == lv_event_get_current_target(e)) {
         lv_obj_delete((lv_obj_t*)lv_event_get_user_data(e));
     }
 }
 
-static void confirm_cancel_cb(lv_event_t* e)
+// A dimmed, tap-to-dismiss backdrop on the active screen (above the launcher).
+// The dim fades in; the caller adds a card via modal_card().
+static lv_obj_t* modal_backdrop(void)
 {
-    lv_obj_delete((lv_obj_t*)lv_event_get_user_data(e));
+    lv_obj_t* modal = lv_obj_create(lv_screen_active());
+    lv_obj_remove_style_all(modal);
+    lv_obj_set_size(modal, LV_PCT(100), LV_PCT(100));
+    lv_obj_set_style_bg_color(modal, lv_color_hex(0x000000), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(modal, LV_OPA_TRANSP, LV_PART_MAIN);  // fades in below
+    lv_obj_clear_flag(modal, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(modal, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(modal, modal_dismiss_cb, LV_EVENT_CLICKED, modal);
+
+    lv_anim_t a;
+    lv_anim_init(&a);
+    lv_anim_set_var(&a, modal);
+    lv_anim_set_exec_cb(&a, set_bg_opa_cb);
+    lv_anim_set_values(&a, 0, LV_OPA_60);
+    lv_anim_set_duration(&a, FRIJ_ANIM_MS);
+    lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
+    lv_anim_start(&a);
+    return modal;
 }
 
-static void confirm_ok_cb(lv_event_t* e)
+// A centered Surface-2 card (flex column) that fades + rises in.
+static lv_obj_t* modal_card(lv_obj_t* modal)
 {
-    lv_obj_t*     modal = (lv_obj_t*)lv_event_get_user_data(e);
-    lv_event_cb_t cb    = (lv_event_cb_t)lv_obj_get_user_data(modal);  // the caller's handler
-    if (cb) {
-        cb(e);
-    }
-    lv_obj_delete(modal);
+    lv_obj_t* card = lv_obj_create(modal);
+    lv_obj_set_width(card, LV_PCT(74));
+    lv_obj_set_height(card, LV_SIZE_CONTENT);
+    lv_obj_center(card);
+    lv_obj_set_style_bg_color(card, lv_color_hex(FRIJ_SURFACE_2), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(card, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_radius(card, FRIJ_RADIUS_L, LV_PART_MAIN);
+    lv_obj_set_style_border_width(card, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(card, FRIJ_SP_L, LV_PART_MAIN);
+    lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(card, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_row(card, FRIJ_SP_M, LV_PART_MAIN);
+    frij_anim_enter(card, 30);  // fade + rise entrance
+    return card;
 }
 
 static lv_obj_t* pill_button(lv_obj_t* parent, const char* text, uint32_t bg, uint32_t fg,
@@ -361,36 +436,31 @@ static lv_obj_t* pill_button(lv_obj_t* parent, const char* text, uint32_t bg, ui
     return b;
 }
 
+// ---- confirmation dialog ---------------------------------------------------
+
+static void confirm_cancel_cb(lv_event_t* e)
+{
+    lv_obj_delete((lv_obj_t*)lv_event_get_user_data(e));
+}
+
+static void confirm_ok_cb(lv_event_t* e)
+{
+    lv_obj_t*     modal = (lv_obj_t*)lv_event_get_user_data(e);
+    lv_event_cb_t cb    = (lv_event_cb_t)lv_obj_get_user_data(modal);  // the caller's handler
+    if (cb) {
+        cb(e);
+    }
+    lv_obj_delete(modal);
+}
+
 void frij_confirm(const char* title, const char* message, const char* confirm_text,
                   uint32_t accent, lv_event_cb_t on_confirm)
 {
-    // Backdrop covers everything (sits on the active screen, above the launcher
-    // root) and dims the UI. The backdrop absorbs taps so the launcher stays put.
-    lv_obj_t* modal = lv_obj_create(lv_screen_active());
-    lv_obj_remove_style_all(modal);
-    lv_obj_set_size(modal, LV_PCT(100), LV_PCT(100));
-    lv_obj_set_style_bg_color(modal, lv_color_hex(0x000000), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(modal, LV_OPA_60, LV_PART_MAIN);
-    lv_obj_clear_flag(modal, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_add_flag(modal, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_t* modal = modal_backdrop();
     lv_obj_set_user_data(modal, (void*)on_confirm);  // read back by confirm_ok_cb
-    lv_obj_add_event_cb(modal, confirm_backdrop_cb, LV_EVENT_CLICKED, modal);
 
-    lv_obj_t* card = lv_obj_create(modal);
-    lv_obj_set_width(card, LV_PCT(74));
-    lv_obj_set_height(card, LV_SIZE_CONTENT);
-    lv_obj_center(card);
-    lv_obj_set_style_bg_color(card, lv_color_hex(FRIJ_SURFACE_2), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(card, LV_OPA_COVER, LV_PART_MAIN);
-    lv_obj_set_style_radius(card, FRIJ_RADIUS_L, LV_PART_MAIN);
-    lv_obj_set_style_border_width(card, 0, LV_PART_MAIN);
-    lv_obj_set_style_pad_all(card, FRIJ_SP_L, LV_PART_MAIN);
-    lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(card, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_row(card, FRIJ_SP_M, LV_PART_MAIN);
-
-    lv_obj_t* t = frij_label(card, title, FRIJ_FONT_TITLE, FRIJ_TEXT);
+    lv_obj_t* card = modal_card(modal);
+    lv_obj_t* t    = frij_label(card, title, FRIJ_FONT_TITLE, FRIJ_TEXT);
     lv_obj_set_style_text_align(t, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     if (message && message[0]) {
         lv_obj_t* m = frij_label(card, message, FRIJ_FONT_BODY, FRIJ_TEXT_2);
@@ -410,6 +480,69 @@ void frij_confirm(const char* title, const char* message, const char* confirm_te
 
     pill_button(row, "Cancel", FRIJ_SURFACE_3, FRIJ_TEXT, confirm_cancel_cb, modal);
     pill_button(row, confirm_text, accent, 0xFFFFFF, confirm_ok_cb, modal);
+}
+
+// ---- action sheet ----------------------------------------------------------
+
+typedef struct {
+    frij_sheet_cb cb;
+    void*         user;
+} sheet_ctx_t;
+
+static void sheet_free_cb(lv_event_t* e)
+{
+    lv_free(lv_event_get_user_data(e));  // ctx outlives the build call
+}
+
+static void sheet_cancel_cb(lv_event_t* e)
+{
+    lv_obj_delete((lv_obj_t*)lv_event_get_user_data(e));
+}
+
+static void sheet_option_cb(lv_event_t* e)
+{
+    lv_obj_t*     btn   = (lv_obj_t*)lv_event_get_target(e);
+    lv_obj_t*     modal = (lv_obj_t*)lv_event_get_user_data(e);
+    sheet_ctx_t*  c     = (sheet_ctx_t*)lv_obj_get_user_data(modal);
+    int           idx   = (int)(intptr_t)lv_obj_get_user_data(btn);
+    frij_sheet_cb cb    = c->cb;  // copy out before the modal (and ctx) are freed
+    void*         user  = c->user;
+    lv_obj_delete(modal);
+    if (cb) {
+        cb(idx, user);
+    }
+}
+
+void frij_action_sheet(const char* title, const char* const* options, int count, uint32_t accent,
+                       frij_sheet_cb cb, void* user)
+{
+    sheet_ctx_t* c = (sheet_ctx_t*)lv_malloc(sizeof(sheet_ctx_t));
+    c->cb          = cb;
+    c->user        = user;
+
+    lv_obj_t* modal = modal_backdrop();
+    lv_obj_set_user_data(modal, c);
+    lv_obj_add_event_cb(modal, sheet_free_cb, LV_EVENT_DELETE, c);
+
+    lv_obj_t* card = modal_card(modal);
+    if (title && title[0]) {
+        lv_obj_t* t = frij_label(card, title, FRIJ_FONT_TITLE, FRIJ_TEXT);
+        lv_obj_set_style_text_align(t, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    }
+
+    for (int i = 0; i < count; i++) {
+        // first option is the primary (accent); the rest are neutral surfaces
+        uint32_t  bg = (i == 0) ? accent : FRIJ_SURFACE_3;
+        uint32_t  fg = (i == 0) ? 0xFFFFFF : FRIJ_TEXT;
+        lv_obj_t* b  = pill_button(card, options[i], bg, fg, sheet_option_cb, modal);
+        lv_obj_set_flex_grow(b, 0);          // stack at natural height in the column
+        lv_obj_set_width(b, LV_PCT(100));
+        lv_obj_set_user_data(b, (void*)(intptr_t)i);  // option index for the callback
+    }
+
+    lv_obj_t* cancel = pill_button(card, "Cancel", FRIJ_SURFACE_2, FRIJ_TEXT_2, sheet_cancel_cb, modal);
+    lv_obj_set_flex_grow(cancel, 0);
+    lv_obj_set_width(cancel, LV_PCT(100));
 }
 
 lv_obj_t* frij_toggle(lv_obj_t* parent, bool on, uint32_t accent)

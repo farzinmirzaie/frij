@@ -27,7 +27,17 @@ lv_obj_t* frij_glow(lv_obj_t* parent, uint32_t accent);
 lv_obj_t* frij_col(lv_obj_t* parent, int gap);
 
 // A centered column at 86% width — the standard page body for a round screen.
+// Call frij_page_settle() after adding children to finalize the layout.
 lv_obj_t* frij_page(lv_obj_t* parent);
+
+// Lay a page out beneath a top bar `header_px` tall: adds breathing room under
+// the bar and a matching bottom inset so centered content still lands at the
+// screen's true center. A reusable "safe area" for header screens.
+void frij_page_under_header(lv_obj_t* page, int header_px);
+
+// Finalize a page once its children exist: center the content if it fits, or
+// top-align it if it overflows (so the first row never hides above the scroll).
+void frij_page_settle(lv_obj_t* page);
 
 // A label using a theme font + color (0xRRGGBB).
 lv_obj_t* frij_label(lv_obj_t* parent, const char* text, const lv_font_t* font, uint32_t color);
@@ -59,7 +69,7 @@ void frij_header_set_action(lv_obj_t* header, const char* symbol);
 // and an accent fill shows the amount; `label` sits on top. Returns the slider
 // (an lv_slider) — attach LV_EVENT_VALUE_CHANGED and read lv_slider_get_value.
 lv_obj_t* frij_slider_row(lv_obj_t* parent, const char* label, int min, int max,
-                          int value, uint32_t accent);
+                          int value, uint32_t accent, const char* unit);
 
 // A themed on/off switch. Attach your own LV_EVENT_VALUE_CHANGED handler.
 lv_obj_t* frij_toggle(lv_obj_t* parent, bool on, uint32_t accent);
@@ -74,6 +84,16 @@ lv_obj_t* frij_action_row(lv_obj_t* parent, const char* label, lv_event_cb_t on_
 // either way (tapping the backdrop cancels). Use for destructive actions.
 void frij_confirm(const char* title, const char* message, const char* confirm_text,
                   uint32_t accent, lv_event_cb_t on_confirm);
+
+// Callback for frij_action_sheet: `option` is the tapped option's index (0..n-1).
+typedef void (*frij_sheet_cb)(int option, void* user);
+
+// A modal action sheet: a dimmed backdrop + a centered card with `title` and a
+// stacked list of `options` (the first is the accent/primary action) plus a
+// "Cancel". `cb` fires with the chosen index; the sheet closes itself (tapping
+// the backdrop or Cancel dismisses without calling `cb`).
+void frij_action_sheet(const char* title, const char* const* options, int count, uint32_t accent,
+                       frij_sheet_cb cb, void* user);
 
 // Entrance animation: fade in + rise. `delay_ms` lets callers stagger a list.
 void frij_anim_enter(lv_obj_t* obj, uint32_t delay_ms);

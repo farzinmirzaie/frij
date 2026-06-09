@@ -49,5 +49,6 @@ every app shares the look but has its own scheme.
 - `home/` — watch face (time + date), registered first so it's the landing tile. Purple.
 - `todo/` — cloud-synced checklist, 3 screens. Amber.
 - `counter/` — a number with ±, persists. Blue.
-- `settings/` — brightness slider + 24-hour toggle + about, 3 screens. Purple.
-  Registered in the settings slot (swipe down), not the home carousel.
+- `settings/` — 3 screens: General (brightness/volume/sleep sliders + 24-hour,
+  vibration, auto-sync toggles), Network (Wi-Fi list), About (sync now + reset).
+  Purple. Registered in the settings slot (swipe down), not the home carousel.

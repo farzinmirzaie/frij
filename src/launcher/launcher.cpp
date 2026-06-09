@@ -71,6 +71,7 @@ static void glance_builder(lv_obj_t* page, int index, void* user)
     if (app->build_glance) {
         app->build_glance(page);
     }
+    frij_page_settle(page);  // center if it fits, else top-align
 }
 
 static void app_screen_builder(lv_obj_t* page, int index, void* user)
@@ -83,11 +84,8 @@ static void app_screen_builder(lv_obj_t* page, int index, void* user)
     if (app->build_screen) {
         app->build_screen(page, index);
     }
-    // The header sits at the top of the layer; balance it with matching bottom
-    // padding so the page's centered content lands at the screen's true center
-    // (rather than the center of the shorter area below the header).
-    int pad_top = lv_obj_get_style_pad_top(page, LV_PART_MAIN);
-    lv_obj_set_style_pad_bottom(page, pad_top + header_zone(), LV_PART_MAIN);
+    frij_page_under_header(page, header_zone());  // breathing room + screen-centered
+    frij_page_settle(page);                       // center if it fits, else top-align
 }
 
 // ---- layers ---------------------------------------------------------------
@@ -133,10 +131,12 @@ static void layer_change_cb(int index, void* user)
 // sitting behind the header title (not as a full-screen background).
 static void add_layer_header(lv_obj_t* layer, const frij_app_t* app, frij_carousel_t* car)
 {
-    int       sz = frij_screen_min() * 52 / 100;  // compact halo, just behind the title
+    // a wide, short halo (an ellipse) sitting behind the header title
+    int       gw = frij_screen_min() * 64 / 100;
+    int       gh = frij_screen_min() * 26 / 100;
     lv_obj_t* g  = frij_glow(layer, app->color);
-    lv_obj_set_size(g, sz, sz);  // frij_glow defaults to a large halo; shrink it here
-    lv_obj_align(g, LV_ALIGN_TOP_MID, 0, frij_screen_min() * 13 / 100 - sz / 2);
+    lv_obj_set_size(g, gw, gh);  // frij_glow defaults to a large square halo
+    lv_obj_align(g, LV_ALIGN_TOP_MID, 0, frij_screen_min() * 14 / 100 - gh / 2);
     lv_obj_move_background(g);  // behind header + content
 
     s_layer_app = app;
