@@ -11,6 +11,7 @@
 #endif
 
 #ifdef FRIJ_NATIVE
+#include <dirent.h>
 // ============================================================================
 // Emulator backend: local file cache (.frij_store/) + Supabase over HTTPS.
 //
@@ -236,6 +237,24 @@ void frij_store_pull_async(const char* key)
     std::thread([k = std::string(key)] { cloud_fetch_to_cache(k); }).detach();
 }
 
+void frij_store_clear(void)
+{
+    DIR* d = opendir(STORE_DIR);
+    if (!d) {
+        return;
+    }
+    struct dirent* ent;
+    while ((ent = readdir(d)) != NULL) {
+        if (ent->d_name[0] == '.') {
+            continue;  // skip "." / ".."
+        }
+        char path[200];
+        snprintf(path, sizeof(path), "%s/%s", STORE_DIR, ent->d_name);
+        remove(path);
+    }
+    closedir(d);
+}
+
 #else
 // ============================================================================
 // Device backend: TODO — Supabase over WiFiClientSecure + NVS/LittleFS cache,
@@ -268,6 +287,9 @@ void frij_store_pull_async(const char* key)
 {
     (void)key;
 }
+
+void frij_store_clear(void) {}  // device: TODO — erase NVS/LittleFS namespace
+
 #endif
 
 // ---- typed accessors (backend-agnostic; built on load/save) ----------------

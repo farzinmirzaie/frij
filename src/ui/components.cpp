@@ -583,9 +583,39 @@ void frij_action_sheet(const char* title, const char* const* options, int count,
 
 // ---- toast (auto-dismissing snackbar) --------------------------------------
 
+static lv_obj_t* s_toast = NULL;  // at most one on screen at a time
+
+static void toast_gone_cb(lv_anim_t* a)
+{
+    lv_obj_t* t = (lv_obj_t*)a->var;
+    if (s_toast == t) {
+        s_toast = NULL;
+    }
+    lv_obj_delete(t);
+}
+
+// Hold, then fade out + delete. Sequenced after the fade-in so the two opacity
+// animations don't fight over the same property (which left the toast hidden).
+static void toast_in_done_cb(lv_anim_t* a)
+{
+    lv_anim_t out;
+    lv_anim_init(&out);
+    lv_anim_set_var(&out, a->var);
+    lv_anim_set_exec_cb(&out, set_opa_cb);
+    lv_anim_set_values(&out, LV_OPA_COVER, LV_OPA_TRANSP);
+    lv_anim_set_duration(&out, FRIJ_ANIM_MS);
+    lv_anim_set_delay(&out, 1500);  // hold visible before fading
+    lv_anim_set_completed_cb(&out, toast_gone_cb);
+    lv_anim_start(&out);
+}
+
 void frij_toast(const char* text)
 {
+    if (s_toast) {
+        lv_obj_delete(s_toast);  // also cancels its anims (LVGL drops anims on delete)
+    }
     lv_obj_t* t = lv_obj_create(lv_screen_active());
+    s_toast     = t;
     lv_obj_remove_style_all(t);
     lv_obj_set_size(t, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
     lv_obj_set_style_bg_color(t, lv_color_hex(FRIJ_SURFACE_3), LV_PART_MAIN);
@@ -596,16 +626,21 @@ void frij_toast(const char* text)
     lv_obj_set_style_pad_top(t, FRIJ_SP_S, LV_PART_MAIN);
     lv_obj_set_style_pad_bottom(t, FRIJ_SP_S, LV_PART_MAIN);
     lv_obj_clear_flag(t, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_align(t, LV_ALIGN_BOTTOM_MID, 0, -frij_screen_min() * 12 / 100);
+    lv_obj_align(t, LV_ALIGN_BOTTOM_MID, 0, -frij_screen_min() * 14 / 100);
 
     lv_obj_t* l = frij_label(t, text, FRIJ_FONT_BODY, FRIJ_TEXT);
     lv_obj_center(l);
 
-    // Fade in, hold, fade out, then self-delete — all via LVGL's built-in helpers.
-    lv_obj_set_style_opa(t, LV_OPA_TRANSP, LV_PART_MAIN);
-    lv_obj_fade_in(t, FRIJ_ANIM_MS, 0);
-    lv_obj_fade_out(t, FRIJ_ANIM_MS, 1500);
-    lv_obj_delete_delayed(t, 1500 + FRIJ_ANIM_MS + 20);
+    // Fade in; toast_in_done_cb then holds and fades it back out.
+    lv_anim_t in;
+    lv_anim_init(&in);
+    lv_anim_set_var(&in, t);
+    lv_anim_set_exec_cb(&in, set_opa_cb);
+    lv_anim_set_values(&in, LV_OPA_TRANSP, LV_OPA_COVER);
+    lv_anim_set_duration(&in, FRIJ_ANIM_MS);
+    lv_anim_set_path_cb(&in, lv_anim_path_ease_out);
+    lv_anim_set_completed_cb(&in, toast_in_done_cb);
+    lv_anim_start(&in);
 }
 
 lv_obj_t* frij_toggle(lv_obj_t* parent, bool on, uint32_t accent)

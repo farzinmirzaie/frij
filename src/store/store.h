@@ -31,6 +31,10 @@ bool frij_store_pull(const char* key);
 // opening a screen so the gesture stays smooth.
 void frij_store_pull_async(const char* key);
 
+// Wipe all locally-cached values (factory reset of on-device data). Does not
+// touch the cloud; apps fall back to their defaults on the next read.
+void frij_store_clear(void);
+
 // Typed convenience accessors built on load/save. Values are stored as plain
 // text (a decimal for ints, "1"/"0" for bools); `def` is returned when the key
 // is absent. Saves go through the same cloud-backed path as frij_store_save.

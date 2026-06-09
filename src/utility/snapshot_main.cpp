@@ -155,6 +155,9 @@ int main(int, char**)
         frij_action_sheet("Linksys-5G", opts, 2, FRIJ_PRIMARY, NULL, NULL);
     } else if (scr && strcmp(scr, "about") == 0) {
         build_app_screen(settings_app(), 2);
+    } else if (scr && strcmp(scr, "toast") == 0) {
+        build_app_screen(settings_app(), 2);
+        frij_toast("Syncing...");
     } else if (scr && strcmp(scr, "confirm") == 0) {
         build_app_screen(settings_app(), 2);
         frij_confirm("Reset settings?", "Restore everything to defaults.", "Reset",
@@ -163,8 +166,9 @@ int main(int, char**)
         user_app();  // default: the launcher (home)
     }
 
-    s_tick_offset += 3000;  // jump past entrance animations
-    lv_refr_now(disp);      // render the settled UI once
+    // settle past entrance anims; the toast is transient, so sample it mid-hold
+    s_tick_offset += (scr && strcmp(scr, "toast") == 0) ? 600 : 3000;
+    lv_refr_now(disp);  // render the settled UI once
 
     lv_draw_buf_t* snap = lv_snapshot_take(lv_screen_active(), LV_COLOR_FORMAT_ARGB8888);
     if (snap) {

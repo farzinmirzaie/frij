@@ -25,6 +25,12 @@ void user_app(void)
     // apply the saved vibration preference (default on)
     frij_haptics_set_enabled(frij_store_load_bool("haptics", true));
 
+    // when auto-sync is on, pull the apps' latest cloud data in the background
+    if (frij_store_load_bool("autosync", true)) {
+        frij_store_pull_async("todo");
+        frij_store_pull_async("counter");
+    }
+
     frij_register_apps();
     frij_launcher_start();
     frij_input_init();

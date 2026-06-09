@@ -38,8 +38,10 @@
 #define FRIJ_FONT_DISPLAY (&frij_sf_display)  // 34 Semibold
 #define FRIJ_FONT_TITLE   (&frij_sf_title)    // 26 Semibold
 #define FRIJ_FONT_BODY    (&frij_sf_body)     // 18 Regular
-// Symbols (✓ ± +) aren't in the SF subset — symbol labels use this.
+// Symbols (✓ ± +) aren't in the SF subset — symbol labels use these. Montserrat
+// also carries digits/%, so it doubles as the small caption font (battery, etc).
 #define FRIJ_FONT_SYMBOL  (&lv_font_montserrat_20)
+#define FRIJ_FONT_SMALL   (&lv_font_montserrat_14)
 
 // ---- Spacing (4pt grid) ---------------------------------------------------
 #define FRIJ_SP_XS  4

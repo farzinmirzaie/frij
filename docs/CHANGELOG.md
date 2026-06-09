@@ -2,6 +2,20 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-09 — polish pass 2 (fixes + sync/erase)
+
+- **Fixed the toast** — it never showed: `fade_in` and `fade_out` fought over the
+  same opacity property, leaving it transparent. Now sequenced (fade in → hold →
+  fade out), with a single tracked instance.
+- **Battery moved** under the date on the watch face, in a smaller font
+  (`FRIJ_FONT_SMALL` = Montserrat 14).
+- **Wi-Fi feedback** — Connect/Disconnect/Forget now show a toast; Network shows
+  an empty state when no networks are visible.
+- **Auto-sync wired** — when enabled, the apps' cloud data is pulled in the
+  background at boot. About shows a **Last sync** time (stamped on Sync now).
+- **Erase all data** — About gains a confirm-gated factory reset
+  (`frij_store_clear` wipes the local cache; defaults return on next read).
+
 ## 2026-06-09 — polish pass (battery, UX, feedback)
 
 - **Battery** — new `system/battery` service (emulator mock + device TODO). The

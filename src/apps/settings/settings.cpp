@@ -1,6 +1,7 @@
 #include "settings.h"
 
 #include <string.h>
+#include <time.h>
 
 #include "store/store.h"
 #include "system/battery.h"
@@ -72,6 +73,7 @@ static void on_sync_now(lv_event_t* e)
     (void)e;
     frij_store_pull_async("todo");  // best-effort cloud refresh
     frij_store_pull_async("counter");
+    frij_store_save_int("last_sync", (int)time(NULL));
     frij_haptic(FRIJ_HAPTIC_SUCCESS);
     frij_toast("Syncing...");
 }
@@ -95,6 +97,22 @@ static void on_reset(lv_event_t* e)
 {
     (void)e;  // destructive: confirm first
     frij_confirm("Reset settings?", "Restore everything to defaults.", "Reset", ACCENT, do_reset);
+}
+
+static void do_erase(lv_event_t* e)
+{
+    (void)e;
+    frij_store_clear();  // wipe todos / counter / settings; defaults return on next read
+    frij_set_brightness(80);
+    frij_haptics_set_enabled(true);
+    frij_haptic(FRIJ_HAPTIC_SUCCESS);
+    frij_toast("All data erased");
+}
+
+static void on_erase(lv_event_t* e)
+{
+    (void)e;  // destructive: confirm first
+    frij_confirm("Erase all data?", "Removes todos, counter and settings.", "Erase", ACCENT, do_erase);
 }
 
 // ---- row helpers -----------------------------------------------------------
@@ -131,6 +149,15 @@ static void slider_row(lv_obj_t* col, const char* text, int min, int max, const 
     lv_obj_add_event_cb(s, cb, LV_EVENT_VALUE_CHANGED, NULL);
 }
 
+// A read-only "label  …  value" row (Battery, Last sync, …).
+static void info_row(lv_obj_t* col, const char* label, const char* value)
+{
+    lv_obj_t* r = frij_surface_row(col);
+    lv_obj_t* l = frij_label(r, label, FRIJ_FONT_BODY, FRIJ_TEXT);
+    lv_obj_set_flex_grow(l, 1);
+    frij_label(r, value, FRIJ_FONT_BODY, FRIJ_TEXT_2);
+}
+
 // ---- Network screen (Wi-Fi) ------------------------------------------------
 
 static lv_obj_t*      s_net_col = NULL;            // the Network page, for in-place refresh
@@ -154,15 +181,21 @@ static void net_refresh(void)
 static void net_action_cb(int opt, void* user)
 {
     (void)user;
-    if (s_sel_kind == 2) {  // connected: Disconnect / Forget
-        opt == 0 ? frij_wifi_disconnect() : frij_wifi_forget(s_sel);
-    } else if (s_sel_kind == 1) {  // saved: Connect / Forget
-        opt == 0 ? (void)frij_wifi_connect(s_sel, NULL) : frij_wifi_forget(s_sel);
-    } else {  // new: Connect
+    char msg[64];
+    bool forget = (s_sel_kind != 0 && opt == 1);  // option 1 is Forget when present
+    if (forget) {
+        frij_wifi_forget(s_sel);
+        lv_snprintf(msg, sizeof(msg), "Forgot %s", s_sel);
+    } else if (s_sel_kind == 2) {  // connected, Disconnect
+        frij_wifi_disconnect();
+        lv_snprintf(msg, sizeof(msg), "Disconnected");
+    } else {  // Connect (new or saved)
         frij_wifi_connect(s_sel, NULL);
+        lv_snprintf(msg, sizeof(msg), "Connected to %s", s_sel);
     }
     frij_haptic(FRIJ_HAPTIC_SELECT);
     net_refresh();
+    frij_toast(msg);
 }
 
 static void net_row_cb(lv_event_t* e)
@@ -214,6 +247,10 @@ static void build_network(lv_obj_t* col)
 
     // Visible networks; tap one for Connect / Disconnect / Forget.
     s_scan_n = frij_wifi_scan(s_scan, (int)(sizeof(s_scan) / sizeof(s_scan[0])));
+    if (s_scan_n == 0) {
+        frij_empty_state(col, "No networks");
+        return;
+    }
     for (int i = 0; i < s_scan_n; i++) {
         frij_wifi_net_t* nw  = &s_scan[i];
         lv_obj_t*        r   = frij_surface_row(col);
@@ -265,16 +302,26 @@ static void screen(lv_obj_t* parent, int index)
                 frij_label(col, "Frij", FRIJ_FONT_TITLE, FRIJ_TEXT);
                 frij_label(col, "on-device UI  -  v0.1", FRIJ_FONT_BODY, FRIJ_TEXT_2);
 
-                lv_obj_t* brow = frij_surface_row(col);
-                lv_obj_t* blbl = frij_label(brow, "Battery", FRIJ_FONT_BODY, FRIJ_TEXT);
-                lv_obj_set_flex_grow(blbl, 1);
                 char bbuf[24];
                 lv_snprintf(bbuf, sizeof(bbuf), "%d%%%s", frij_battery_pct(),
                             frij_battery_charging() ? "  " LV_SYMBOL_CHARGE : "");
-                frij_label(brow, bbuf, FRIJ_FONT_BODY, FRIJ_TEXT_2);
+                info_row(col, "Battery", bbuf);
+
+                char        sbuf[24];
+                int         ls = frij_store_load_int("last_sync", 0);
+                if (ls > 0) {
+                    time_t    tt = (time_t)ls;
+                    struct tm tmv;
+                    localtime_r(&tt, &tmv);
+                    strftime(sbuf, sizeof(sbuf), "%H:%M", &tmv);
+                } else {
+                    lv_snprintf(sbuf, sizeof(sbuf), "Never");
+                }
+                info_row(col, "Last sync", sbuf);
 
                 frij_action_row(col, "Sync now", on_sync_now);
                 frij_action_row(col, "Reset settings", on_reset);
+                frij_action_row(col, "Erase all data", on_erase);
             }
             break;
     }
