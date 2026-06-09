@@ -8,9 +8,9 @@ theme, list rows, …) as patterns repeat.
 
 - `theme.h` — design tokens: colors (`FRIJ_PRIMARY`, `FRIJ_SURFACE_*`, …),
   fonts (SF Pro Rounded — see `fonts/`), 4pt spacing, radius, motion.
-- `datetime.*` — shared time formatting: `frij_clock_is_24h()` (the single
-  source of truth for the 24-hour setting) + `frij_format_time()` (`14:30` /
-  `2:30 PM`). Use these so every screen respects the toggle.
+- `anim.*` — shared motion: `frij_anim_enter` (fade + rise), `frij_stagger_in`
+  (staggered list entrance), and reusable lv_anim exec callbacks
+  (`frij_anim_exec_opa` / `_bg_opa` / `_translate_y` / `_scale`).
 - `fonts/` — SF Pro Rounded converted to LVGL fonts (see its README + license note).
 - `components.*` — themed widgets:
   - `frij_col` / `frij_label` — layout + typed text.
@@ -46,9 +46,7 @@ theme, list rows, …) as patterns repeat.
   - `frij_empty_state` — round "nothing here" placeholder.
   - `frij_header` — shared app top bar: back button (returns to the launcher) +
     centered title + optional right action button. Round-safe placement.
-  - `frij_anim_enter` — fade + rise entrance (stagger lists with a delay).
-  - `frij_stagger_in` — run `frij_anim_enter` across a container's children with
-    an increasing delay; the shared staggered-list entrance.
+  - (entrance/stagger animations live in `anim.*`.)
 - `carousel.*` — a horizontal, looping, finger-following pager. Input-free: the
   owner calls `drag(dx)` / `end(dx)`. No loop when `count <= 1`. Shows an
   auto-fading **page-dot indicator** at the bottom (active dot uses the accent

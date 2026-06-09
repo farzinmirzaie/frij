@@ -6,6 +6,7 @@
 #include <ArduinoJson.h>
 
 #include "store/store.h"
+#include "ui/anim.h"
 #include "ui/components.h"
 #include "ui/theme.h"
 

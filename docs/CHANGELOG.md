@@ -2,6 +2,17 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-09 — restructure + tint
+
+- **Header tint**: pushed the accent peak lower so the top edge stays
+  dark/transparent longer (more "fades into black on top").
+- **Package cleanup**: moved the non-UI `datetime` helper out of `ui/` into a new
+  **`core/`** package (app-agnostic, non-UI logic). Extracted motion into
+  **`ui/anim.*`** (entrance/stagger + shared lv_anim exec callbacks), out of
+  `components`. Updated READMEs + the structure table.
+- Recorded a **Settings-expansion assessment** in ROADMAP (Bluetooth: yes via a
+  BLE mock; GPS: no hardware; Date & time, Sound, Accessibility, Power).
+
 ## 2026-06-09 — polish pass 5 (time util + tint)
 
 - **Shared time formatting** (`ui/datetime`: `frij_clock_is_24h` +

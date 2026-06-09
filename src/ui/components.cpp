@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 
+#include "anim.h"
 #include "system/haptics.h"
 #include "theme.h"
 
@@ -9,29 +10,6 @@ static void on_press_haptic(lv_event_t* e)
 {
     (void)e;
     frij_haptic(FRIJ_HAPTIC_TAP);
-}
-
-// ---- animation exec callbacks ---------------------------------------------
-
-static void set_opa_cb(void* o, int32_t v)
-{
-    lv_obj_set_style_opa((lv_obj_t*)o, (lv_opa_t)v, LV_PART_MAIN);
-}
-
-static void set_ty_cb(void* o, int32_t v)
-{
-    lv_obj_set_style_translate_y((lv_obj_t*)o, v, LV_PART_MAIN);
-}
-
-static void set_scale_cb(void* o, int32_t v)
-{
-    lv_obj_set_style_transform_scale_x((lv_obj_t*)o, v, LV_PART_MAIN);
-    lv_obj_set_style_transform_scale_y((lv_obj_t*)o, v, LV_PART_MAIN);
-}
-
-static void set_bg_opa_cb(void* o, int32_t v)
-{
-    lv_obj_set_style_bg_opa((lv_obj_t*)o, (lv_opa_t)v, LV_PART_MAIN);
 }
 
 // ---- helpers ---------------------------------------------------------------
@@ -130,13 +108,13 @@ lv_obj_t* frij_top_tint(lv_obj_t* parent, uint32_t accent)
     d->dir            = LV_GRAD_DIR_VER;
     d->stops_count    = 3;
     d->stops[0].color = lv_color_hex(accent);
-    d->stops[0].opa   = 0;  // fade into the background at the top edge
+    d->stops[0].opa   = 0;  // transparent (shows black) at the top edge
     d->stops[0].frac  = 0;
     d->stops[1].color = lv_color_hex(accent);
-    d->stops[1].opa   = 80;  // peak just below the top
-    d->stops[1].frac  = 120;
+    d->stops[1].opa   = 85;  // peak pushed low, so the top stays dark longer
+    d->stops[1].frac  = 150;
     d->stops[2].color = lv_color_hex(accent);
-    d->stops[2].opa   = 0;
+    d->stops[2].opa   = 0;  // fade back out by the bottom
     d->stops[2].frac  = 255;
 
     lv_obj_set_style_bg_grad(g, d, LV_PART_MAIN);
@@ -304,7 +282,7 @@ void frij_check_set(lv_obj_t* check, bool checked, bool animate)
         lv_anim_t a;
         lv_anim_init(&a);
         lv_anim_set_var(&a, check);
-        lv_anim_set_exec_cb(&a, set_scale_cb);
+        lv_anim_set_exec_cb(&a, frij_anim_exec_scale);
         lv_anim_set_values(&a, 210, 256);  // 256 = 100%
         lv_anim_set_duration(&a, 180);
         lv_anim_set_path_cb(&a, lv_anim_path_overshoot);
@@ -454,7 +432,7 @@ static void modal_close(lv_obj_t* modal)
     lv_anim_t a;
     lv_anim_init(&a);
     lv_anim_set_var(&a, modal);
-    lv_anim_set_exec_cb(&a, set_opa_cb);  // overall opacity cascades to the card
+    lv_anim_set_exec_cb(&a, frij_anim_exec_opa);  // overall opacity cascades to the card
     lv_anim_set_values(&a, LV_OPA_COVER, LV_OPA_TRANSP);
     lv_anim_set_duration(&a, FRIJ_ANIM_MS);
     lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
@@ -497,7 +475,7 @@ static lv_obj_t* modal_backdrop(void)
     lv_anim_t a;
     lv_anim_init(&a);
     lv_anim_set_var(&a, modal);
-    lv_anim_set_exec_cb(&a, set_bg_opa_cb);
+    lv_anim_set_exec_cb(&a, frij_anim_exec_bg_opa);
     lv_anim_set_values(&a, 0, LV_OPA_60);
     lv_anim_set_duration(&a, FRIJ_ANIM_MS);
     lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
@@ -679,7 +657,7 @@ static void toast_in_done_cb(lv_anim_t* a)
     lv_anim_t out;
     lv_anim_init(&out);
     lv_anim_set_var(&out, a->var);
-    lv_anim_set_exec_cb(&out, set_opa_cb);
+    lv_anim_set_exec_cb(&out, frij_anim_exec_opa);
     lv_anim_set_values(&out, LV_OPA_COVER, LV_OPA_TRANSP);
     lv_anim_set_duration(&out, FRIJ_ANIM_MS);
     lv_anim_set_delay(&out, 1500);  // hold visible before fading
@@ -713,7 +691,7 @@ void frij_toast(const char* text)
     lv_anim_t in;
     lv_anim_init(&in);
     lv_anim_set_var(&in, t);
-    lv_anim_set_exec_cb(&in, set_opa_cb);
+    lv_anim_set_exec_cb(&in, frij_anim_exec_opa);
     lv_anim_set_values(&in, LV_OPA_TRANSP, LV_OPA_COVER);
     lv_anim_set_duration(&in, FRIJ_ANIM_MS);
     lv_anim_set_path_cb(&in, lv_anim_path_ease_out);
@@ -802,39 +780,5 @@ void frij_header_set_action(lv_obj_t* header, const char* symbol)
     } else {
         lv_obj_set_style_opa(action, LV_OPA_TRANSP, LV_PART_MAIN);
         lv_obj_remove_flag(action, LV_OBJ_FLAG_CLICKABLE);
-    }
-}
-
-void frij_anim_enter(lv_obj_t* obj, uint32_t delay_ms)
-{
-    lv_obj_set_style_opa(obj, LV_OPA_TRANSP, LV_PART_MAIN);
-    lv_obj_set_style_translate_y(obj, 14, LV_PART_MAIN);
-
-    lv_anim_t fade;
-    lv_anim_init(&fade);
-    lv_anim_set_var(&fade, obj);
-    lv_anim_set_exec_cb(&fade, set_opa_cb);
-    lv_anim_set_values(&fade, 0, LV_OPA_COVER);
-    lv_anim_set_duration(&fade, FRIJ_ANIM_MS);
-    lv_anim_set_delay(&fade, delay_ms);
-    lv_anim_set_path_cb(&fade, lv_anim_path_ease_out);
-    lv_anim_start(&fade);
-
-    lv_anim_t rise;
-    lv_anim_init(&rise);
-    lv_anim_set_var(&rise, obj);
-    lv_anim_set_exec_cb(&rise, set_ty_cb);
-    lv_anim_set_values(&rise, 14, 0);
-    lv_anim_set_duration(&rise, FRIJ_ANIM_MS + 40);
-    lv_anim_set_delay(&rise, delay_ms);
-    lv_anim_set_path_cb(&rise, lv_anim_path_ease_out);
-    lv_anim_start(&rise);
-}
-
-void frij_stagger_in(lv_obj_t* container, int step_ms)
-{
-    uint32_t n = lv_obj_get_child_count(container);
-    for (uint32_t i = 0; i < n; i++) {
-        frij_anim_enter(lv_obj_get_child(container, i), i * step_ms);
     }
 }

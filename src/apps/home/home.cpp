@@ -2,9 +2,9 @@
 
 #include <time.h>
 
+#include "core/datetime.h"
 #include "system/battery.h"
 #include "ui/components.h"
-#include "ui/datetime.h"
 #include "ui/theme.h"
 
 /*

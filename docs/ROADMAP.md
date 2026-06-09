@@ -60,6 +60,21 @@ Ideas surfaced while polishing; not yet committed to a phase.
 - Sync state: show a spinner/`lv_spinner` while a pull is in flight, then a toast.
 - Empty/error states for the network list (no networks, connect failure).
 
+**More Settings — what fits the StopWatch hardware**
+- **Bluetooth: yes, eventually.** The ESP32-S3 has BLE. A Network-style screen
+  (master toggle + paired/nearby list + connect/forget via the action sheet) is
+  a natural fit once we need a phone link/notifications. Build it on a
+  `system/bluetooth` mock first, exactly like Wi-Fi.
+- **GPS: no.** There is no GNSS module on the StopWatch — skip it. (Location, if
+  ever needed, would have to come from a paired phone over BLE.)
+- **Date & time** (RX8130CE RTC): set time/zone manually + NTP sync over Wi-Fi.
+  High value — pairs with the new 24-hour setting and `core/datetime`.
+- **Sound** (ES8311): once a `system/audio` service exists, wire Touch sounds +
+  a UI-sounds toggle (today it's a stored pref only).
+- **Display**: always-on / raise-to-wake (BMI270) sensitivity, auto-dim.
+- **Accessibility**: larger text, reduce motion (gate `anim` durations).
+- **Power** (M5PM1): battery-saver mode, charge limit.
+
 **Settings polish (further)**
 - On-device Wi-Fi password entry (needs a keyboard/numpad component).
 - Per-app settings pages (e.g. Todo: clear completed).

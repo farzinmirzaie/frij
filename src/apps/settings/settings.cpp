@@ -8,8 +8,9 @@
 #include "system/brightness.h"
 #include "system/haptics.h"
 #include "system/wifi.h"
+#include "core/datetime.h"
+#include "ui/anim.h"
 #include "ui/components.h"
-#include "ui/datetime.h"
 #include "ui/theme.h"
 
 /*

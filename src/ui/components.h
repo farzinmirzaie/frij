@@ -114,11 +114,6 @@ typedef void (*frij_sheet_cb)(int option, void* user);
 void frij_action_sheet(const char* title, const char* const* options, int count, uint32_t accent,
                        frij_sheet_cb cb, void* user);
 
-// Entrance animation: fade in + rise. `delay_ms` lets callers stagger a list.
-void frij_anim_enter(lv_obj_t* obj, uint32_t delay_ms);
-
-// Run frij_anim_enter on every direct child, each delayed by `step_ms` more than
-// the last — a staggered list entrance. Call after building the rows.
-void frij_stagger_in(lv_obj_t* container, int step_ms);
+// Entrance/stagger animations now live in ui/anim.h.
 
 #endif  // FRIJ_COMPONENTS_H

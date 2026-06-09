@@ -30,7 +30,8 @@ If `pio` is not on PATH, it ships with the VS Code PlatformIO extension at
 | `src/app.h` | App contract (`frij_app_t`: glance + screens) — all a mini-app needs |
 | `src/launcher/` | Nav (4-way finger-follow), registry, Back input — see its README |
 | `src/apps/` | Mini-apps + settings; `apps.cpp` registers them — see its README |
-| `src/ui/` | Shared app-agnostic widgets (carousel; future components) |
+| `src/ui/` | Shared app-agnostic widgets + motion (`components`, `carousel`, `anim`, `theme`) |
+| `src/core/` | App-agnostic **non-UI** helpers (e.g. `datetime`) — see its README |
 | `src/store/` | Shared key→JSON store (file + Supabase, async) — see its README |
 | `src/system/` | Neutral board-service interfaces (e.g. brightness) — see its README |
 | `src/utility/` | The only board-specific code (LVGL↔M5GFX bridge) — see its README |
