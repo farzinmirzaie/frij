@@ -1,7 +1,5 @@
 #include "counter.h"
 
-#include <stdlib.h>  // atoi
-
 #include "store/store.h"
 #include "ui/components.h"
 #include "ui/theme.h"
@@ -19,17 +17,12 @@ static lv_obj_t* s_value = NULL;
 
 static void load_count(void)
 {
-    char buf[16];
-    if (frij_store_load(STORE_KEY, buf, sizeof(buf))) {
-        s_count = atoi(buf);
-    }
+    s_count = frij_store_load_int(STORE_KEY, 0);
 }
 
 static void save_count(void)
 {
-    char buf[16];
-    lv_snprintf(buf, sizeof(buf), "%d", s_count);
-    frij_store_save(STORE_KEY, buf);
+    frij_store_save_int(STORE_KEY, s_count);
 }
 
 static void refresh(void)

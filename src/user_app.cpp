@@ -1,5 +1,3 @@
-#include <stdlib.h>  // atoi
-
 #include "apps/apps.h"
 #include "launcher/input.h"
 #include "launcher/launcher.h"
@@ -22,12 +20,10 @@ void user_app(void)
     frij_store_init();
 
     // apply the saved brightness (default 80%)
-    char b[16];
-    frij_set_brightness(frij_store_load("brightness", b, sizeof(b)) ? (uint8_t)atoi(b) : 80);
+    frij_set_brightness((uint8_t)frij_store_load_int("brightness", 80));
 
     // apply the saved vibration preference (default on)
-    char h[8];
-    frij_haptics_set_enabled(frij_store_load("haptics", h, sizeof(h)) ? (h[0] == '1') : true);
+    frij_haptics_set_enabled(frij_store_load_bool("haptics", true));
 
     frij_register_apps();
     frij_launcher_start();

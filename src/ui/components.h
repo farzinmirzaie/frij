@@ -68,6 +68,13 @@ lv_obj_t* frij_toggle(lv_obj_t* parent, bool on, uint32_t accent);
 // LV_EVENT_CLICKED. Use for actions like "Sync now" / "Reset".
 lv_obj_t* frij_action_row(lv_obj_t* parent, const char* label, lv_event_cb_t on_click);
 
+// A modal confirmation dialog: a dimmed backdrop + a centered card with `title`,
+// optional `message`, a "Cancel" button and an accent button labelled
+// `confirm_text`. `on_confirm` fires when confirmed; the dialog closes itself
+// either way (tapping the backdrop cancels). Use for destructive actions.
+void frij_confirm(const char* title, const char* message, const char* confirm_text,
+                  uint32_t accent, lv_event_cb_t on_confirm);
+
 // Entrance animation: fade in + rise. `delay_ms` lets callers stagger a list.
 void frij_anim_enter(lv_obj_t* obj, uint32_t delay_ms);
 

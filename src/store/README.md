@@ -9,6 +9,11 @@ frij_store_init();
 frij_store_load(key, buf, size);  // local cache — fast, no network
 frij_store_save(key, json);       // cache + push to the cloud (best effort)
 frij_store_pull(key);             // cloud -> cache (call when opening a screen)
+
+frij_store_load_int(key, def);    // typed helpers over load/save: values are
+frij_store_save_int(key, value);  // stored as plain text ("42", "1"/"0").
+frij_store_load_bool(key, def);   // `def` is returned when the key is absent.
+frij_store_save_bool(key, value);
 ```
 
 Key = app name; one JSON blob per app. Apps choose their own serialization

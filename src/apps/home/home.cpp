@@ -27,8 +27,7 @@ typedef struct {
 
 static bool read_clock24(void)
 {
-    char b[8];
-    return frij_store_load("clock24", b, sizeof(b)) ? (b[0] == '1') : true;
+    return frij_store_load_bool("clock24", true);
 }
 
 static void render(clock_ctx_t* c)

@@ -316,6 +316,102 @@ lv_obj_t* frij_action_row(lv_obj_t* parent, const char* label, lv_event_cb_t on_
     return row;
 }
 
+// ---- confirmation dialog ---------------------------------------------------
+
+static void confirm_backdrop_cb(lv_event_t* e)
+{
+    // cancel only when the backdrop itself is tapped, not a child button
+    if (lv_event_get_target(e) == lv_event_get_current_target(e)) {
+        lv_obj_delete((lv_obj_t*)lv_event_get_user_data(e));
+    }
+}
+
+static void confirm_cancel_cb(lv_event_t* e)
+{
+    lv_obj_delete((lv_obj_t*)lv_event_get_user_data(e));
+}
+
+static void confirm_ok_cb(lv_event_t* e)
+{
+    lv_obj_t*     modal = (lv_obj_t*)lv_event_get_user_data(e);
+    lv_event_cb_t cb    = (lv_event_cb_t)lv_obj_get_user_data(modal);  // the caller's handler
+    if (cb) {
+        cb(e);
+    }
+    lv_obj_delete(modal);
+}
+
+static lv_obj_t* pill_button(lv_obj_t* parent, const char* text, uint32_t bg, uint32_t fg,
+                             lv_event_cb_t cb, void* user)
+{
+    lv_obj_t* b = lv_button_create(parent);
+    lv_obj_set_height(b, 44);
+    lv_obj_set_flex_grow(b, 1);
+    lv_obj_set_style_radius(b, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(b, lv_color_hex(bg), LV_PART_MAIN);
+    lv_obj_set_style_shadow_width(b, 0, LV_PART_MAIN);
+    frij_haptic_attach(b);
+    lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, user);
+
+    lv_obj_t* l = lv_label_create(b);
+    lv_label_set_text(l, text);
+    lv_obj_set_style_text_font(l, FRIJ_FONT_BODY, LV_PART_MAIN);
+    lv_obj_set_style_text_color(l, lv_color_hex(fg), LV_PART_MAIN);
+    lv_obj_center(l);
+    return b;
+}
+
+void frij_confirm(const char* title, const char* message, const char* confirm_text,
+                  uint32_t accent, lv_event_cb_t on_confirm)
+{
+    // Backdrop covers everything (sits on the active screen, above the launcher
+    // root) and dims the UI. The backdrop absorbs taps so the launcher stays put.
+    lv_obj_t* modal = lv_obj_create(lv_screen_active());
+    lv_obj_remove_style_all(modal);
+    lv_obj_set_size(modal, LV_PCT(100), LV_PCT(100));
+    lv_obj_set_style_bg_color(modal, lv_color_hex(0x000000), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(modal, LV_OPA_60, LV_PART_MAIN);
+    lv_obj_clear_flag(modal, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(modal, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_user_data(modal, (void*)on_confirm);  // read back by confirm_ok_cb
+    lv_obj_add_event_cb(modal, confirm_backdrop_cb, LV_EVENT_CLICKED, modal);
+
+    lv_obj_t* card = lv_obj_create(modal);
+    lv_obj_set_width(card, LV_PCT(74));
+    lv_obj_set_height(card, LV_SIZE_CONTENT);
+    lv_obj_center(card);
+    lv_obj_set_style_bg_color(card, lv_color_hex(FRIJ_SURFACE_2), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(card, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_radius(card, FRIJ_RADIUS_L, LV_PART_MAIN);
+    lv_obj_set_style_border_width(card, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(card, FRIJ_SP_L, LV_PART_MAIN);
+    lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(card, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_row(card, FRIJ_SP_M, LV_PART_MAIN);
+
+    lv_obj_t* t = frij_label(card, title, FRIJ_FONT_TITLE, FRIJ_TEXT);
+    lv_obj_set_style_text_align(t, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    if (message && message[0]) {
+        lv_obj_t* m = frij_label(card, message, FRIJ_FONT_BODY, FRIJ_TEXT_2);
+        lv_obj_set_width(m, LV_PCT(100));
+        lv_label_set_long_mode(m, LV_LABEL_LONG_WRAP);
+        lv_obj_set_style_text_align(m, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    }
+
+    lv_obj_t* row = lv_obj_create(card);
+    lv_obj_set_width(row, LV_PCT(100));
+    lv_obj_set_height(row, LV_SIZE_CONTENT);
+    strip(row);
+    lv_obj_set_style_pad_top(row, FRIJ_SP_XS, LV_PART_MAIN);
+    lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(row, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(row, FRIJ_SP_M, LV_PART_MAIN);
+
+    pill_button(row, "Cancel", FRIJ_SURFACE_3, FRIJ_TEXT, confirm_cancel_cb, modal);
+    pill_button(row, confirm_text, accent, 0xFFFFFF, confirm_ok_cb, modal);
+}
+
 lv_obj_t* frij_toggle(lv_obj_t* parent, bool on, uint32_t accent)
 {
     lv_obj_t* sw = lv_switch_create(parent);

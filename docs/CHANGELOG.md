@@ -4,6 +4,19 @@ Newest first. One short entry per change.
 
 ## 2026-06-09
 
+- **Smaller header glow** — the accent halo behind the title is now compact
+  (~52% of the screen) instead of a big wash.
+- **App-page content is screen-centered** — the header no longer pushes content
+  low or clips its top; matching bottom padding balances the header so the
+  centered column lands at the true screen center.
+- New **`frij_confirm`** confirmation dialog (dimmed backdrop + Cancel/Confirm
+  card); **Settings → Reset** now asks before wiping settings.
+- Cleanup: extracted typed store accessors (`frij_store_load_int/save_int/
+  load_bool/save_bool`) and removed the per-app copies (settings, counter, home,
+  boot). Fixed stale comments (settings screen map, carousel dots).
+
+## 2026-06-09
+
 - On app pages the accent **glow now sits behind the header title** (on the
   layer), not as a full background.
 - Fixed app pages scrolling when content fit: the full-size glow was inflating

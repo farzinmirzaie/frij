@@ -31,4 +31,12 @@ bool frij_store_pull(const char* key);
 // opening a screen so the gesture stays smooth.
 void frij_store_pull_async(const char* key);
 
+// Typed convenience accessors built on load/save. Values are stored as plain
+// text (a decimal for ints, "1"/"0" for bools); `def` is returned when the key
+// is absent. Saves go through the same cloud-backed path as frij_store_save.
+int  frij_store_load_int(const char* key, int def);
+void frij_store_save_int(const char* key, int value);
+bool frij_store_load_bool(const char* key, bool def);
+void frij_store_save_bool(const char* key, bool value);
+
 #endif  // FRIJ_STORE_H

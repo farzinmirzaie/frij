@@ -1,6 +1,7 @@
 #include "store.h"
 
 #include <stdio.h>
+#include <stdlib.h>  // atoi
 #include <string.h>
 
 #if defined(__has_include)
@@ -268,3 +269,29 @@ void frij_store_pull_async(const char* key)
     (void)key;
 }
 #endif
+
+// ---- typed accessors (backend-agnostic; built on load/save) ----------------
+
+int frij_store_load_int(const char* key, int def)
+{
+    char b[24];
+    return frij_store_load(key, b, sizeof(b)) ? atoi(b) : def;
+}
+
+void frij_store_save_int(const char* key, int value)
+{
+    char b[24];
+    snprintf(b, sizeof(b), "%d", value);
+    frij_store_save(key, b);
+}
+
+bool frij_store_load_bool(const char* key, bool def)
+{
+    char b[8];
+    return frij_store_load(key, b, sizeof(b)) ? (b[0] == '1') : def;
+}
+
+void frij_store_save_bool(const char* key, bool value)
+{
+    frij_store_save(key, value ? "1" : "0");
+}

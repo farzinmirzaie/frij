@@ -14,7 +14,7 @@ static int wrap(int i, int n)
     return ((i % n) + n) % n;
 }
 
-// ---- page indicator (always visible, kept above the pages) ----------------
+// ---- page indicator (fades in on swipe, idles out; kept above the pages) ---
 
 static void refresh_dots(frij_carousel_t* c)
 {
