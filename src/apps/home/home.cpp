@@ -2,9 +2,9 @@
 
 #include <time.h>
 
-#include "store/store.h"
 #include "system/battery.h"
 #include "ui/components.h"
+#include "ui/datetime.h"
 #include "ui/theme.h"
 
 /*
@@ -24,11 +24,6 @@ typedef struct {
     lv_obj_t* time;
     lv_obj_t* date;
 } clock_ctx_t;
-
-static bool read_clock24(void)
-{
-    return frij_store_load_bool("clock24", true);
-}
 
 // Battery glyph for a charge level (or the charging bolt while plugged in).
 static const char* battery_glyph(uint8_t pct, bool charging)
@@ -53,7 +48,7 @@ static const char* battery_glyph(uint8_t pct, bool charging)
 
 static void render(clock_ctx_t* c)
 {
-    bool      h24 = read_clock24();  // re-read each tick so the setting reflects live
+    bool      h24 = frij_clock_is_24h();  // re-read each tick so the setting reflects live
     time_t    now = time(NULL);
     struct tm tmv;
     localtime_r(&now, &tmv);

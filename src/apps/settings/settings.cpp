@@ -9,6 +9,7 @@
 #include "system/haptics.h"
 #include "system/wifi.h"
 #include "ui/components.h"
+#include "ui/datetime.h"
 #include "ui/theme.h"
 
 /*
@@ -256,12 +257,14 @@ static void build_network(lv_obj_t* col)
     lv_obj_remove_flag(tog, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_event_cb(row, wifi_master_cb, LV_EVENT_CLICKED, NULL);
     if (!on) {
-        // radio off: keep the toggle pinned at the top and explain the empty space
+        // radio off: toggle stays pinned at the top; float the hint at the
+        // screen's center (FLOATING so it ignores the top-pinned flex flow).
         lv_obj_t* hint = frij_label(col, "Turn on Wi-Fi to see\nnearby networks",
                                     FRIJ_FONT_BODY, FRIJ_TEXT_2);
         lv_obj_set_width(hint, LV_PCT(100));
         lv_obj_set_style_text_align(hint, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
-        lv_obj_set_style_pad_top(hint, FRIJ_SP_XL, LV_PART_MAIN);
+        lv_obj_add_flag(hint, LV_OBJ_FLAG_FLOATING);
+        lv_obj_align(hint, LV_ALIGN_CENTER, 0, 60);  // centered in the page area
         frij_stagger_in(col, 40);
         return;
     }
@@ -326,11 +329,11 @@ static void screen(lv_obj_t* parent, int index)
 
         default:  // System / About
             {
-                // hero: name + version, with extra breathing room around it
+                // hero: name + version, with generous breathing room around it
                 lv_obj_t* hero = frij_label(col, "Frij", FRIJ_FONT_TITLE, FRIJ_TEXT);
-                lv_obj_set_style_margin_top(hero, FRIJ_SP_L, LV_PART_MAIN);
+                lv_obj_set_style_margin_top(hero, FRIJ_SP_XXL * 4, LV_PART_MAIN);  // 36
                 lv_obj_t* ver = frij_label(col, "on-device UI  -  v0.1", FRIJ_FONT_BODY, FRIJ_TEXT_2);
-                lv_obj_set_style_margin_bottom(ver, FRIJ_SP_L, LV_PART_MAIN);
+                lv_obj_set_style_margin_bottom(ver, FRIJ_SP_XXL * 4, LV_PART_MAIN);  // 36
 
                 char bbuf[24];
                 lv_snprintf(bbuf, sizeof(bbuf), "%d%%%s", frij_battery_pct(),
@@ -343,7 +346,7 @@ static void screen(lv_obj_t* parent, int index)
                     time_t    tt = (time_t)ls;
                     struct tm tmv;
                     localtime_r(&tt, &tmv);
-                    strftime(sbuf, sizeof(sbuf), "%H:%M", &tmv);
+                    frij_format_time(sbuf, sizeof(sbuf), &tmv);  // respects 24-hour setting
                 } else {
                     lv_snprintf(sbuf, sizeof(sbuf), "Never");
                 }

@@ -8,6 +8,9 @@ theme, list rows, …) as patterns repeat.
 
 - `theme.h` — design tokens: colors (`FRIJ_PRIMARY`, `FRIJ_SURFACE_*`, …),
   fonts (SF Pro Rounded — see `fonts/`), 4pt spacing, radius, motion.
+- `datetime.*` — shared time formatting: `frij_clock_is_24h()` (the single
+  source of truth for the 24-hour setting) + `frij_format_time()` (`14:30` /
+  `2:30 PM`). Use these so every screen respects the toggle.
 - `fonts/` — SF Pro Rounded converted to LVGL fonts (see its README + license note).
 - `components.*` — themed widgets:
   - `frij_col` / `frij_label` — layout + typed text.

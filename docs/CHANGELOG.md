@@ -2,6 +2,25 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-09 — polish pass 5 (time util + tint)
+
+- **Shared time formatting** (`ui/datetime`: `frij_clock_is_24h` +
+  `frij_format_time`) — one source of truth for the 24-hour setting. Last sync
+  and the watch face both go through it, so the toggle is respected everywhere.
+- **Header tint fades into the background at the top** — 3-stop gradient
+  (transparent → accent → transparent) instead of a hard accent band at the edge
+  (`LV_GRADIENT_MAX_STOPS` bumped to 3).
+
+## 2026-06-09 — polish pass 4 (layout fixes)
+
+- **Row content vertically centered** — surface rows now use a fixed
+  `FRIJ_ROW_H` (was content-height + min-height, which left text near the top).
+- **Wi-Fi-off hint centered** — the "turn on Wi-Fi" text floats at the page
+  center while the toggle stays pinned at the top.
+- **Modal buttons no longer clip on press** — neutralized the default theme's
+  grow-on-press transform (it poked past the card's clip); subtle dim instead.
+- **More space around the About hero** (Frij + version).
+
 ## 2026-06-09 — polish pass 3 (consistency + motion + hardware)
 
 - **Rethought the header glow** — replaced the accent ellipse with a restrained

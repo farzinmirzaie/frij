@@ -123,16 +123,21 @@ lv_obj_t* frij_top_tint(lv_obj_t* parent, uint32_t accent)
     lv_obj_clear_flag(g, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_clear_flag(g, LV_OBJ_FLAG_SCROLLABLE);
 
+    // Vertical: fades up FROM the background at the very top edge, peaks behind
+    // the title, then fades back to nothing — so it never hits the top harshly.
     lv_grad_dsc_t* d = (lv_grad_dsc_t*)lv_malloc(sizeof(lv_grad_dsc_t));
     lv_memzero(d, sizeof(*d));
-    d->dir            = LV_GRAD_DIR_VER;  // vertical: strong at top, gone by the bottom
-    d->stops_count    = 2;
+    d->dir            = LV_GRAD_DIR_VER;
+    d->stops_count    = 3;
     d->stops[0].color = lv_color_hex(accent);
-    d->stops[0].opa   = 70;
+    d->stops[0].opa   = 0;  // fade into the background at the top edge
     d->stops[0].frac  = 0;
     d->stops[1].color = lv_color_hex(accent);
-    d->stops[1].opa   = 0;
-    d->stops[1].frac  = 255;
+    d->stops[1].opa   = 80;  // peak just below the top
+    d->stops[1].frac  = 120;
+    d->stops[2].color = lv_color_hex(accent);
+    d->stops[2].opa   = 0;
+    d->stops[2].frac  = 255;
 
     lv_obj_set_style_bg_grad(g, d, LV_PART_MAIN);
     lv_obj_set_style_bg_opa(g, LV_OPA_COVER, LV_PART_MAIN);
@@ -231,8 +236,7 @@ lv_obj_t* frij_surface_row(lv_obj_t* parent)
 
     lv_obj_t* r = lv_obj_create(parent);
     lv_obj_set_width(r, LV_PCT(100));
-    lv_obj_set_height(r, LV_SIZE_CONTENT);
-    lv_obj_set_style_min_height(r, FRIJ_ROW_H, LV_PART_MAIN);  // uniform row height
+    lv_obj_set_height(r, FRIJ_ROW_H);  // fixed: uniform height + content stays vertically centered
     grad_v(r, FRIJ_SURFACE_2, 0x101216);  // subtle depth
     lv_obj_set_style_radius(r, FRIJ_RADIUS_M, LV_PART_MAIN);
     lv_obj_set_style_border_width(r, 0, LV_PART_MAIN);
@@ -530,6 +534,11 @@ static lv_obj_t* pill_button(lv_obj_t* parent, const char* text, uint32_t bg, ui
     lv_obj_set_style_radius(b, LV_RADIUS_CIRCLE, LV_PART_MAIN);
     lv_obj_set_style_bg_color(b, lv_color_hex(bg), LV_PART_MAIN);
     lv_obj_set_style_shadow_width(b, 0, LV_PART_MAIN);
+    // The default theme grows buttons on press; that pokes past the card's clip.
+    // Neutralize it and use a subtle dim instead.
+    lv_obj_set_style_transform_width(b, 0, LV_STATE_PRESSED);
+    lv_obj_set_style_transform_height(b, 0, LV_STATE_PRESSED);
+    lv_obj_set_style_bg_opa(b, LV_OPA_80, LV_STATE_PRESSED);
     frij_haptic_attach(b);
     lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, user);
 
