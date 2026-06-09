@@ -2,6 +2,18 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-09 — Todo app: progress + add screens, focus glance
+
+- **Glance → "Up next"**: shows the next unchecked item big + "N left" (or
+  "All done"), instead of the small ring.
+- **New Progress screen**: a large on-brand ring with the % in the middle +
+  "N of M done" (replaces the tiny stats screen).
+- **New Add-by-voice screen**: a big accent mic/＋ button + "Tap to speak" —
+  placeholder UI only (no STT yet).
+- Checklist screen unchanged. Screens are now: checklist / progress / add.
+- Stored item text cap raised 39 → 63 (device `TEXT_LEN` 64): the glance shows
+  the **full** todo (wrapped, padded), the list still trims to one line.
+
 ## 2026-06-09 — Keep ⇄ Frij two-way (done-state)
 
 - The bridge now syncs **check/uncheck both ways**: a 3-way merge against a saved

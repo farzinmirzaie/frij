@@ -71,7 +71,9 @@ every app shares the look but has its own scheme.
 ## Examples
 
 - `home/` — watch face (time + date), registered first so it's the landing tile. Purple.
-- `todo/` — cloud-synced checklist, 3 screens. Amber.
+- `todo/` — Keep-synced checklist. 3 screens: list (tap to toggle) / progress
+  (big ring) / add-by-voice (placeholder UI). Glance shows the next item +
+  count. Amber.
 - `counter/` — a number with ±, persists. Blue.
 - `settings/` — 3 screens: General (Display: brightness/sleep/raise-to-wake;
   Sound: volume/touch-sounds; Preferences: 24-hour/vibration/auto-sync), Network

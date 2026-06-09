@@ -66,6 +66,24 @@ static void build_app_screen(const frij_app_t* app, int index)
     }
 }
 
+// Render an app's home glance (no header), round-clipped like the launcher.
+static void build_glance_view(const frij_app_t* app)
+{
+    lv_obj_set_style_bg_color(lv_screen_active(), lv_color_hex(FRIJ_OUTSIDE), LV_PART_MAIN);
+    lv_obj_t* root = lv_obj_create(lv_screen_active());
+    lv_obj_set_size(root, LV_PCT(100), LV_PCT(100));
+    lv_obj_set_style_border_width(root, 0, LV_PART_MAIN);
+    lv_obj_set_style_radius(root, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+    lv_obj_set_style_clip_corner(root, true, LV_PART_MAIN);
+    lv_obj_clear_flag(root, LV_OBJ_FLAG_SCROLLABLE);
+    frij_apply_bg(root);
+    if (app && app->build_glance) {
+        frij_glow(root, app->color);
+        app->build_glance(root);
+        frij_page_settle(root);
+    }
+}
+
 extern "C" {
 bool lvgl_port_lock(void)
 {
@@ -140,6 +158,12 @@ int main(int, char**)
     const char* scr = getenv("FRIJ_SNAP");
     if (scr && strcmp(scr, "todo") == 0) {
         build_app_screen(todo_app(), 0);
+    } else if (scr && strcmp(scr, "todo_progress") == 0) {
+        build_app_screen(todo_app(), 1);
+    } else if (scr && strcmp(scr, "todo_add") == 0) {
+        build_app_screen(todo_app(), 2);
+    } else if (scr && strcmp(scr, "todo_glance") == 0) {
+        build_glance_view(todo_app());
     } else if (scr && strcmp(scr, "counter") == 0) {
         build_app_screen(counter_app(), 0);
     } else if (scr && strcmp(scr, "settings") == 0) {

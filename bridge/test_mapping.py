@@ -12,7 +12,7 @@ def test_basic_mapping():
 
 
 def test_trims_blank_and_long():
-    items = [("  ", False), ("   Bread  ", False), ("x" * 60, True)]
+    items = [("  ", False), ("   Bread  ", False), ("x" * 80, True)]
     out = to_todo_json(items)
     assert out == [{"t": "Bread", "d": False}, {"t": "x" * TEXT_MAX, "d": True}]
 

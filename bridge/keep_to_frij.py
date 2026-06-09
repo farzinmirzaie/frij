@@ -24,7 +24,7 @@ import urllib.error
 import urllib.request
 
 MAX_ITEMS = 16  # matches the device's todo cap (src/apps/todo/todo.cpp MAX_ITEMS)
-TEXT_MAX = 39   # matches the device's TEXT_LEN - 1
+TEXT_MAX = 63   # matches the device's TEXT_LEN - 1 (the list ellipsizes; glance wraps full)
 
 # The device font (SF Pro subset) has no emoji glyphs, so they render as tofu
 # boxes. Strip emoji / pictographs / dingbats / variation selectors.

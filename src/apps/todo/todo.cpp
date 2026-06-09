@@ -16,14 +16,14 @@
  * so today the device is effectively read-only; editing happens in Keep.
  *
  * Data: a JSON array under the key "todo": [{"t":"Milk","d":false}, ...].
- *   glance   : progress ring + "<done> of <total>"
+ *   glance   : "up next" — the next unchecked item, big, + count remaining
  *   screen 0 : the checklist (tap a row to toggle; animated)
- *   screen 1 : add-item hint (adding happens in Google Keep for now)
- *   screen 2 : stats
+ *   screen 1 : progress (big ring + %)
+ *   screen 2 : add by voice (placeholder UI — no STT yet)
  */
 
 #define MAX_ITEMS 16
-#define TEXT_LEN  40
+#define TEXT_LEN  64  // full-ish item text; the list ellipsizes, the glance wraps it
 #define STORE_KEY "todo"
 
 static const uint32_t ACCENT = FRIJ_YELLOW;  // Todo's color scheme
@@ -43,7 +43,7 @@ static void save_todo(void)
         o["t"]       = s_text[i];
         o["d"]       = s_done[i];
     }
-    char out[1024];
+    char out[2048];
     serializeJson(doc, out, sizeof(out));
     frij_store_save(STORE_KEY, out);
 }
@@ -62,7 +62,7 @@ static void seed_defaults(void)
 
 static void load_todo(void)
 {
-    char buf[1024];
+    char buf[2048];
     if (!frij_store_load(STORE_KEY, buf, sizeof(buf))) {
         seed_defaults();
         return;
@@ -137,7 +137,9 @@ static void populate_list(lv_obj_t* col)
         lv_obj_t* label = frij_label(row, s_text[i], FRIJ_FONT_BODY,
                                      s_done[i] ? FRIJ_TEXT_2 : FRIJ_TEXT);
         lv_obj_set_flex_grow(label, 1);
-        lv_label_set_long_mode(label, LV_LABEL_LONG_DOT);  // ellipsize long text
+        // one line, ellipsized — pin the height so LONG_DOT dots instead of wrapping
+        lv_obj_set_height(label, lv_font_get_line_height(FRIJ_FONT_BODY));
+        lv_label_set_long_mode(label, LV_LABEL_LONG_DOT);
     }
     frij_stagger_in(col, 45);  // staggered fade + rise (shared helper)
 }
@@ -152,19 +154,82 @@ static void build_list(lv_obj_t* parent)
 
 // ---- app contract ---------------------------------------------------------
 
+// Glance: "up next" — the next unchecked item, big, plus how many remain.
 static void glance(lv_obj_t* parent)
 {
     load_todo();
     lv_obj_t* col = frij_page(parent);
 
-    lv_obj_t* ring  = frij_progress_ring(col, 72, done_pct(), ACCENT);
-    lv_obj_t* ringl = frij_label(ring, "", FRIJ_FONT_BODY, FRIJ_TEXT);
-    lv_label_set_text_fmt(ringl, "%d%%", done_pct());
-    lv_obj_center(ringl);
+    const char* next = NULL;
+    for (int i = 0; i < s_n; i++) {
+        if (!s_done[i]) {
+            next = s_text[i];
+            break;
+        }
+    }
 
-    frij_label(col, "Todo", FRIJ_FONT_TITLE, FRIJ_TEXT);
-    lv_obj_t* sub = frij_label(col, "", FRIJ_FONT_BODY, FRIJ_TEXT_2);
-    lv_label_set_text_fmt(sub, "%d of %d", done_count(), s_n);
+    if (next) {
+        frij_label(col, "Up next", FRIJ_FONT_BODY, FRIJ_TEXT_2);
+        // full text (not the list's trim), wrapped, with extra side padding
+        lv_obj_t* item = frij_label(col, next, FRIJ_FONT_TITLE, FRIJ_TEXT);
+        lv_obj_set_width(item, LV_PCT(100));
+        lv_obj_set_style_pad_left(item, FRIJ_SP_L, LV_PART_MAIN);
+        lv_obj_set_style_pad_right(item, FRIJ_SP_L, LV_PART_MAIN);
+        lv_label_set_long_mode(item, LV_LABEL_LONG_WRAP);
+        lv_obj_set_style_text_align(item, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+        lv_obj_t* count = frij_label(col, "", FRIJ_FONT_BODY, FRIJ_TEXT_2);
+        lv_label_set_text_fmt(count, "%d left", s_n - done_count());
+    } else {
+        frij_label(col, s_n == 0 ? "No todos" : "All done", FRIJ_FONT_TITLE, FRIJ_TEXT);
+        if (s_n > 0) {
+            frij_label(col, "Nothing left", FRIJ_FONT_BODY, FRIJ_TEXT_2);
+        }
+    }
+}
+
+// Progress screen: a large ring with the % in the middle.
+static void build_progress(lv_obj_t* parent)
+{
+    load_todo();
+    lv_obj_t* col = frij_page(parent);
+
+    int       sz  = frij_screen_min() * 60 / 100;  // big, on-brand
+    lv_obj_t* arc = frij_progress_ring(col, sz, done_pct(), ACCENT);
+    lv_obj_set_style_arc_width(arc, 12, LV_PART_MAIN);
+    lv_obj_set_style_arc_width(arc, 12, LV_PART_INDICATOR);
+
+    lv_obj_t* inner = frij_col(arc, 2);  // stacked, centered inside the ring
+    lv_obj_center(inner);
+    lv_obj_t* pct = frij_label(inner, "", FRIJ_FONT_DISPLAY, FRIJ_TEXT);
+    lv_label_set_text_fmt(pct, "%d%%", done_pct());
+    lv_obj_t* sub = frij_label(inner, "", FRIJ_FONT_BODY, FRIJ_TEXT_2);
+    lv_label_set_text_fmt(sub, "%d of %d done", done_count(), s_n);
+}
+
+// Add-by-voice screen: a big mic-style button. Placeholder — no STT yet.
+static void on_add_voice(lv_event_t* e)
+{
+    (void)e;
+    frij_toast("Voice add — coming soon");
+}
+
+static void build_add(lv_obj_t* parent)
+{
+    lv_obj_t* col = frij_page(parent);
+
+    lv_obj_t* btn = lv_button_create(col);
+    lv_obj_set_size(btn, 104, 104);
+    lv_obj_set_style_radius(btn, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(btn, lv_color_hex(ACCENT), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(btn, LV_OPA_80, LV_STATE_PRESSED);
+    lv_obj_set_style_shadow_width(btn, 0, LV_PART_MAIN);
+    frij_haptic_attach(btn);
+    lv_obj_add_event_cb(btn, on_add_voice, LV_EVENT_CLICKED, NULL);
+    lv_obj_t* plus = frij_label(btn, "+", FRIJ_FONT_DISPLAY, 0x101216);  // big, dark on accent
+    lv_obj_center(plus);
+
+    frij_label(col, "Add by voice", FRIJ_FONT_TITLE, FRIJ_TEXT);
+    frij_label(col, "Tap to speak", FRIJ_FONT_BODY, FRIJ_TEXT_2);
 }
 
 static void screen(lv_obj_t* parent, int index)
@@ -174,17 +239,9 @@ static void screen(lv_obj_t* parent, int index)
         load_todo();
         build_list(parent);
     } else if (index == 1) {
-        frij_empty_state(frij_page(parent), "Add in\nGoogle Keep");
+        build_progress(parent);
     } else {
-        load_todo();
-        lv_obj_t* col   = frij_page(parent);
-        lv_obj_t* ring  = frij_progress_ring(col, 84, done_pct(), ACCENT);
-        lv_obj_t* ringl = frij_label(ring, "", FRIJ_FONT_TITLE, FRIJ_TEXT);
-        lv_label_set_text_fmt(ringl, "%d%%", done_pct());
-        lv_obj_center(ringl);
-        frij_label(col, "Stats", FRIJ_FONT_TITLE, FRIJ_TEXT);
-        lv_obj_t* s = frij_label(col, "", FRIJ_FONT_BODY, FRIJ_TEXT_2);
-        lv_label_set_text_fmt(s, "%d items  -  %d done", s_n, done_count());
+        build_add(parent);
     }
 }
 
