@@ -50,8 +50,19 @@ the launcher. From there:
 - Shared widgets live in [../src/ui/README.md](../src/ui/README.md); persistence
   in [../src/store/README.md](../src/store/README.md).
 
-Dependency direction: apps → `app.h` (+ `ui/`, `store/`); the launcher reads the
-registry and hardcodes no app names; `apps.cpp` is the single glue point.
+An app's toolbox (reuse before hand-rolling — see
+[../src/apps/README.md](../src/apps/README.md) "Building blocks you can reuse"):
+
+- `ui/` — widgets (`components`) + motion (`anim`) + tokens (`theme`).
+- `core/` — non-UI helpers (`datetime`: settings-aware time formatting).
+- `store/` — key→JSON persistence (typed accessors + async cloud pull).
+- `system/` — board services (brightness, haptics, battery, wifi): neutral
+  interfaces with an emulator mock + a device path behind a guard.
+
+Dependency direction: apps → `app.h` (+ `ui/`, `core/`, `store/`, `system/`); the
+launcher reads the registry and hardcodes no app names; `apps.cpp` is the single
+glue point. New board capability → add a `system/` interface (mock + device
+guard); an app never calls `utility/` directly.
 
 ## Emulator vs device
 

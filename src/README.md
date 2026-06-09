@@ -10,7 +10,8 @@ Each package has its own README:
 | --- | --- |
 | `apps/` | the mini-apps (+ settings) and where they register |
 | `launcher/` | the navigation shell (layers, gestures, registry) |
-| `ui/` | shared, app-agnostic UI building blocks |
+| `ui/` | shared, app-agnostic UI building blocks (`components`, `carousel`, `anim`, `theme`) |
+| `core/` | app-agnostic **non-UI** helpers (e.g. `datetime`) |
 | `store/` | shared key→JSON storage (local cache + Supabase, off-thread) |
-| `system/` | neutral board-service interfaces (brightness, …) |
+| `system/` | neutral board-service interfaces (brightness, haptics, battery, wifi) |
 | `utility/` | the board-specific LVGL ↔ M5GFX bridge |

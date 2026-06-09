@@ -2,6 +2,18 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-09 — header polish + doc audit
+
+- **Header tint even darker on top** — 5-stop gradient: the upper ~3/4 is fully
+  transparent (shows the dark background), with a single low accent band behind
+  the title (`LV_GRADIENT_MAX_STOPS` → 5).
+- **Borderless header buttons** — the back/action icons lost their circular
+  background; the icon now scale-pops on press (no plate).
+- **Doc cross-check for agents** — `src/README` + `ARCHITECTURE` now list `core/`
+  and the full `system/` services, and `apps/README` gained a "Building blocks
+  you can reuse" palette (components, modals, anim, datetime, store, services) so
+  new work composes existing pieces instead of re-deriving them.
+
 ## 2026-06-09 — restructure + tint
 
 - **Header tint**: pushed the accent peak lower so the top edge stays

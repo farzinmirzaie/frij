@@ -105,17 +105,26 @@ lv_obj_t* frij_top_tint(lv_obj_t* parent, uint32_t accent)
     // the title, then fades back to nothing — so it never hits the top harshly.
     lv_grad_dsc_t* d = (lv_grad_dsc_t*)lv_malloc(sizeof(lv_grad_dsc_t));
     lv_memzero(d, sizeof(*d));
+    // Top→bottom (frac 0 = top): the upper 3/4 is fully transparent (shows the
+    // dark background), then a single accent band low down, fading out at the
+    // very bottom. Keeps the top edge dark and the cue subtle, behind the title.
     d->dir            = LV_GRAD_DIR_VER;
-    d->stops_count    = 3;
+    d->stops_count    = 5;
     d->stops[0].color = lv_color_hex(accent);
-    d->stops[0].opa   = 0;  // transparent (shows black) at the top edge
+    d->stops[0].opa   = 0;
     d->stops[0].frac  = 0;
     d->stops[1].color = lv_color_hex(accent);
-    d->stops[1].opa   = 85;  // peak pushed low, so the top stays dark longer
-    d->stops[1].frac  = 150;
+    d->stops[1].opa   = 10;
+    d->stops[1].frac  = 60;
     d->stops[2].color = lv_color_hex(accent);
-    d->stops[2].opa   = 0;  // fade back out by the bottom
-    d->stops[2].frac  = 255;
+    d->stops[2].opa   = 80;
+    d->stops[2].frac  = 150;
+    d->stops[3].color = lv_color_hex(accent);
+    d->stops[3].opa   = 100;  // the accent band, low in the rect
+    d->stops[3].frac  = 200;
+    d->stops[4].color = lv_color_hex(accent);
+    d->stops[4].opa   = 0;
+    d->stops[4].frac  = 255;
 
     lv_obj_set_style_bg_grad(g, d, LV_PART_MAIN);
     lv_obj_set_style_bg_opa(g, LV_OPA_COVER, LV_PART_MAIN);
@@ -723,13 +732,29 @@ static void on_header_back(lv_event_t* e)
 
 static lv_obj_t* icon_button(lv_obj_t* parent, const char* sym)
 {
+    // Scale-pop transition for the press feedback (no background — just the icon).
+    static lv_style_prop_t props[] = {LV_STYLE_TRANSFORM_SCALE_X, LV_STYLE_TRANSFORM_SCALE_Y,
+                                      LV_STYLE_PROP_INV};
+    static lv_style_transition_dsc_t tr;
+    static bool                      tr_ready = false;
+    if (!tr_ready) {
+        lv_style_transition_dsc_init(&tr, props, lv_anim_path_ease_out, 120, 0, NULL);
+        tr_ready = true;
+    }
+
     lv_obj_t* b = lv_button_create(parent);
     lv_obj_set_size(b, 36, 36);
-    lv_obj_set_style_radius(b, LV_RADIUS_CIRCLE, LV_PART_MAIN);
-    lv_obj_set_style_bg_color(b, lv_color_hex(FRIJ_SURFACE_2), LV_PART_MAIN);
-    lv_obj_set_style_bg_color(b, lv_color_hex(FRIJ_SURFACE_3), LV_STATE_PRESSED);
+    lv_obj_set_style_bg_opa(b, LV_OPA_TRANSP, LV_PART_MAIN);  // no background, icon only
     lv_obj_set_style_shadow_width(b, 0, LV_PART_MAIN);
+    // shrink the icon on press, ease back on release; cancel the theme's grow
+    lv_obj_set_style_transform_pivot_x(b, 18, LV_PART_MAIN);
+    lv_obj_set_style_transform_pivot_y(b, 18, LV_PART_MAIN);
+    lv_obj_set_style_transform_scale(b, 224, LV_STATE_PRESSED);  // ~0.88
+    lv_obj_set_style_transform_width(b, 0, LV_STATE_PRESSED);
+    lv_obj_set_style_transform_height(b, 0, LV_STATE_PRESSED);
+    lv_obj_set_style_transition(b, &tr, LV_PART_MAIN);
     frij_haptic_attach(b);
+
     lv_obj_t* l = lv_label_create(b);
     lv_label_set_text(l, sym);
     lv_obj_set_style_text_font(l, FRIJ_FONT_SYMBOL, LV_PART_MAIN);
