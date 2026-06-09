@@ -68,6 +68,20 @@ static void on_autosync(lv_event_t* e)
     frij_store_save_bool("autosync", lv_obj_has_state(sw, LV_STATE_CHECKED));
 }
 
+static void on_raise_wake(lv_event_t* e)
+{
+    lv_obj_t* sw = (lv_obj_t*)lv_event_get_target(e);
+    frij_store_save_bool("raisewake", lv_obj_has_state(sw, LV_STATE_CHECKED));
+    // TODO(device): arm BMI270 tilt/raise interrupt to wake the display.
+}
+
+static void on_touch_sfx(lv_event_t* e)
+{
+    lv_obj_t* sw = (lv_obj_t*)lv_event_get_target(e);
+    frij_store_save_bool("touchsfx", lv_obj_has_state(sw, LV_STATE_CHECKED));
+    // TODO(device): play a click on the ES8311 codec on touch.
+}
+
 static void on_sync_now(lv_event_t* e)
 {
     (void)e;
@@ -242,13 +256,21 @@ static void build_network(lv_obj_t* col)
     lv_obj_remove_flag(tog, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_event_cb(row, wifi_master_cb, LV_EVENT_CLICKED, NULL);
     if (!on) {
-        return;  // radio off: nothing else to show
+        // radio off: keep the toggle pinned at the top and explain the empty space
+        lv_obj_t* hint = frij_label(col, "Turn on Wi-Fi to see\nnearby networks",
+                                    FRIJ_FONT_BODY, FRIJ_TEXT_2);
+        lv_obj_set_width(hint, LV_PCT(100));
+        lv_obj_set_style_text_align(hint, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+        lv_obj_set_style_pad_top(hint, FRIJ_SP_XL, LV_PART_MAIN);
+        frij_stagger_in(col, 40);
+        return;
     }
 
     // Visible networks; tap one for Connect / Disconnect / Forget.
     s_scan_n = frij_wifi_scan(s_scan, (int)(sizeof(s_scan) / sizeof(s_scan[0])));
     if (s_scan_n == 0) {
         frij_empty_state(col, "No networks");
+        frij_stagger_in(col, 40);
         return;
     }
     for (int i = 0; i < s_scan_n; i++) {
@@ -271,6 +293,7 @@ static void build_network(lv_obj_t* col)
             frij_label(r, status, FRIJ_FONT_BODY, nw->connected ? ACCENT : FRIJ_TEXT_2);
         }
     }
+    frij_stagger_in(col, 35);  // staggered list entrance
 }
 
 // ---- screens ---------------------------------------------------------------
@@ -284,23 +307,30 @@ static void screen(lv_obj_t* parent, int index)
             frij_section_label(col, "Display");
             slider_row(col, "Brightness", 10, 100, "brightness", 80, on_brightness, "%");
             slider_row(col, "Sleep", 1, 30, "sleep", 5, on_sleep, " min");
+            toggle_row(col, "Raise to wake", "raisewake", true, on_raise_wake);  // BMI270 IMU
             frij_section_label(col, "Sound");
             slider_row(col, "Volume", 0, 100, "volume", 60, on_volume, "%");
+            toggle_row(col, "Touch sounds", "touchsfx", false, on_touch_sfx);  // ES8311 codec
             frij_section_label(col, "Preferences");
             toggle_row(col, "24-hour time", "clock24", true, on_clock24);
             toggle_row(col, "Vibration", "haptics", true, on_vibration);
             toggle_row(col, "Auto-sync", "autosync", true, on_autosync);
+            frij_stagger_in(col, 30);
             break;
 
         case 1:  // Network
             s_net_col = col;
+            frij_page_pin_top(col);  // keep the Wi-Fi toggle at the top, on or off
             build_network(col);
             break;
 
         default:  // System / About
             {
-                frij_label(col, "Frij", FRIJ_FONT_TITLE, FRIJ_TEXT);
-                frij_label(col, "on-device UI  -  v0.1", FRIJ_FONT_BODY, FRIJ_TEXT_2);
+                // hero: name + version, with extra breathing room around it
+                lv_obj_t* hero = frij_label(col, "Frij", FRIJ_FONT_TITLE, FRIJ_TEXT);
+                lv_obj_set_style_margin_top(hero, FRIJ_SP_L, LV_PART_MAIN);
+                lv_obj_t* ver = frij_label(col, "on-device UI  -  v0.1", FRIJ_FONT_BODY, FRIJ_TEXT_2);
+                lv_obj_set_style_margin_bottom(ver, FRIJ_SP_L, LV_PART_MAIN);
 
                 char bbuf[24];
                 lv_snprintf(bbuf, sizeof(bbuf), "%d%%%s", frij_battery_pct(),
@@ -322,6 +352,7 @@ static void screen(lv_obj_t* parent, int index)
                 frij_action_row(col, "Sync now", on_sync_now);
                 frij_action_row(col, "Reset settings", on_reset);
                 frij_action_row(col, "Erase all data", on_erase);
+                frij_stagger_in(col, 30);
             }
             break;
     }

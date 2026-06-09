@@ -23,6 +23,10 @@ void frij_apply_bg(lv_obj_t* obj);
 // can reposition it (e.g. behind a header). `accent` is 0xRRGGBB.
 lv_obj_t* frij_glow(lv_obj_t* parent, uint32_t accent);
 
+// A restrained accent wash along the top edge that fades to nothing — a subtle
+// per-app color cue behind a header (replaces the old glowing halo). FLOATING.
+lv_obj_t* frij_top_tint(lv_obj_t* parent, uint32_t accent);
+
 // A vertical, centered flex column with `gap` px between children.
 lv_obj_t* frij_col(lv_obj_t* parent, int gap);
 
@@ -38,6 +42,10 @@ void frij_page_under_header(lv_obj_t* page, int header_px);
 // Finalize a page once its children exist: center the content if it fits, or
 // top-align it if it overflows (so the first row never hides above the scroll).
 void frij_page_settle(lv_obj_t* page);
+
+// Opt a page out of auto-centering: it stays top-aligned regardless of how much
+// content it has (use for lists whose first row should never jump to center).
+void frij_page_pin_top(lv_obj_t* page);
 
 // A label using a theme font + color (0xRRGGBB).
 lv_obj_t* frij_label(lv_obj_t* parent, const char* text, const lv_font_t* font, uint32_t color);
@@ -108,5 +116,9 @@ void frij_action_sheet(const char* title, const char* const* options, int count,
 
 // Entrance animation: fade in + rise. `delay_ms` lets callers stagger a list.
 void frij_anim_enter(lv_obj_t* obj, uint32_t delay_ms);
+
+// Run frij_anim_enter on every direct child, each delayed by `step_ms` more than
+// the last — a staggered list entrance. Call after building the rows.
+void frij_stagger_in(lv_obj_t* container, int step_ms);
 
 #endif  // FRIJ_COMPONENTS_H

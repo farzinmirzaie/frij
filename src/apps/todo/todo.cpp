@@ -138,9 +138,8 @@ static void build_list(lv_obj_t* parent)
                                      s_done[i] ? FRIJ_TEXT_2 : FRIJ_TEXT);
         lv_obj_set_flex_grow(label, 1);
         lv_label_set_long_mode(label, LV_LABEL_LONG_DOT);  // ellipsize long text
-
-        frij_anim_enter(row, i * 45);  // staggered fade + rise
     }
+    frij_stagger_in(col, 45);  // staggered fade + rise (shared helper)
 }
 
 // ---- app contract ---------------------------------------------------------

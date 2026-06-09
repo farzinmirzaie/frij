@@ -131,13 +131,8 @@ static void layer_change_cb(int index, void* user)
 // sitting behind the header title (not as a full-screen background).
 static void add_layer_header(lv_obj_t* layer, const frij_app_t* app, frij_carousel_t* car)
 {
-    // a wide, short halo (an ellipse) sitting behind the header title
-    int       gw = frij_screen_min() * 64 / 100;
-    int       gh = frij_screen_min() * 26 / 100;
-    lv_obj_t* g  = frij_glow(layer, app->color);
-    lv_obj_set_size(g, gw, gh);  // frij_glow defaults to a large square halo
-    lv_obj_align(g, LV_ALIGN_TOP_MID, 0, frij_screen_min() * 14 / 100 - gh / 2);
-    lv_obj_move_background(g);  // behind header + content
+    lv_obj_t* g = frij_top_tint(layer, app->color);  // subtle accent wash behind the header
+    lv_obj_move_background(g);                        // behind header + content
 
     s_layer_app = app;
     frij_carousel_set_change_cb(car, layer_change_cb, NULL);

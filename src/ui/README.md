@@ -36,12 +36,16 @@ theme, list rows, …) as patterns repeat.
   - `frij_toast` — a brief auto-dismissing snackbar near the bottom (fades in,
     holds, fades out, self-removes). For transient confirmations.
   - `frij_glow` — soft radial accent halo; **FLOATING** (doesn't scroll or grow
-    the scroll area). Returns the object so it can be repositioned (e.g. behind a header).
+    the scroll area). Returns the object so it can be repositioned.
+  - `frij_top_tint` — a restrained accent wash along the top edge that fades to
+    nothing (the per-app color cue behind a header). FLOATING.
   - `frij_progress_ring` — thin arc gauge.
   - `frij_empty_state` — round "nothing here" placeholder.
   - `frij_header` — shared app top bar: back button (returns to the launcher) +
     centered title + optional right action button. Round-safe placement.
   - `frij_anim_enter` — fade + rise entrance (stagger lists with a delay).
+  - `frij_stagger_in` — run `frij_anim_enter` across a container's children with
+    an increasing delay; the shared staggered-list entrance.
 - `carousel.*` — a horizontal, looping, finger-following pager. Input-free: the
   owner calls `drag(dx)` / `end(dx)`. No loop when `count <= 1`. Shows an
   auto-fading **page-dot indicator** at the bottom (active dot uses the accent

@@ -20,6 +20,7 @@
 #include "apps/counter/counter.h"
 #include "apps/settings/settings.h"
 #include "apps/todo/todo.h"
+#include "system/wifi.h"
 #include "ui/components.h"
 #include "ui/theme.h"
 
@@ -41,12 +42,8 @@ static void build_app_screen(const frij_app_t* app, int index)
     if (!app) {
         return;
     }
-    // wide, short glow behind the header title (mirrors the launcher)
-    int       gw = 466 * 64 / 100;
-    int       gh = 466 * 26 / 100;
-    lv_obj_t* g  = frij_glow(root, app->color);
-    lv_obj_set_size(g, gw, gh);
-    lv_obj_align(g, LV_ALIGN_TOP_MID, 0, 466 * 14 / 100 - gh / 2);
+    // subtle accent wash behind the header (mirrors the launcher)
+    lv_obj_t* g = frij_top_tint(root, app->color);
     lv_obj_move_background(g);
 
     // mirror the launcher: header on the layer, content in an area below it
@@ -148,6 +145,9 @@ int main(int, char**)
     } else if (scr && strcmp(scr, "settings") == 0) {
         build_app_screen(settings_app(), 0);
     } else if (scr && strcmp(scr, "network") == 0) {
+        build_app_screen(settings_app(), 1);
+    } else if (scr && strcmp(scr, "netoff") == 0) {
+        frij_wifi_set_enabled(false);
         build_app_screen(settings_app(), 1);
     } else if (scr && strcmp(scr, "sheet") == 0) {
         build_app_screen(settings_app(), 1);

@@ -51,6 +51,10 @@
 #define FRIJ_SP_XL  20
 #define FRIJ_SP_XXL 24
 
+// Standard height for list rows / cards, so every row lines up regardless of
+// the glyphs/fonts inside it.
+#define FRIJ_ROW_H 56
+
 // ---- Radius ---------------------------------------------------------------
 #define FRIJ_RADIUS_S    12
 #define FRIJ_RADIUS_M    16

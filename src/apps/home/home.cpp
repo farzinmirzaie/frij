@@ -23,7 +23,6 @@ typedef struct {
     lv_obj_t* arc_min;  // minutes ring (inner, dimmer)
     lv_obj_t* time;
     lv_obj_t* date;
-    bool      h24;
 } clock_ctx_t;
 
 static bool read_clock24(void)
@@ -54,13 +53,14 @@ static const char* battery_glyph(uint8_t pct, bool charging)
 
 static void render(clock_ctx_t* c)
 {
+    bool      h24 = read_clock24();  // re-read each tick so the setting reflects live
     time_t    now = time(NULL);
     struct tm tmv;
     localtime_r(&now, &tmv);
 
     char t[8];
-    strftime(t, sizeof(t), c->h24 ? "%H:%M" : "%I:%M", &tmv);
-    const char* tp = (!c->h24 && t[0] == '0') ? t + 1 : t;  // drop 12h leading zero
+    strftime(t, sizeof(t), h24 ? "%H:%M" : "%I:%M", &tmv);
+    const char* tp = (!h24 && t[0] == '0') ? t + 1 : t;  // drop 12h leading zero
     if (c->time) {
         lv_label_set_text(c->time, tp);
     }
@@ -71,7 +71,7 @@ static void render(clock_ctx_t* c)
     strftime(wd, sizeof(wd), "%a", &tmv);
     strftime(mo, sizeof(mo), "%b", &tmv);
     char d[48];
-    if (c->h24) {
+    if (h24) {
         lv_snprintf(d, sizeof(d), "%s %d %s", wd, tmv.tm_mday, mo);
     } else {
         char ap[4];
@@ -107,7 +107,6 @@ static void build_clock(lv_obj_t* parent)
 {
     lv_obj_t*    col = frij_page(parent);
     clock_ctx_t* c   = (clock_ctx_t*)lv_malloc(sizeof(clock_ctx_t));
-    c->h24           = read_clock24();
 
     // A thin seconds ring fills most of the face (scales with the screen)...
     int ring = frij_screen_min() * 80 / 100;

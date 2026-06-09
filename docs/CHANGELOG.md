@@ -2,6 +2,24 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-09 — polish pass 3 (consistency + motion + hardware)
+
+- **Rethought the header glow** — replaced the accent ellipse with a restrained
+  top wash that fades down (`frij_top_tint`).
+- **Uniform row height** (`FRIJ_ROW_H`) so info rows / action rows / Wi-Fi rows /
+  sliders all line up.
+- **Modal close now fades out** (was an instant pop); shared `modal_close`
+  animates the dim + card out, then deletes.
+- **Reusable stagger** (`frij_stagger_in`) — todo, settings and the Wi-Fi list
+  all get the staggered fade-in (was todo-only).
+- **24-hour toggle reflects live** — the watch face re-reads the setting each
+  tick instead of caching it at build.
+- **Wi-Fi off no longer jumps** — the toggle stays pinned at the top
+  (`frij_page_pin_top`) with a "turn on Wi-Fi…" empty-state hint.
+- **About hero** gets breathing room around the name/version.
+- **New hardware-backed settings**: Raise to wake (BMI270 IMU) and Touch sounds
+  (ES8311 codec) — stored now, wired on device later.
+
 ## 2026-06-09 — polish pass 2 (fixes + sync/erase)
 
 - **Fixed the toast** — it never showed: `fade_in` and `fade_out` fought over the

@@ -111,6 +111,35 @@ lv_obj_t* frij_glow(lv_obj_t* parent, uint32_t accent)
     return g;
 }
 
+lv_obj_t* frij_top_tint(lv_obj_t* parent, uint32_t accent)
+{
+    // A restrained accent wash along the top edge that fades to nothing — a
+    // per-app color cue behind the header, without a glowing blob.
+    lv_obj_t* g = lv_obj_create(parent);
+    lv_obj_remove_style_all(g);
+    lv_obj_set_size(g, LV_PCT(100), frij_screen_min() * 38 / 100);
+    lv_obj_align(g, LV_ALIGN_TOP_MID, 0, 0);
+    lv_obj_add_flag(g, LV_OBJ_FLAG_FLOATING);
+    lv_obj_clear_flag(g, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_clear_flag(g, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_grad_dsc_t* d = (lv_grad_dsc_t*)lv_malloc(sizeof(lv_grad_dsc_t));
+    lv_memzero(d, sizeof(*d));
+    d->dir            = LV_GRAD_DIR_VER;  // vertical: strong at top, gone by the bottom
+    d->stops_count    = 2;
+    d->stops[0].color = lv_color_hex(accent);
+    d->stops[0].opa   = 70;
+    d->stops[0].frac  = 0;
+    d->stops[1].color = lv_color_hex(accent);
+    d->stops[1].opa   = 0;
+    d->stops[1].frac  = 255;
+
+    lv_obj_set_style_bg_grad(g, d, LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(g, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_add_event_cb(g, glow_free_cb, LV_EVENT_DELETE, d);
+    return g;
+}
+
 lv_obj_t* frij_col(lv_obj_t* parent, int gap)
 {
     lv_obj_t* c = lv_obj_create(parent);
@@ -153,10 +182,25 @@ void frij_page_under_header(lv_obj_t* page, int header_px)
     lv_obj_set_style_pad_bottom(page, pad_top + header_px, LV_PART_MAIN);
 }
 
+// Pages can opt out of auto-centering (e.g. a list whose first row must stay put
+// whether it has 1 or 10 items). We reuse a spare LVGL object flag for the mark.
+#define FRIJ_FLAG_PIN_TOP LV_OBJ_FLAG_USER_1
+
+void frij_page_pin_top(lv_obj_t* page)
+{
+    lv_obj_add_flag(page, FRIJ_FLAG_PIN_TOP);
+}
+
 void frij_page_settle(lv_obj_t* page)
 {
-    // Center the content when it fits; top-align it when it overflows so the
-    // first row stays visible (a centered overflowing list hides its top items).
+    // Pinned pages always stay top-aligned (content doesn't jump when it's short).
+    if (lv_obj_has_flag(page, FRIJ_FLAG_PIN_TOP)) {
+        lv_obj_set_flex_align(page, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+        lv_obj_scroll_to_y(page, 0, LV_ANIM_OFF);
+        return;
+    }
+    // Otherwise center the content when it fits; top-align when it overflows so
+    // the first row stays visible (a centered overflowing list hides its top).
     lv_obj_set_flex_align(page, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_update_layout(page);
     if (lv_obj_get_scroll_bottom(page) <= 0) {
@@ -188,6 +232,7 @@ lv_obj_t* frij_surface_row(lv_obj_t* parent)
     lv_obj_t* r = lv_obj_create(parent);
     lv_obj_set_width(r, LV_PCT(100));
     lv_obj_set_height(r, LV_SIZE_CONTENT);
+    lv_obj_set_style_min_height(r, FRIJ_ROW_H, LV_PART_MAIN);  // uniform row height
     grad_v(r, FRIJ_SURFACE_2, 0x101216);  // subtle depth
     lv_obj_set_style_radius(r, FRIJ_RADIUS_M, LV_PART_MAIN);
     lv_obj_set_style_border_width(r, 0, LV_PART_MAIN);
@@ -318,7 +363,7 @@ lv_obj_t* frij_slider_row(lv_obj_t* parent, const char* label, int min, int max,
 {
     lv_obj_t* s = lv_slider_create(parent);
     lv_obj_set_width(s, LV_PCT(100));
-    lv_obj_set_height(s, 52);  // card-sized
+    lv_obj_set_height(s, FRIJ_ROW_H);  // matches the other rows
     lv_slider_set_range(s, min, max);
     lv_slider_set_value(s, value, LV_ANIM_OFF);
 
@@ -388,11 +433,35 @@ static void modal_clear_top_cb(lv_event_t* e)
     }
 }
 
+static void modal_gone_cb(lv_anim_t* a)
+{
+    lv_obj_delete((lv_obj_t*)a->var);
+}
+
+// Fade the whole modal (dim + card) out, then delete. Guards double-close.
+static void modal_close(lv_obj_t* modal)
+{
+    if (s_modal_top != modal) {
+        return;  // already closing
+    }
+    s_modal_top = NULL;
+    lv_obj_remove_flag(modal, LV_OBJ_FLAG_CLICKABLE);  // ignore taps mid-fade
+
+    lv_anim_t a;
+    lv_anim_init(&a);
+    lv_anim_set_var(&a, modal);
+    lv_anim_set_exec_cb(&a, set_opa_cb);  // overall opacity cascades to the card
+    lv_anim_set_values(&a, LV_OPA_COVER, LV_OPA_TRANSP);
+    lv_anim_set_duration(&a, FRIJ_ANIM_MS);
+    lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
+    lv_anim_set_completed_cb(&a, modal_gone_cb);
+    lv_anim_start(&a);
+}
+
 bool frij_modal_close_top(void)
 {
     if (s_modal_top) {
-        lv_obj_delete(s_modal_top);
-        s_modal_top = NULL;
+        modal_close(s_modal_top);
         return true;
     }
     return false;
@@ -402,7 +471,7 @@ bool frij_modal_close_top(void)
 static void modal_dismiss_cb(lv_event_t* e)
 {
     if (lv_event_get_target(e) == lv_event_get_current_target(e)) {
-        lv_obj_delete((lv_obj_t*)lv_event_get_user_data(e));
+        modal_close((lv_obj_t*)lv_event_get_user_data(e));
     }
 }
 
@@ -476,7 +545,7 @@ static lv_obj_t* pill_button(lv_obj_t* parent, const char* text, uint32_t bg, ui
 
 static void confirm_cancel_cb(lv_event_t* e)
 {
-    lv_obj_delete((lv_obj_t*)lv_event_get_user_data(e));
+    modal_close((lv_obj_t*)lv_event_get_user_data(e));
 }
 
 static void confirm_ok_cb(lv_event_t* e)
@@ -486,7 +555,7 @@ static void confirm_ok_cb(lv_event_t* e)
     if (cb) {
         cb(e);
     }
-    lv_obj_delete(modal);
+    modal_close(modal);
 }
 
 void frij_confirm(const char* title, const char* message, const char* confirm_text,
@@ -532,7 +601,7 @@ static void sheet_free_cb(lv_event_t* e)
 
 static void sheet_cancel_cb(lv_event_t* e)
 {
-    lv_obj_delete((lv_obj_t*)lv_event_get_user_data(e));
+    modal_close((lv_obj_t*)lv_event_get_user_data(e));
 }
 
 static void sheet_option_cb(lv_event_t* e)
@@ -543,7 +612,7 @@ static void sheet_option_cb(lv_event_t* e)
     int           idx   = (int)(intptr_t)lv_obj_get_user_data(btn);
     frij_sheet_cb cb    = c->cb;  // copy out before the modal (and ctx) are freed
     void*         user  = c->user;
-    lv_obj_delete(modal);
+    modal_close(modal);  // ctx is freed when the fade-out completes (sheet_free_cb)
     if (cb) {
         cb(idx, user);
     }
@@ -751,4 +820,12 @@ void frij_anim_enter(lv_obj_t* obj, uint32_t delay_ms)
     lv_anim_set_delay(&rise, delay_ms);
     lv_anim_set_path_cb(&rise, lv_anim_path_ease_out);
     lv_anim_start(&rise);
+}
+
+void frij_stagger_in(lv_obj_t* container, int step_ms)
+{
+    uint32_t n = lv_obj_get_child_count(container);
+    for (uint32_t i = 0; i < n; i++) {
+        frij_anim_enter(lv_obj_get_child(container, i), i * step_ms);
+    }
 }
