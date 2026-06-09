@@ -9,6 +9,12 @@
  * properties, same easing) instead of each re-deriving it.
  */
 
+// Reduce-motion switch. When disabled, frij_anim_enter / frij_stagger_in skip
+// the motion and snap straight to the final state (the user's "Animations"
+// setting). Defaults to enabled. (Does not affect direct lv_anim_start calls.)
+void frij_anim_set_enabled(bool on);
+bool frij_anim_enabled(void);
+
 // lv_anim exec callbacks for common properties (pass to lv_anim_set_exec_cb).
 void frij_anim_exec_opa(void* obj, int32_t v);          // whole-object opacity
 void frij_anim_exec_bg_opa(void* obj, int32_t v);       // background opacity

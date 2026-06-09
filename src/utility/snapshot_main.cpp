@@ -19,6 +19,7 @@
 
 #include "apps/counter/counter.h"
 #include "apps/settings/settings.h"
+#include "apps/stopwatch/stopwatch.h"
 #include "apps/todo/todo.h"
 #include "system/wifi.h"
 #include "ui/components.h"
@@ -166,6 +167,10 @@ int main(int, char**)
         build_glance_view(todo_app());
     } else if (scr && strcmp(scr, "counter") == 0) {
         build_app_screen(counter_app(), 0);
+    } else if (scr && strcmp(scr, "stopwatch") == 0) {
+        build_app_screen(stopwatch_app(), 0);
+    } else if (scr && strcmp(scr, "stopwatch_glance") == 0) {
+        build_glance_view(stopwatch_app());
     } else if (scr && strcmp(scr, "settings") == 0) {
         build_app_screen(settings_app(), 0);
     } else if (scr && strcmp(scr, "network") == 0) {
@@ -185,7 +190,7 @@ int main(int, char**)
     } else if (scr && strcmp(scr, "confirm") == 0) {
         build_app_screen(settings_app(), 2);
         frij_confirm("Reset settings?", "Restore everything to defaults.", "Reset",
-                     FRIJ_PRIMARY, NULL);
+                     FRIJ_DANGER, NULL);
     } else {
         user_app();  // default: the launcher (home)
     }

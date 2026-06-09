@@ -71,6 +71,10 @@ static void glance_builder(lv_obj_t* page, int index, void* user)
     if (app->build_glance) {
         app->build_glance(page);
     }
+    // openable apps get a faint "swipe up to open" affordance
+    if (app->build_screen && app->screen_count >= 1) {
+        frij_swipe_hint(page);
+    }
     frij_page_settle(page);  // center if it fits, else top-align
 }
 

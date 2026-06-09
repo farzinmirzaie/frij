@@ -16,9 +16,10 @@
 #define FRIJ_PRIMARY    0xA855F7  // brand purple
 #define FRIJ_SECONDARY  0x22C55E  // green
 #define FRIJ_ACCENT     0x38BDF8  // blue
-#define FRIJ_WARNING    0xFB8C00  // orange
+#define FRIJ_WARNING    0xFB8C00  // orange (low battery, caution)
 #define FRIJ_INFO       0x7C3AED  // violet
 #define FRIJ_YELLOW     0xFACC15  // amber
+#define FRIJ_DANGER     0xEF4444  // red — destructive actions (erase/reset)
 
 // Per-app accent palette. Each app picks ONE of these as its `color` and uses
 // it for its checks/rings/highlights; the page background stays Surface-1, so

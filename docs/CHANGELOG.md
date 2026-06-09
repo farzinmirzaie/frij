@@ -2,6 +2,29 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-09 — feature pass (10 bigger changes)
+
+- **New Stopwatch app** (on-brand for the dev kit): MM:SS.cs readout, Start/Stop,
+  Lap list, and Reset. Timing lives in module state so it keeps running while you
+  navigate away; not persisted across restarts. Registered between Todo and
+  Counter. Green accent.
+- **Reduce-motion setting**: a new "Animations" toggle (Settings ▸ General). When
+  off, entrance/stagger animations snap to their final state. Applied at boot.
+- **Danger accent**: new `FRIJ_DANGER` red; Reset/Erase confirm buttons use it so
+  destructive actions read as dangerous (were app-purple).
+- **Toast status variants**: `frij_toast_status(text, ok)` shows a green check or
+  red cross. Wired to Reset/Erase and Wi-Fi connect/forget/disconnect.
+- **Low-battery warning**: the home + About battery readout turns amber when
+  ≤15% and unplugged.
+- **Sync now** refreshes the About page in place (Last-sync updates immediately).
+- **Counter**: long-press the number to reset it to zero (haptic + toast).
+- **Todo all-done celebration**: at 100% the progress ring gives a one-shot pulse
+  + a success buzz.
+- **Swipe-up affordance**: openable glances show a faint, gently-bobbing up-chevron
+  (`frij_swipe_hint`) hinting the card opens on swipe-up. Respects reduce-motion.
+- **Relative "ago" time**: new `frij_format_relative`; About's Last sync now reads
+  "Just now" / "5m ago" / "2d ago" (clock time past a week).
+
 ## 2026-06-09 — polish pass (5 improvements)
 
 - **Home battery stays live**: the watch-face battery readout is now re-read each

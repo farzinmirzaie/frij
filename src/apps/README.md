@@ -47,13 +47,14 @@ plus whatever shared headers it needs):
   `frij_page_settle` (scroll/center), `frij_surface_row`, `frij_action_row`,
   `frij_slider_row`, `frij_toggle`, `frij_check`, `frij_section_label`,
   `frij_progress_ring`, `frij_empty_state`, `frij_label`.
-- **Modals/feedback**: `frij_confirm` (destructive actions), `frij_action_sheet`
-  (multi-choice), `frij_toast` (transient confirmation).
+- **Modals/feedback**: `frij_confirm` (destructive actions — pass `FRIJ_DANGER`),
+  `frij_action_sheet` (multi-choice), `frij_toast` / `frij_toast_status` (a
+  transient confirmation, optionally with a ✓/✗ status glyph).
 - **Motion** ([`ui/anim.h`](../ui/README.md)): `frij_stagger_in` for list
   entrances; `frij_anim_enter` for one widget.
 - **Time** ([`core/datetime.h`](../core/README.md)): `frij_format_time` /
-  `frij_clock_is_24h` (respect the 24-hour setting — don't call `strftime`
-  directly for clock strings).
+  `frij_format_relative` ("5m ago") / `frij_clock_is_24h` (respect the 24-hour
+  setting — don't call `strftime` directly for clock strings).
 - **Persistence** ([`store/store.h`](../store/README.md)): `frij_store_load/save`
   + typed `frij_store_load_int/bool` (+ `_save_*`), `frij_store_pull_async`.
 - **Board services** ([`system/`](../system/README.md)): `frij_set_brightness`,
@@ -74,9 +75,11 @@ every app shares the look but has its own scheme.
 - `todo/` — Keep-synced checklist. 3 screens: list (tap to toggle) / progress
   (big ring) / add-by-voice (placeholder UI). Glance shows the next item +
   count. Amber.
-- `counter/` — a number with ±, persists. Blue.
+- `stopwatch/` — MM:SS.cs stopwatch with Start/Stop, laps, and reset; timing
+  lives in module state so it keeps running off-screen. Green.
+- `counter/` — a number with ±, persists; long-press the number to reset. Blue.
 - `settings/` — 3 screens: General (Display: brightness/sleep/raise-to-wake;
-  Sound: volume/touch-sounds; Preferences: 24-hour/vibration/auto-sync), Network
+  Sound: volume/touch-sounds; Preferences: 24-hour/vibration/animations/auto-sync), Network
   (Wi-Fi list + connect/disconnect/forget), About (battery, last sync, sync now,
   reset, erase all data). Hardware-backed toggles (raise-to-wake → BMI270,
   touch-sounds → ES8311) are stored now, wired on device later. Purple.

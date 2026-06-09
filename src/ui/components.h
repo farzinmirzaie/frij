@@ -65,6 +65,10 @@ lv_obj_t* frij_progress_ring(lv_obj_t* parent, int size, int pct, uint32_t accen
 // A round "nothing here" placeholder with an icon + text.
 lv_obj_t* frij_empty_state(lv_obj_t* parent, const char* text);
 
+// A faint, gently-bobbing up-chevron near the bottom of a glance — hints that
+// the card can be opened by swiping up. FLOATING (doesn't affect layout).
+lv_obj_t* frij_swipe_hint(lv_obj_t* parent);
+
 // A shared app header near the top: a back button (left, returns to the
 // launcher), a centered `title`, and a right action button (hidden until set).
 // `action_cb` fires when the action is tapped. Round-screen-safe placement.
@@ -101,6 +105,10 @@ lv_obj_t* frij_circle_button(lv_obj_t* parent, int diameter, uint32_t bg, const 
 // A brief auto-dismissing message pill near the bottom of the screen (fades in,
 // holds, fades out, removes itself). Use for transient confirmations.
 void frij_toast(const char* text);
+
+// Like frij_toast, but with a leading status glyph: a green check when `ok`,
+// a red cross otherwise. Use for action results (sync done / failed).
+void frij_toast_status(const char* text, bool ok);
 
 // A modal confirmation dialog: a dimmed backdrop + a centered card with `title`,
 // optional `message`, a "Cancel" button and an accent button labelled

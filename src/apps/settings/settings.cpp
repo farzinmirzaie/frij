@@ -13,6 +13,9 @@
 #include "ui/components.h"
 #include "ui/theme.h"
 
+static void build_about(lv_obj_t* col);  // forward (used by Sync now's refresh)
+static lv_obj_t* s_about_col = NULL;     // the About page, for in-place refresh
+
 /*
  * Settings — a normal app (glance unused; reached by swiping down). Screens:
  *   0 General : Display (brightness/sleep/raise-to-wake), Sound (volume/touch
@@ -70,6 +73,14 @@ static void on_autosync(lv_event_t* e)
     frij_store_save_bool("autosync", lv_obj_has_state(sw, LV_STATE_CHECKED));
 }
 
+static void on_animations(lv_event_t* e)
+{
+    lv_obj_t* sw = (lv_obj_t*)lv_event_get_target(e);
+    bool      on = lv_obj_has_state(sw, LV_STATE_CHECKED);
+    frij_anim_set_enabled(on);  // reduce-motion: takes effect on the next screen
+    frij_store_save_bool("anim", on);
+}
+
 static void on_raise_wake(lv_event_t* e)
 {
     lv_obj_t* sw = (lv_obj_t*)lv_event_get_target(e);
@@ -91,6 +102,11 @@ static void on_sync_now(lv_event_t* e)
     frij_store_pull_async("counter");
     frij_store_save_int("last_sync", (int)time(NULL));
     frij_haptic(FRIJ_HAPTIC_SUCCESS);
+    if (s_about_col) {  // reflect the new "Last sync" immediately
+        lv_obj_clean(s_about_col);
+        build_about(s_about_col);
+        frij_page_settle(s_about_col);
+    }
     frij_toast("Syncing...");
 }
 
@@ -103,16 +119,18 @@ static void do_reset(lv_event_t* e)
     frij_store_save_bool("clock24", true);
     frij_store_save_bool("haptics", true);
     frij_store_save_bool("autosync", true);
+    frij_store_save_bool("anim", true);
     frij_set_brightness(80);
     frij_haptics_set_enabled(true);
+    frij_anim_set_enabled(true);
     frij_haptic(FRIJ_HAPTIC_SUCCESS);
-    frij_toast("Settings reset");
+    frij_toast_status("Settings reset", true);
 }
 
 static void on_reset(lv_event_t* e)
 {
-    (void)e;  // destructive: confirm first
-    frij_confirm("Reset settings?", "Restore everything to defaults.", "Reset", ACCENT, do_reset);
+    (void)e;  // destructive: confirm with a danger-colored button
+    frij_confirm("Reset settings?", "Restore everything to defaults.", "Reset", FRIJ_DANGER, do_reset);
 }
 
 static void do_erase(lv_event_t* e)
@@ -121,14 +139,15 @@ static void do_erase(lv_event_t* e)
     frij_store_clear();  // wipe todos / counter / settings; defaults return on next read
     frij_set_brightness(80);
     frij_haptics_set_enabled(true);
+    frij_anim_set_enabled(true);
     frij_haptic(FRIJ_HAPTIC_SUCCESS);
-    frij_toast("All data erased");
+    frij_toast_status("All data erased", true);
 }
 
 static void on_erase(lv_event_t* e)
 {
-    (void)e;  // destructive: confirm first
-    frij_confirm("Erase all data?", "Removes todos, counter and settings.", "Erase", ACCENT, do_erase);
+    (void)e;  // destructive: confirm with a danger-colored button
+    frij_confirm("Erase all data?", "Removes todos, counter and settings.", "Erase", FRIJ_DANGER, do_erase);
 }
 
 // ---- row helpers -----------------------------------------------------------
@@ -210,7 +229,7 @@ static void net_action_cb(int opt, void* user)
     }
     frij_haptic(FRIJ_HAPTIC_SELECT);
     net_refresh();
-    frij_toast(msg);
+    frij_toast_status(msg, true);  // mock Wi-Fi always succeeds
 }
 
 static void net_row_cb(lv_event_t* e)
@@ -299,6 +318,49 @@ static void build_network(lv_obj_t* col)
     frij_stagger_in(col, 35);  // staggered list entrance
 }
 
+// ---- About screen ----------------------------------------------------------
+
+// Clear the cached About page pointer when its page is destroyed.
+static void on_about_deleted(lv_event_t* e)
+{
+    if (s_about_col == lv_event_get_target(e)) {
+        s_about_col = NULL;
+    }
+}
+
+static void build_about(lv_obj_t* col)
+{
+    // hero: name + version, with generous breathing room around it
+    lv_obj_t* hero = frij_label(col, "Frij", FRIJ_FONT_TITLE, FRIJ_TEXT);
+    lv_obj_set_style_margin_top(hero, FRIJ_SP_XXL * 4, LV_PART_MAIN);  // 36
+    lv_obj_t* ver = frij_label(col, "on-device UI  -  v0.1", FRIJ_FONT_BODY, FRIJ_TEXT_2);
+    lv_obj_set_style_margin_bottom(ver, FRIJ_SP_XXL * 4, LV_PART_MAIN);  // 36
+
+    uint8_t pct      = frij_battery_pct();
+    bool    charging = frij_battery_charging();
+    char    bbuf[24];
+    lv_snprintf(bbuf, sizeof(bbuf), "%d%%%s", pct, charging ? "  " LV_SYMBOL_CHARGE : "");
+    lv_obj_t* brow = frij_value_row(col, "Battery", bbuf);
+    if (pct <= 15 && !charging) {  // flag a low battery in the readout
+        lv_obj_set_style_text_color(lv_obj_get_child(brow, 1), lv_color_hex(FRIJ_WARNING),
+                                    LV_PART_MAIN);
+    }
+
+    char sbuf[24];
+    int  ls = frij_store_load_int("last_sync", 0);
+    if (ls > 0) {
+        frij_format_relative(sbuf, sizeof(sbuf), (time_t)ls);  // "Just now" / "5m ago"
+    } else {
+        lv_snprintf(sbuf, sizeof(sbuf), "Never");
+    }
+    frij_value_row(col, "Last sync", sbuf);
+
+    frij_action_row(col, "Sync now", on_sync_now);
+    frij_action_row(col, "Reset settings", on_reset);
+    frij_action_row(col, "Erase all data", on_erase);
+    frij_stagger_in(col, 30);
+}
+
 // ---- screens ---------------------------------------------------------------
 
 static void screen(lv_obj_t* parent, int index)
@@ -317,6 +379,7 @@ static void screen(lv_obj_t* parent, int index)
             frij_section_label(col, "Preferences");
             toggle_row(col, "24-hour time", "clock24", true, on_clock24);
             toggle_row(col, "Vibration", "haptics", true, on_vibration);
+            toggle_row(col, "Animations", "anim", true, on_animations);
             toggle_row(col, "Auto-sync", "autosync", true, on_autosync);
             frij_stagger_in(col, 30);
             break;
@@ -329,35 +392,9 @@ static void screen(lv_obj_t* parent, int index)
             break;
 
         default:  // System / About
-            {
-                // hero: name + version, with generous breathing room around it
-                lv_obj_t* hero = frij_label(col, "Frij", FRIJ_FONT_TITLE, FRIJ_TEXT);
-                lv_obj_set_style_margin_top(hero, FRIJ_SP_XXL * 4, LV_PART_MAIN);  // 36
-                lv_obj_t* ver = frij_label(col, "on-device UI  -  v0.1", FRIJ_FONT_BODY, FRIJ_TEXT_2);
-                lv_obj_set_style_margin_bottom(ver, FRIJ_SP_XXL * 4, LV_PART_MAIN);  // 36
-
-                char bbuf[24];
-                lv_snprintf(bbuf, sizeof(bbuf), "%d%%%s", frij_battery_pct(),
-                            frij_battery_charging() ? "  " LV_SYMBOL_CHARGE : "");
-                frij_value_row(col, "Battery", bbuf);
-
-                char        sbuf[24];
-                int         ls = frij_store_load_int("last_sync", 0);
-                if (ls > 0) {
-                    time_t    tt = (time_t)ls;
-                    struct tm tmv;
-                    localtime_r(&tt, &tmv);
-                    frij_format_time(sbuf, sizeof(sbuf), &tmv);  // respects 24-hour setting
-                } else {
-                    lv_snprintf(sbuf, sizeof(sbuf), "Never");
-                }
-                frij_value_row(col, "Last sync", sbuf);
-
-                frij_action_row(col, "Sync now", on_sync_now);
-                frij_action_row(col, "Reset settings", on_reset);
-                frij_action_row(col, "Erase all data", on_erase);
-                frij_stagger_in(col, 30);
-            }
+            s_about_col = col;
+            lv_obj_add_event_cb(col, on_about_deleted, LV_EVENT_DELETE, NULL);
+            build_about(col);
             break;
     }
 }

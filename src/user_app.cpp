@@ -4,6 +4,7 @@
 #include "store/store.h"
 #include "system/brightness.h"
 #include "system/haptics.h"
+#include "ui/anim.h"
 
 /*
  * Frij entry point — called once at startup after display + LVGL are ready.
@@ -24,6 +25,9 @@ void user_app(void)
 
     // apply the saved vibration preference (default on)
     frij_haptics_set_enabled(frij_store_load_bool("haptics", true));
+
+    // apply the saved reduce-motion preference (default: animations on)
+    frij_anim_set_enabled(frij_store_load_bool("anim", true));
 
     // when auto-sync is on, pull the apps' latest cloud data in the background
     if (frij_store_load_bool("autosync", true)) {

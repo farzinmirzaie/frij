@@ -346,6 +346,32 @@ lv_obj_t* frij_empty_state(lv_obj_t* parent, const char* text)
     return box;
 }
 
+lv_obj_t* frij_swipe_hint(lv_obj_t* parent)
+{
+    lv_obj_t* hint = lv_label_create(parent);
+    lv_label_set_text(hint, LV_SYMBOL_UP);
+    lv_obj_set_style_text_font(hint, FRIJ_FONT_SYMBOL, LV_PART_MAIN);
+    lv_obj_set_style_text_color(hint, lv_color_hex(FRIJ_TEXT_2), LV_PART_MAIN);
+    lv_obj_set_style_opa(hint, LV_OPA_30, LV_PART_MAIN);
+    lv_obj_add_flag(hint, LV_OBJ_FLAG_FLOATING);  // ignore the page's flex/scroll
+    lv_obj_clear_flag(hint, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_align(hint, LV_ALIGN_BOTTOM_MID, 0, -frij_screen_min() * 7 / 100);
+
+    if (frij_anim_enabled()) {  // gentle bob (respects reduce-motion)
+        lv_anim_t bob;
+        lv_anim_init(&bob);
+        lv_anim_set_var(&bob, hint);
+        lv_anim_set_exec_cb(&bob, frij_anim_exec_translate_y);
+        lv_anim_set_values(&bob, 0, -6);
+        lv_anim_set_duration(&bob, 700);
+        lv_anim_set_playback_duration(&bob, 700);
+        lv_anim_set_repeat_count(&bob, LV_ANIM_REPEAT_INFINITE);
+        lv_anim_set_path_cb(&bob, lv_anim_path_ease_in_out);
+        lv_anim_start(&bob);
+    }
+    return hint;
+}
+
 // Keep the slider-card's right-hand value readout in sync as it's dragged.
 static void slider_value_cb(lv_event_t* e)
 {
@@ -698,7 +724,8 @@ static void toast_in_done_cb(lv_anim_t* a)
     lv_anim_start(&out);
 }
 
-void frij_toast(const char* text)
+// Shared builder: a pill with an optional leading status glyph + the message.
+static void toast_show(const char* glyph, uint32_t glyph_color, const char* text)
 {
     if (s_toast) {
         lv_obj_delete(s_toast);  // also cancels its anims (LVGL drops anims on delete)
@@ -716,14 +743,20 @@ void frij_toast(const char* text)
     lv_obj_set_style_pad_bottom(t, FRIJ_SP_S, LV_PART_MAIN);
     lv_obj_clear_flag(t, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_align(t, LV_ALIGN_BOTTOM_MID, 0, -frij_screen_min() * 14 / 100);
+    // row: [glyph] text — centered, with a small gap when a glyph is present
+    lv_obj_set_flex_flow(t, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(t, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(t, FRIJ_SP_S, LV_PART_MAIN);
 
+    if (glyph && glyph[0]) {
+        frij_label(t, glyph, FRIJ_FONT_SYMBOL, glyph_color);
+    }
     lv_obj_t* l = frij_label(t, text, FRIJ_FONT_BODY, FRIJ_TEXT);
     // cap the label width so long messages wrap instead of pushing the pill off
     // the round edge; the pill (content-sized) then grows to the wrapped text
-    lv_obj_set_style_max_width(l, frij_screen_min() * 70 / 100, LV_PART_MAIN);
+    lv_obj_set_style_max_width(l, frij_screen_min() * 64 / 100, LV_PART_MAIN);
     lv_label_set_long_mode(l, LV_LABEL_LONG_WRAP);
     lv_obj_set_style_text_align(l, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
-    lv_obj_center(l);
 
     // Fade in; toast_in_done_cb then holds and fades it back out.
     lv_anim_t in;
@@ -746,6 +779,17 @@ void frij_toast(const char* text)
     lv_anim_set_duration(&rise, FRIJ_ANIM_MS);
     lv_anim_set_path_cb(&rise, lv_anim_path_ease_out);
     lv_anim_start(&rise);
+}
+
+void frij_toast(const char* text)
+{
+    toast_show(NULL, 0, text);
+}
+
+void frij_toast_status(const char* text, bool ok)
+{
+    toast_show(ok ? LV_SYMBOL_OK : LV_SYMBOL_CLOSE,
+               ok ? FRIJ_SECONDARY : FRIJ_DANGER, text);
 }
 
 lv_obj_t* frij_value_row(lv_obj_t* parent, const char* label, const char* value)

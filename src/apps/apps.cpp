@@ -4,6 +4,7 @@
 #include "counter/counter.h"
 #include "home/home.h"
 #include "settings/settings.h"
+#include "stopwatch/stopwatch.h"
 #include "todo/todo.h"
 
 // Add one line per app. Home-carousel order = order of frij_registry_add();
@@ -13,6 +14,7 @@ void frij_register_apps(void)
 {
     frij_registry_add(home_app());
     frij_registry_add(todo_app());
+    frij_registry_add(stopwatch_app());
     frij_registry_add(counter_app());
     frij_registry_set_settings(settings_app());
 }

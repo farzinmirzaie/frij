@@ -21,3 +21,24 @@ void frij_format_time(char* buf, size_t n, const struct tm* tmv)
     }
     lv_snprintf(buf, n, "%d:%02d %s", hour12, tmv->tm_min, tmv->tm_hour < 12 ? "AM" : "PM");
 }
+
+void frij_format_relative(char* buf, size_t n, time_t then)
+{
+    long diff = (long)(time(NULL) - then);
+    if (diff < 0) {
+        diff = 0;  // clock skew — treat a future stamp as "now"
+    }
+    if (diff < 45) {
+        lv_snprintf(buf, n, "Just now");
+    } else if (diff < 3600) {
+        lv_snprintf(buf, n, "%ldm ago", diff / 60);
+    } else if (diff < 86400) {
+        lv_snprintf(buf, n, "%ldh ago", diff / 3600);
+    } else if (diff < 7 * 86400) {
+        lv_snprintf(buf, n, "%ldd ago", diff / 86400);
+    } else {
+        struct tm tmv;
+        localtime_r(&then, &tmv);
+        frij_format_time(buf, n, &tmv);  // older than a week: show the clock time
+    }
+}

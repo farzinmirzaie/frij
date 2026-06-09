@@ -6,6 +6,7 @@
 #include <ArduinoJson.h>
 
 #include "store/store.h"
+#include "system/haptics.h"
 #include "ui/anim.h"
 #include "ui/components.h"
 #include "ui/theme.h"
@@ -241,6 +242,20 @@ static void build_progress(lv_obj_t* parent)
     } else if (done_count() == s_n) {
         lv_label_set_text(pct, "100%");
         lv_label_set_text(sub, "All done!");
+        // celebrate: a gentle one-shot pulse of the ring + a success buzz
+        lv_obj_set_style_transform_pivot_x(arc, lv_pct(50), LV_PART_MAIN);
+        lv_obj_set_style_transform_pivot_y(arc, lv_pct(50), LV_PART_MAIN);
+        lv_anim_t pulse;
+        lv_anim_init(&pulse);
+        lv_anim_set_var(&pulse, arc);
+        lv_anim_set_exec_cb(&pulse, frij_anim_exec_scale);
+        lv_anim_set_values(&pulse, 256, 280);
+        lv_anim_set_duration(&pulse, 260);
+        lv_anim_set_playback_duration(&pulse, 260);
+        lv_anim_set_delay(&pulse, FRIJ_ANIM_MS);  // after the fill sweep
+        lv_anim_set_path_cb(&pulse, lv_anim_path_ease_in_out);
+        lv_anim_start(&pulse);
+        frij_haptic(FRIJ_HAPTIC_SUCCESS);
     } else {
         lv_label_set_text_fmt(pct, "%d%%", done_pct());
         lv_label_set_text_fmt(sub, "%d of %d done", done_count(), s_n);

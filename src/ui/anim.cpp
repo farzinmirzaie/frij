@@ -2,6 +2,18 @@
 
 #include "theme.h"
 
+static bool s_anim_enabled = true;
+
+void frij_anim_set_enabled(bool on)
+{
+    s_anim_enabled = on;
+}
+
+bool frij_anim_enabled(void)
+{
+    return s_anim_enabled;
+}
+
 void frij_anim_exec_opa(void* o, int32_t v)
 {
     lv_obj_set_style_opa((lv_obj_t*)o, (lv_opa_t)v, LV_PART_MAIN);
@@ -25,6 +37,9 @@ void frij_anim_exec_scale(void* o, int32_t v)
 
 void frij_anim_enter(lv_obj_t* obj, uint32_t delay_ms)
 {
+    if (!s_anim_enabled) {
+        return;  // reduce motion: leave the object at its final state, no anim
+    }
     lv_obj_set_style_opa(obj, LV_OPA_TRANSP, LV_PART_MAIN);
     lv_obj_set_style_translate_y(obj, 14, LV_PART_MAIN);
 

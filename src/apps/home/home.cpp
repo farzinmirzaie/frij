@@ -86,8 +86,13 @@ static void render(clock_ctx_t* c)
     }
 
     if (c->bat) {
-        uint8_t pct = frij_battery_pct();  // re-read so the face stays current
-        lv_label_set_text_fmt(c->bat, "%s %d%%", battery_glyph(pct, frij_battery_charging()), pct);
+        uint8_t pct      = frij_battery_pct();  // re-read so the face stays current
+        bool    charging = frij_battery_charging();
+        lv_label_set_text_fmt(c->bat, "%s %d%%", battery_glyph(pct, charging), pct);
+        // warn (amber) when low and unplugged; muted otherwise
+        lv_obj_set_style_text_color(
+            c->bat, lv_color_hex((pct <= 15 && !charging) ? FRIJ_WARNING : FRIJ_TEXT_2),
+            LV_PART_MAIN);
     }
 }
 

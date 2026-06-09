@@ -9,6 +9,7 @@ target whatever board we run on (see [HARDWARE.md](HARDWARE.md)).
 ## Apps (planned)
 
 - **Todos** — quick check-off list.
+- **Stopwatch** — count-up timer with laps (shipped; on-brand for the dev kit).
 - **Reminders** — time/day-based nudges.
 - **Grocery list** — add/remove items, clear bought.
 - **Photos** — slideshow of family pics.
