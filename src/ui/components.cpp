@@ -82,6 +82,7 @@ void frij_glow(lv_obj_t* parent, uint32_t accent)
     lv_obj_remove_style_all(g);
     lv_obj_set_size(g, sz, sz);
     lv_obj_center(g);
+    lv_obj_add_flag(g, LV_OBJ_FLAG_IGNORE_LAYOUT);  // background, not a flex item
     lv_obj_clear_flag(g, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_clear_flag(g, LV_OBJ_FLAG_SCROLLABLE);
 
@@ -116,10 +117,22 @@ lv_obj_t* frij_col(lv_obj_t* parent, int gap)
 
 lv_obj_t* frij_page(lv_obj_t* parent)
 {
-    lv_obj_t* col = frij_col(parent, FRIJ_SP_S);
-    lv_obj_set_width(col, LV_PCT(86));
-    lv_obj_center(col);
-    return col;
+    // Configure the page itself as a centered, vertically-scrollable column.
+    // Short content sits centered; taller content scrolls (the launcher turns a
+    // swipe past the scroll edge into Back).
+    int hpad = frij_screen_min() * 8 / 100;
+    lv_obj_set_flex_flow(parent, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(parent, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_row(parent, FRIJ_SP_S, LV_PART_MAIN);
+    lv_obj_set_style_pad_left(parent, hpad, LV_PART_MAIN);
+    lv_obj_set_style_pad_right(parent, hpad, LV_PART_MAIN);
+    lv_obj_set_style_pad_top(parent, FRIJ_SP_L, LV_PART_MAIN);
+    lv_obj_set_style_pad_bottom(parent, FRIJ_SP_XL, LV_PART_MAIN);
+    lv_obj_add_flag(parent, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_scroll_dir(parent, LV_DIR_VER);
+    lv_obj_remove_flag(parent, LV_OBJ_FLAG_SCROLL_ELASTIC);  // firm edges for the back gesture
+    lv_obj_set_scrollbar_mode(parent, LV_SCROLLBAR_MODE_OFF);
+    return parent;
 }
 
 lv_obj_t* frij_label(lv_obj_t* parent, const char* text, const lv_font_t* font, uint32_t color)
@@ -260,27 +273,30 @@ lv_obj_t* frij_empty_state(lv_obj_t* parent, const char* text)
     return box;
 }
 
-lv_obj_t* frij_slider(lv_obj_t* parent, int min, int max, int value, uint32_t accent)
+lv_obj_t* frij_slider_row(lv_obj_t* parent, const char* label, int min, int max,
+                          int value, uint32_t accent)
 {
     lv_obj_t* s = lv_slider_create(parent);
     lv_obj_set_width(s, LV_PCT(100));
-    lv_obj_set_style_height(s, 6, LV_PART_MAIN);
+    lv_obj_set_height(s, 52);  // card-sized
     lv_slider_set_range(s, min, max);
     lv_slider_set_value(s, value, LV_ANIM_OFF);
 
-    // Inset the track so the round knob never overflows (and gets clipped by)
-    // the parent at the ends — the bug in the earlier version.
-    lv_obj_set_style_margin_left(s, 10, LV_PART_MAIN);
-    lv_obj_set_style_margin_right(s, 10, LV_PART_MAIN);
-    lv_obj_set_style_margin_top(s, 10, LV_PART_MAIN);
-    lv_obj_set_style_margin_bottom(s, 10, LV_PART_MAIN);
-
-    lv_obj_set_style_bg_color(s, lv_color_hex(FRIJ_SURFACE_3), LV_PART_MAIN);
-    lv_obj_set_style_radius(s, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+    // card body (MAIN), accent fill (INDICATOR), no visible knob
+    grad_v(s, FRIJ_SURFACE_2, 0x101216);
+    lv_obj_set_style_radius(s, FRIJ_RADIUS_M, LV_PART_MAIN);
     lv_obj_set_style_bg_color(s, lv_color_hex(accent), LV_PART_INDICATOR);
-    lv_obj_set_style_radius(s, LV_RADIUS_CIRCLE, LV_PART_INDICATOR);
-    lv_obj_set_style_bg_color(s, lv_color_hex(0xFFFFFF), LV_PART_KNOB);
-    lv_obj_set_style_pad_all(s, 5, LV_PART_KNOB);  // knob size
+    lv_obj_set_style_bg_opa(s, LV_OPA_50, LV_PART_INDICATOR);
+    lv_obj_set_style_radius(s, FRIJ_RADIUS_M, LV_PART_INDICATOR);
+    lv_obj_set_style_bg_opa(s, LV_OPA_TRANSP, LV_PART_KNOB);
+    lv_obj_set_style_pad_all(s, 0, LV_PART_KNOB);
+
+    lv_obj_t* l = lv_label_create(s);
+    lv_label_set_text(l, label);
+    lv_obj_set_style_text_color(l, lv_color_hex(FRIJ_TEXT), LV_PART_MAIN);
+    lv_obj_set_style_text_font(l, FRIJ_FONT_BODY, LV_PART_MAIN);
+    lv_obj_align(l, LV_ALIGN_LEFT_MID, FRIJ_SP_M, 0);
+
     frij_haptic_attach(s);
     return s;
 }

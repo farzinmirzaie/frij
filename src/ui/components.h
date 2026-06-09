@@ -54,8 +54,11 @@ lv_obj_t* frij_header(lv_obj_t* parent, const char* title, lv_event_cb_t action_
 // Show/hide + set the icon of the header's action button (NULL/"" hides it).
 void frij_header_set_action(lv_obj_t* header, const char* symbol);
 
-// A themed slider (full width). Attach your own LV_EVENT_VALUE_CHANGED handler.
-lv_obj_t* frij_slider(lv_obj_t* parent, int min, int max, int value, uint32_t accent);
+// A slider styled as a full-width card: the whole card is draggable left/right
+// and an accent fill shows the amount; `label` sits on top. Returns the slider
+// (an lv_slider) — attach LV_EVENT_VALUE_CHANGED and read lv_slider_get_value.
+lv_obj_t* frij_slider_row(lv_obj_t* parent, const char* label, int min, int max,
+                          int value, uint32_t accent);
 
 // A themed on/off switch. Attach your own LV_EVENT_VALUE_CHANGED handler.
 lv_obj_t* frij_toggle(lv_obj_t* parent, bool on, uint32_t accent);

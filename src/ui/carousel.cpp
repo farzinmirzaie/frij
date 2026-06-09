@@ -37,6 +37,53 @@ static void dots_to_front(frij_carousel_t* c)
     }
 }
 
+static void set_opa(void* obj, int32_t v)
+{
+    lv_obj_set_style_opa((lv_obj_t*)obj, (lv_opa_t)v, LV_PART_MAIN);
+}
+
+static void fade_dots(frij_carousel_t* c, lv_opa_t to)
+{
+    if (!c->dots) {
+        return;
+    }
+    lv_anim_t a;
+    lv_anim_init(&a);
+    lv_anim_set_var(&a, c->dots);
+    lv_anim_set_exec_cb(&a, set_opa);
+    lv_anim_set_values(&a, lv_obj_get_style_opa(c->dots, LV_PART_MAIN), to);
+    lv_anim_set_duration(&a, 220);
+    lv_anim_start(&a);
+}
+
+static void dots_hide_cb(lv_timer_t* t)
+{
+    fade_dots((frij_carousel_t*)lv_timer_get_user_data(t), LV_OPA_TRANSP);
+    lv_timer_pause(t);
+}
+
+// Show the dots (fade in) and restart the idle-hide timer.
+static void dots_show(frij_carousel_t* c)
+{
+    if (!c->dots) {
+        return;
+    }
+    dots_to_front(c);
+    fade_dots(c, LV_OPA_COVER);
+    lv_timer_reset(c->hide_timer);
+    lv_timer_resume(c->hide_timer);
+}
+
+static void on_viewport_delete(lv_event_t* e)
+{
+    frij_carousel_t* c = (frij_carousel_t*)lv_event_get_user_data(e);
+    if (c->hide_timer) {
+        lv_timer_delete(c->hide_timer);
+        c->hide_timer = NULL;
+    }
+    c->dots = NULL;
+}
+
 static void make_dots(frij_carousel_t* c)
 {
     c->dots = lv_obj_create(c->viewport);
@@ -56,6 +103,7 @@ static void make_dots(frij_carousel_t* c)
         lv_obj_set_style_radius(d, LV_RADIUS_CIRCLE, LV_PART_MAIN);
         lv_obj_clear_flag(d, LV_OBJ_FLAG_CLICKABLE);
     }
+    lv_obj_set_style_opa(c->dots, LV_OPA_TRANSP, LV_PART_MAIN);  // hidden until a swipe
     refresh_dots(c);
 }
 
@@ -118,7 +166,7 @@ static void commit_done(lv_anim_t* a)
     c->index = c->adj_index;
     c->busy  = false;
     refresh_dots(c);
-    dots_to_front(c);
+    dots_show(c);
     notify(c);
 }
 
@@ -161,6 +209,7 @@ void frij_carousel_init(frij_carousel_t* c, lv_obj_t* parent, int count,
     c->user        = user;
     c->adj         = NULL;
     c->dots        = NULL;
+    c->hide_timer  = NULL;
     c->accent      = accent;
     c->on_change   = NULL;
     c->change_user = NULL;
@@ -180,6 +229,9 @@ void frij_carousel_init(frij_carousel_t* c, lv_obj_t* parent, int count,
 
     if (c->count > 1) {
         make_dots(c);
+        c->hide_timer = lv_timer_create(dots_hide_cb, 1400, c);
+        lv_timer_pause(c->hide_timer);
+        lv_obj_add_event_cb(c->viewport, on_viewport_delete, LV_EVENT_DELETE, c);
     }
 }
 
@@ -199,10 +251,12 @@ void frij_carousel_drag(frij_carousel_t* c, int dx)
     ensure_neighbor(c, sign);
     lv_obj_set_x(c->cur, dx);
     lv_obj_set_x(c->adj, (sign < 0 ? w : -w) + dx);
+    dots_show(c);
 }
 
 void frij_carousel_end(frij_carousel_t* c, int dx)
 {
+    dots_show(c);  // keep the dots up through the snap, then they idle out
     if (c->busy || c->adj == NULL) {
         return;
     }
@@ -230,7 +284,7 @@ void frij_carousel_goto(frij_carousel_t* c, int index)
     lv_obj_set_x(c->cur, 0);
     build_into(c, c->cur, c->index);
     refresh_dots(c);
-    dots_to_front(c);
+    dots_show(c);
     notify(c);
 }
 

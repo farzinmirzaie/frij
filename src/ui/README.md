@@ -10,13 +10,18 @@ theme, list rows, …) as patterns repeat.
   fonts (SF Pro Rounded — see `fonts/`), 4pt spacing, radius, motion.
 - `fonts/` — SF Pro Rounded converted to LVGL fonts (see its README + license note).
 - `components.*` — themed widgets:
-  - `frij_col` / `frij_page` / `frij_label` — layout + typed text (`frij_page` is
-    the standard centered, round-screen-friendly body).
+  - `frij_col` / `frij_label` — layout + typed text.
+  - `frij_page` — the standard page body: a centered, **vertically scrollable**
+    column (short content centers; taller content scrolls). The launcher turns a
+    swipe past the scroll edge into Back.
   - `frij_apply_bg` — the subtle page-background gradient; `frij_screen_min` —
     shorter screen side, for responsive sizing.
   - `frij_surface_row` — rounded row with a subtle gradient + press feedback.
   - `frij_check` / `frij_check_set` — circular check with a pop animation.
-  - `frij_slider` / `frij_toggle` — themed slider + switch (take an accent).
+  - `frij_slider_row` — a full-width card that IS the slider: drag anywhere to
+    set, accent fill shows the amount, label on top.
+  - `frij_toggle` — themed switch (takes an accent).
+  - `frij_glow` — soft radial accent halo (background; ignores layout).
   - `frij_progress_ring` — thin arc gauge.
   - `frij_empty_state` — round "nothing here" placeholder.
   - `frij_header` — shared app top bar: back button (returns to the launcher) +

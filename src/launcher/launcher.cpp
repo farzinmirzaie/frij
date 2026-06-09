@@ -47,6 +47,8 @@ static lv_point_t s_start;
 static int        s_axis    = 0;     // 0 undecided, 1 horizontal, 2 vertical
 static bool       s_anim    = false; // a vertical transition is animating
 static bool       s_outside = false; // press began outside the round area
+static bool       s_v_decided    = false;  // this vertical gesture's mode is set
+static bool       s_v_transition = false;  // true = layer transition; false = content scroll
 
 static int height(void)
 {
@@ -130,6 +132,18 @@ static void add_layer_header(lv_obj_t* layer, const frij_app_t* app, frij_carous
     layer_change_cb(frij_carousel_index(car), NULL);
 }
 
+// Push a layer's content carousel below the persistent header.
+static int header_zone(void)
+{
+    return frij_screen_min() * 24 / 100;
+}
+
+static void drop_content_below_header(frij_carousel_t* car)
+{
+    lv_obj_set_y(car->viewport, header_zone());
+    lv_obj_set_height(car->viewport, frij_screen_min() - header_zone());
+}
+
 static void ensure_app_layer(void)
 {
     if (s_app) {
@@ -143,6 +157,7 @@ static void ensure_app_layer(void)
     s_app = make_layer();
     lv_obj_set_y(s_app, height());  // starts below the home
     frij_carousel_init(&s_capp, s_app, app->screen_count, app_screen_builder, (void*)app, app->color);
+    drop_content_below_header(&s_capp);
     add_layer_header(s_app, app, &s_capp);  // header on top, persists across screens
 }
 
@@ -159,6 +174,7 @@ static void ensure_settings_layer(void)
     lv_obj_set_y(s_settings, -height());  // starts above the home
     int n = app->screen_count > 0 ? app->screen_count : 1;
     frij_carousel_init(&s_cset, s_settings, n, app_screen_builder, (void*)app, app->color);
+    drop_content_below_header(&s_cset);
     add_layer_header(s_settings, app, &s_cset);
 }
 
@@ -273,6 +289,23 @@ static void nav_vend(int dy)
 
 // ---- input + back ----------------------------------------------------------
 
+// A vertical drag becomes a layer transition (Back/open) only when the content
+// can't scroll further in that direction; otherwise it scrolls natively.
+static bool should_transition(int dy)
+{
+    if (s_cur == HOME) {
+        return true;  // glances don't scroll; up = open, down = settings
+    }
+    lv_obj_t* content = s_active ? s_active->cur : NULL;
+    if (!content) {
+        return true;
+    }
+    if (s_cur == APP) {
+        return dy > 0 && lv_obj_get_scroll_top(content) <= 0;     // swipe down at the top
+    }
+    return dy < 0 && lv_obj_get_scroll_bottom(content) <= 0;      // SETTINGS: swipe up at the bottom
+}
+
 static void on_input(lv_event_t* e)
 {
     if (s_anim) {
@@ -286,7 +319,8 @@ static void on_input(lv_event_t* e)
 
     if (code == LV_EVENT_PRESSED) {
         lv_indev_get_point(indev, &s_start);
-        s_axis = 0;
+        s_axis      = 0;
+        s_v_decided = false;
         // ignore touches outside the round panel
         int w  = lv_obj_get_width(s_root);
         int h  = lv_obj_get_height(s_root);
@@ -313,7 +347,14 @@ static void on_input(lv_event_t* e)
         if (s_axis == 1) {
             frij_carousel_drag(s_active, dx);
         } else if (s_axis == 2) {
-            nav_vdrag(dy);
+            if (!s_v_decided) {
+                s_v_decided    = true;
+                s_v_transition = should_transition(dy);
+            }
+            if (s_v_transition) {
+                nav_vdrag(dy);
+            }
+            // else: let LVGL scroll the content natively
         }
         return;
     }
@@ -322,7 +363,7 @@ static void on_input(lv_event_t* e)
         lv_indev_get_point(indev, &p);
         if (s_axis == 1) {
             frij_carousel_end(s_active, p.x - s_start.x);
-        } else if (s_axis == 2) {
+        } else if (s_axis == 2 && s_v_transition) {
             nav_vend(p.y - s_start.y);
         }
         s_axis = 0;

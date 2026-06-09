@@ -38,18 +38,26 @@ static void build_app_screen(const frij_app_t* app)
     lv_obj_set_style_clip_corner(root, true, LV_PART_MAIN);
     lv_obj_clear_flag(root, LV_OBJ_FLAG_SCROLLABLE);
     frij_apply_bg(root);
-    if (app) {
-        frij_glow(root, app->color);
+    if (!app) {
+        return;
     }
-    if (app && app->build_screen) {
-        app->build_screen(root, 0);
+    frij_glow(root, app->color);
+
+    // mirror the launcher: header on the layer, content in an area below it
+    int       hz      = 466 * 24 / 100;
+    lv_obj_t* content = lv_obj_create(root);
+    lv_obj_set_pos(content, 0, hz);
+    lv_obj_set_size(content, 466, 466 - hz);
+    lv_obj_set_style_bg_opa(content, LV_OPA_TRANSP, LV_PART_MAIN);
+    lv_obj_set_style_border_width(content, 0, LV_PART_MAIN);
+    lv_obj_clear_flag(content, LV_OBJ_FLAG_SCROLLABLE);
+    if (app->build_screen) {
+        app->build_screen(content, 0);
     }
-    // mimic the launcher's persistent header for a faithful preview
-    if (app) {
-        lv_obj_t* hdr = frij_header(root, app->name, NULL);
-        if (app->action_symbol) {
-            frij_header_set_action(hdr, app->action_symbol(0));
-        }
+
+    lv_obj_t* hdr = frij_header(root, app->name, NULL);
+    if (app->action_symbol) {
+        frij_header_set_action(hdr, app->action_symbol(0));
     }
 }
 

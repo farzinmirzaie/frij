@@ -26,6 +26,7 @@ typedef struct {
     frij_page_builder builder;
     void*             user;
     lv_obj_t*         dots;        // page indicator (NULL when count <= 1)
+    lv_timer_t*       hide_timer;  // idle timer that fades the dots out
     uint32_t          accent;      // active-dot color (0xRRGGBB)
     void (*on_change)(int index, void* user);  // called when the page settles
     void*             change_user;

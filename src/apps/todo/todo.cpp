@@ -119,11 +119,9 @@ static void on_toggle(lv_event_t* e)
 
 static void build_list(lv_obj_t* parent)
 {
-    // The shared header (back + "Todo" + "+") is provided by the launcher.
-    // list below the header, top-aligned so it doesn't drift into the round edge
-    lv_obj_t* col = frij_col(parent, FRIJ_SP_S);
-    lv_obj_set_width(col, LV_PCT(82));
-    lv_obj_align(col, LV_ALIGN_TOP_MID, 0, frij_screen_min() * 27 / 100);
+    // The shared header (back + "Todo" + "+") is provided by the launcher; this
+    // is the scrollable content (sits in the area below the header).
+    lv_obj_t* col = frij_page(parent);
 
     if (s_n == 0) {
         frij_empty_state(col, "Nothing yet");

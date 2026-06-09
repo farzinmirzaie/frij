@@ -92,39 +92,27 @@ static void screen(lv_obj_t* parent, int index)
     lv_obj_t* col = frij_page(parent);
 
     switch (index) {
-        case 0:  // Display
-            frij_label(col, "Display", FRIJ_FONT_TITLE, FRIJ_TEXT);
-            frij_label(col, "Brightness", FRIJ_FONT_BODY, FRIJ_TEXT_2);
+        case 0:  // General (brightness + volume + 24h + vibration)
             {
-                lv_obj_t* sl = frij_slider(col, 10, 100, load_int("brightness", 80), ACCENT);
-                lv_obj_add_event_cb(sl, on_brightness, LV_EVENT_VALUE_CHANGED, NULL);
+                lv_obj_t* b = frij_slider_row(col, "Brightness", 10, 100,
+                                              load_int("brightness", 80), ACCENT);
+                lv_obj_add_event_cb(b, on_brightness, LV_EVENT_VALUE_CHANGED, NULL);
+                lv_obj_t* v = frij_slider_row(col, "Volume", 0, 100,
+                                              load_int("volume", 60), ACCENT);
+                lv_obj_add_event_cb(v, on_volume, LV_EVENT_VALUE_CHANGED, NULL);
+                toggle_row(col, "24-hour time", "clock24", true, on_clock24);
+                toggle_row(col, "Vibration", "haptics", true, on_vibration);
             }
             break;
 
-        case 1:  // Sound
-            frij_label(col, "Sound", FRIJ_FONT_TITLE, FRIJ_TEXT);
-            frij_label(col, "Volume", FRIJ_FONT_BODY, FRIJ_TEXT_2);
-            {
-                lv_obj_t* sl = frij_slider(col, 0, 100, load_int("volume", 60), ACCENT);
-                lv_obj_add_event_cb(sl, on_volume, LV_EVENT_VALUE_CHANGED, NULL);
-            }
-            break;
-
-        case 2:  // General
-            frij_label(col, "General", FRIJ_FONT_TITLE, FRIJ_TEXT);
-            toggle_row(col, "24-hour time", "clock24", true, on_clock24);
-            toggle_row(col, "Vibration", "haptics", true, on_vibration);
-            break;
-
-        case 3:  // Network
-            frij_label(col, "Network", FRIJ_FONT_TITLE, FRIJ_TEXT);
+        case 1:  // Network
             {
                 lv_obj_t* row = frij_surface_row(col);
                 lv_obj_t* lbl = frij_label(row, "Wi-Fi", FRIJ_FONT_BODY, FRIJ_TEXT);
                 lv_obj_set_flex_grow(lbl, 1);
                 frij_label(row, "on device", FRIJ_FONT_BODY, FRIJ_TEXT_2);
+                frij_label(col, "Syncs to the cloud", FRIJ_FONT_BODY, FRIJ_TEXT_2);
             }
-            frij_label(col, "Syncs to the cloud", FRIJ_FONT_BODY, FRIJ_TEXT_2);
             break;
 
         default:  // About
@@ -137,6 +125,6 @@ static void screen(lv_obj_t* parent, int index)
 
 const frij_app_t* settings_app(void)
 {
-    static const frij_app_t app = {"Settings", ACCENT, NULL, 5, screen};
+    static const frij_app_t app = {"Settings", ACCENT, NULL, 3, screen};
     return &app;
 }

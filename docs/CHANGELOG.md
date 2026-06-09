@@ -4,6 +4,18 @@ Newest first. One short entry per change.
 
 ## 2026-06-09
 
+- Page dots **fade out when idle** again (re-added the timer) while staying on
+  top of the pages — show on swipe, fade after ~1.4s.
+- **Settings** merged Display + Sound into one **General** page; brightness +
+  volume now use a new **`frij_slider_row`** card (the whole card is the slider,
+  drag to set, accent fill shows the amount).
+- **Pages scroll** generically: `frij_page` is now a centered, vertically
+  scrollable column. The launcher only treats a vertical swipe as Back when the
+  content is already at the scroll edge (otherwise it scrolls). Content sits
+  below the persistent header.
+
+## 2026-06-09
+
 - Fixed gradient/glow **banding**: switched `LV_COLOR_DEPTH` 16 → **32** (RGB565
   banded badly) and enabled complex gradients; the glow is now a **true radial
   gradient** (accent → transparent) instead of stacked circles. Smooth.
