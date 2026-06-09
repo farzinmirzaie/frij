@@ -25,4 +25,5 @@ jobs:
           GKEEP_LIST_TITLE: ${{ secrets.GKEEP_LIST_TITLE }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          SUPABASE_TABLE: ${{ secrets.SUPABASE_TABLE }}
+          # SUPABASE_TABLE defaults to "store" in the script; add the secret only
+          # if your table has a different name.

@@ -142,15 +142,16 @@ def main():
         print("dry-run: not writing to Supabase", file=sys.stderr)
         return
 
+    table = env("SUPABASE_TABLE") or "store"   # tolerate unset/empty (no secret needed)
+    store_key = env("FRIJ_STORE_KEY") or "todo"
     status = upsert_supabase(
         env("SUPABASE_URL", required=True),
         env("SUPABASE_ANON_KEY", required=True),
-        env("SUPABASE_TABLE", "store"),
-        env("FRIJ_STORE_KEY", "todo"),
+        table,
+        store_key,
         value,
     )
-    print(f"upserted {len(value)} item(s) -> store:{env('FRIJ_STORE_KEY', 'todo')} (HTTP {status})",
-          file=sys.stderr)
+    print(f"upserted {len(value)} item(s) -> {table}:{store_key} (HTTP {status})", file=sys.stderr)
 
 
 if __name__ == "__main__":
