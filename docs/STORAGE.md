@@ -47,11 +47,15 @@ no official consumer API, so a small **off-device bridge**
 Google Keep ──(read)──> bridge (GitHub Actions cron) ──(REST upsert)──> store:todo ──> device
 ```
 
-So **read-only Keep→device needs no firmware change** — the device just keeps
-pulling `todo`. You provide a Supabase project (this table), the Keep list title,
-and a Google master token (as GitHub Actions secrets). Setup + token steps:
-[`../bridge/README.md`](../bridge/README.md). Writing edits back to Keep is a
-later phase (needs on-device add/edit first).
+The device just reads/writes the `todo` row; the bridge does the Keep side, so no
+firmware change is needed. You provide a Supabase project (this table), the Keep
+list title, and a Google master token (as GitHub Actions secrets). Setup + token
+steps: [`../bridge/README.md`](../bridge/README.md).
+
+**Done-state is two-way** (check/uncheck syncs Keep⇄device via a 3-way merge with
+a `store:todo_base` base row; checked-wins on conflict). **Add/remove stay in
+Keep** — the watch can only toggle for now (voice-add later). Not realtime: it
+rides the ~10-min cron.
 
 ## Phasing
 

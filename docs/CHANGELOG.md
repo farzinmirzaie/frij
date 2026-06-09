@@ -2,6 +2,16 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-09 — Keep ⇄ Frij two-way (done-state)
+
+- The bridge now syncs **check/uncheck both ways**: a 3-way merge against a saved
+  base row (`store:todo_base`) decides which side moved per item; **checked wins**
+  on conflict. Watch toggles are written back to Keep (`keep.sync()`); Keep still
+  owns structure (add/remove). Matches items by cleaned text. Rides the ~10-min
+  cron — not realtime; add/remove stay in Keep (voice-add later).
+- Reverted the on-demand `--serve`/`frij_keep_sync` trigger (needed an always-on
+  host that can't live on the watch) — the Todo refresh is a plain cloud pull.
+
 ## 2026-06-09 — Google Keep → todo bridge (read-only)
 
 - New **`bridge/`**: an off-device Python sync (`keep_to_frij.py`) that reads a

@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
-"""Sync a shared Google Keep checklist into the Frij store.
+"""Two-way sync between a shared Google Keep checklist and the Frij store.
 
-Direction: **read-only** — Google Keep -> Supabase. It reads the Keep list named
-`GKEEP_LIST_TITLE` and upserts it as Frij's `todo` row, in the exact JSON the
-device already understands ([{"t": <text>, "d": <done>}, ...]). The Frij device
-needs no change: its todo app pulls the same row from Supabase.
+Keep owns the list *structure* (which items exist + their text — the watch can
+only toggle, not add/remove). The done-state syncs **both ways**: a 3-way merge
+against a saved base (`<key>_base`) decides per item which side changed since the
+last sync; if both changed differently, *checked wins*. Watch toggles are written
+back to Keep; the merged list (`<key>`) is what the device reads.
 
 Keep has no official consumer API, so this uses the unofficial `gkeepapi`
 (reverse-engineered) — see bridge/README.md for setup + the master-token steps.
+It's meant to run on the GitHub Actions cron (~10 min) — sync is not realtime.
 
 Usage:
-    python3 keep_to_frij.py            # read Keep, upsert Supabase
-    python3 keep_to_frij.py --dry-run  # read Keep, print JSON, no write
+    python3 keep_to_frij.py            # 2-way sync (merge + write back)
+    python3 keep_to_frij.py --dry-run  # show the merged result, write nothing
 """
 import datetime
 import json
@@ -67,8 +69,8 @@ def env(name, default=None, required=False):
     return value
 
 
-def fetch_keep_items(email, master_token, title):
-    """Return [(text, checked), ...] from the Keep list titled `title`."""
+def fetch_keep_note(email, master_token, title):
+    """Return (keep, note) for the Keep list titled `title` (note = a gkeepapi List)."""
     import gkeepapi  # lazy: keeps to_todo_json() importable without the dep
 
     keep = gkeepapi.Keep()
@@ -88,10 +90,13 @@ def fetch_keep_items(email, master_token, title):
     note = next((n for n in keep.find(func=is_target)), None)
     if note is None:
         sys.exit(f'error: no Keep list titled "{title}" visible to {email}')
+    return keep, note
 
-    # Unchecked first (active to-dos), then checked — mirrors Keep's own layout.
-    return [(it.text, False) for it in note.unchecked] + \
-           [(it.text, True) for it in note.checked]
+
+def item_key(text):
+    """The match key for a Keep item: the same cleaned/capped text the device
+    stores (so device toggles map back to the right Keep item)."""
+    return clean_text(text)[:TEXT_MAX]
 
 
 def to_todo_json(items):
@@ -129,32 +134,96 @@ def upsert_supabase(url, anon_key, table, store_key, value):
         sys.exit(f"error: Supabase upsert failed: {e.code} {e.read().decode(errors='replace')}")
 
 
-def main():
-    dry_run = "--dry-run" in sys.argv
-    load_dotenv()
+def read_supabase_value(url, anon_key, table, key):
+    """GET a store row's `value` (a list), or [] if absent."""
+    endpoint = f"{url.rstrip('/')}/rest/v1/{table}?key=eq.{key}&select=value"
+    req = urllib.request.Request(endpoint, headers={
+        "apikey": anon_key,
+        "Authorization": f"Bearer {anon_key}",
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            rows = json.loads(resp.read().decode())
+    except urllib.error.HTTPError as e:
+        sys.exit(f"error: Supabase read failed: {e.code} {e.read().decode(errors='replace')}")
+    if rows and isinstance(rows[0].get("value"), list):
+        return rows[0]["value"]
+    return []
 
-    items = fetch_keep_items(
+
+def run_sync(write=True):
+    """Two-way sync of the done-state between Keep and the device.
+
+    Keep owns the *structure* (which items exist, their text — the watch can only
+    toggle, not add/remove). For each item's done-state we 3-way merge against a
+    saved base (last sync): the side that changed since the base wins; if both
+    changed differently, *checked wins*. Changes the watch made are written back
+    to Keep; the merged list + a fresh base are written to Supabase.
+
+    Returns (merged_list, table, store_key, keep_changed).
+    """
+    keep, note = fetch_keep_note(
         env("GKEEP_EMAIL", required=True),
         env("GKEEP_MASTER_TOKEN", required=True),
         env("GKEEP_LIST_TITLE", required=True),
     )
-    value = to_todo_json(items)
-    print(json.dumps(value, ensure_ascii=False))
+    url = env("SUPABASE_URL", required=True)
+    anon = env("SUPABASE_ANON_KEY", required=True)
+    table = env("SUPABASE_TABLE") or "store"
+    key = env("FRIJ_STORE_KEY") or "todo"
+    base_key = key + "_base"
 
-    if dry_run:
-        print("dry-run: not writing to Supabase", file=sys.stderr)
-        return
+    device = {it["t"]: bool(it["d"]) for it in read_supabase_value(url, anon, table, key) if "t" in it}
+    base = {it["t"]: bool(it["d"]) for it in read_supabase_value(url, anon, table, base_key) if "t" in it}
 
-    table = env("SUPABASE_TABLE") or "store"   # tolerate unset/empty (no secret needed)
-    store_key = env("FRIJ_STORE_KEY") or "todo"
-    status = upsert_supabase(
-        env("SUPABASE_URL", required=True),
-        env("SUPABASE_ANON_KEY", required=True),
-        table,
-        store_key,
-        value,
-    )
-    print(f"upserted {len(value)} item(s) -> {table}:{store_key} (HTTP {status})", file=sys.stderr)
+    merged = []
+    keep_changed = False
+    seen = set()
+    for item in note.items:  # Keep order; Keep owns which items exist
+        text = item_key(item.text)
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        keep_done = bool(item.checked)
+        base_done = base.get(text, keep_done)      # first sight -> no change vs Keep
+        dev_done = device.get(text, base_done)     # device may have toggled it
+        dev_moved = dev_done != base_done
+        keep_moved = keep_done != base_done
+        if dev_moved and keep_moved:
+            m = dev_done or keep_done               # tie -> checked wins
+        elif dev_moved:
+            m = dev_done
+        else:
+            m = keep_done                           # keep_moved or no change
+        if m != keep_done:
+            item.checked = m                        # write the watch's toggle back to Keep
+            keep_changed = True
+        merged.append({"t": text, "d": m})
+
+    if len(merged) > MAX_ITEMS:
+        print(f"note: {len(merged)} items, capping to {MAX_ITEMS} (device limit)", file=sys.stderr)
+        merged = merged[:MAX_ITEMS]
+
+    if write:
+        if keep_changed:
+            keep.sync()  # push the toggles to Keep
+        upsert_supabase(url, anon, table, key, merged)        # device-facing list
+        upsert_supabase(url, anon, table, base_key, merged)   # new merge base
+    return merged, table, key, keep_changed
+
+
+def main():
+    load_dotenv()
+    write = "--dry-run" not in sys.argv
+
+    merged, table, key, keep_changed = run_sync(write=write)
+    print(json.dumps(merged, ensure_ascii=False))
+    if not write:
+        print(f"dry-run: would sync {len(merged)} items; Keep write-back: {keep_changed}",
+              file=sys.stderr)
+    else:
+        print(f"synced {len(merged)} item(s) <-> {table}:{key}; Keep updated: {keep_changed}",
+              file=sys.stderr)
 
 
 if __name__ == "__main__":

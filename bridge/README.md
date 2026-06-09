@@ -1,18 +1,28 @@
-# bridge/ — Google Keep → Frij sync
+# bridge/ — Google Keep ↔ Frij sync
 
-Mirrors a **shared Google Keep checklist** into Frij's todo list.
+Keeps a **shared Google Keep checklist** and Frij's todo list in sync.
 
 Keep has no official consumer API, so this uses the unofficial
 [`gkeepapi`](https://github.com/kiwiz/gkeepapi). It runs **off-device** (GitHub
-Actions cron) and writes into the same Supabase row the Frij device already
-pulls — so the device needs **no change** for read-only.
+Actions cron) against the same Supabase row the device reads/writes.
 
 ```
-Google Keep  ──(gkeepapi, read)──>  keep_to_frij.py  ──(REST upsert)──>  Supabase store:todo  ──>  Frij device
+Google Keep  ⇄ (gkeepapi)  keep_to_frij.py  ⇄ (REST)  Supabase store:todo  ⇄  Frij device
 ```
 
-Direction today: **read-only** (Keep → device). Writing back (device/edits →
-Keep) is a later phase — see "Phase 2" below.
+**Two-way, done-state only.** Keep owns the structure — which items exist and
+their text — because the watch can only *toggle* (no on-device add/remove yet;
+voice-add is planned). Checking/unchecking syncs **both directions**:
+
+- A 3-way merge against a saved base row (`store:todo_base`) decides, per item,
+  which side moved since the last sync. If both moved differently, **checked
+  wins**. Watch toggles are written back to Keep; the merged list lands in
+  `store:todo` for the device.
+- Items are matched by their cleaned/capped text (same transform the device
+  stores), so toggles map back to the right Keep item.
+
+Not realtime — it syncs on the ~10-min cron (each direction lands within a cron
+cycle + the device's next pull). Add/remove still happen in the Keep app.
 
 ## What you need to provide
 
@@ -68,9 +78,9 @@ python3 test_mapping.py     # verifies the Keep-items → device-JSON mapping
 
 - Items map to the device shape `{"t": <text>, "d": <done>}`; text is trimmed to
   39 chars and the list is capped at 16 items (the device's limits) — a cap is
-  logged, never silent.
+  logged, never silent. Emoji are stripped (the device font has none).
 - Unofficial API: it can break if Google changes things, and the token may need
   re-minting. That risk is isolated here, off the device.
-- **Phase 2 (write-back):** once the todo app has on-device add/edit, the bridge
-  can push changes back with `list.add(...)` + `keep.sync()`. Two-way needs a
-  merge rule (last-write-wins per item, or treat Keep as source of truth).
+- **Done-state is two-way; add/remove is not.** The watch can't add or delete
+  items yet, so those only happen in Keep. When on-device add lands (voice), the
+  bridge would `list.add(...)` + `keep.sync()` to push new items back too.
