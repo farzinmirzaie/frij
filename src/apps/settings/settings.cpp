@@ -165,15 +165,6 @@ static void slider_row(lv_obj_t* col, const char* text, int min, int max, const 
     lv_obj_add_event_cb(s, cb, LV_EVENT_VALUE_CHANGED, NULL);
 }
 
-// A read-only "label  …  value" row (Battery, Last sync, …).
-static void info_row(lv_obj_t* col, const char* label, const char* value)
-{
-    lv_obj_t* r = frij_surface_row(col);
-    lv_obj_t* l = frij_label(r, label, FRIJ_FONT_BODY, FRIJ_TEXT);
-    lv_obj_set_flex_grow(l, 1);
-    frij_label(r, value, FRIJ_FONT_BODY, FRIJ_TEXT_2);
-}
-
 // ---- Network screen (Wi-Fi) ------------------------------------------------
 
 static lv_obj_t*      s_net_col = NULL;            // the Network page, for in-place refresh
@@ -183,6 +174,14 @@ static char           s_sel[FRIJ_WIFI_SSID_MAX];   // the network the action she
 static int            s_sel_kind = 0;              // 0 new, 1 saved, 2 connected
 
 static void build_network(lv_obj_t* col);
+
+// Clear the cached Network page pointer when its page is destroyed.
+static void on_net_deleted(lv_event_t* e)
+{
+    if (s_net_col == lv_event_get_target(e)) {
+        s_net_col = NULL;
+    }
+}
 
 static void net_refresh(void)
 {
@@ -324,6 +323,7 @@ static void screen(lv_obj_t* parent, int index)
 
         case 1:  // Network
             s_net_col = col;
+            lv_obj_add_event_cb(col, on_net_deleted, LV_EVENT_DELETE, NULL);
             frij_page_pin_top(col);  // keep the Wi-Fi toggle at the top, on or off
             build_network(col);
             break;
@@ -339,7 +339,7 @@ static void screen(lv_obj_t* parent, int index)
                 char bbuf[24];
                 lv_snprintf(bbuf, sizeof(bbuf), "%d%%%s", frij_battery_pct(),
                             frij_battery_charging() ? "  " LV_SYMBOL_CHARGE : "");
-                info_row(col, "Battery", bbuf);
+                frij_value_row(col, "Battery", bbuf);
 
                 char        sbuf[24];
                 int         ls = frij_store_load_int("last_sync", 0);
@@ -351,7 +351,7 @@ static void screen(lv_obj_t* parent, int index)
                 } else {
                     lv_snprintf(sbuf, sizeof(sbuf), "Never");
                 }
-                info_row(col, "Last sync", sbuf);
+                frij_value_row(col, "Last sync", sbuf);
 
                 frij_action_row(col, "Sync now", on_sync_now);
                 frij_action_row(col, "Reset settings", on_reset);

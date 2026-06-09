@@ -2,6 +2,18 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-09 — quality pass (5 improvements)
+
+- **Empty state** uses a neutral muted glyph instead of "+" (which implied add —
+  wrong for "No networks").
+- New shared **`frij_value_row`** (label + muted value); Settings' About uses it.
+- New shared **`frij_circle_button`** (press-pop + haptic); Counter's ± and the
+  Todo add button now share it (dropped the duplicated `round_button`).
+- **Robustness**: Todo/Settings clear their cached page pointer
+  (`s_list_col`/`s_net_col`) on page delete, so a later refresh can't touch freed
+  memory.
+- Docs: added `bridge/` to the CLAUDE.md structure table; ui README updated.
+
 ## 2026-06-09 — Todo app: progress + add screens, focus glance
 
 - **Glance → "Up next"**: shows the next unchecked item big + "N left" (or

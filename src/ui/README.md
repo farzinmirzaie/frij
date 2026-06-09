@@ -29,6 +29,9 @@ theme, list rows, …) as patterns repeat.
     readout (with a unit, e.g. `80%`) on the right.
   - `frij_toggle` — themed switch (takes an accent).
   - `frij_action_row` — a tappable card row (label + chevron) for actions.
+  - `frij_value_row` — a read-only row: label + muted value (Battery, Last sync…).
+  - `frij_circle_button` — a circular icon button (press-pop + haptic); counter's
+    ± and Todo's add button.
   - `frij_confirm` — a modal confirmation dialog (dimmed backdrop + centered
     card with Cancel / accent-Confirm). Use it before destructive actions.
   - `frij_action_sheet` — a modal with a stacked list of options (first is the

@@ -89,6 +89,15 @@ lv_obj_t* frij_action_row(lv_obj_t* parent, const char* label, lv_event_cb_t on_
 // A small muted, left-aligned heading for grouping rows on a page.
 lv_obj_t* frij_section_label(lv_obj_t* parent, const char* text);
 
+// A read-only row: `label` (left) + muted `value` (right). For info like
+// Battery / Last sync.
+lv_obj_t* frij_value_row(lv_obj_t* parent, const char* label, const char* value);
+
+// A circular icon button with a press-pop + haptic. `bg`/`fg` are 0xRRGGBB,
+// `symbol` is drawn in `font`. Pass NULL `on_click` for a static badge.
+lv_obj_t* frij_circle_button(lv_obj_t* parent, int diameter, uint32_t bg, const char* symbol,
+                             const lv_font_t* font, uint32_t fg, lv_event_cb_t on_click);
+
 // A brief auto-dismissing message pill near the bottom of the screen (fades in,
 // holds, fades out, removes itself). Use for transient confirmations.
 void frij_toast(const char* text);

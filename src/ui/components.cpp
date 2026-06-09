@@ -331,9 +331,9 @@ lv_obj_t* frij_empty_state(lv_obj_t* parent, const char* text)
     lv_obj_clear_flag(circle, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t* icon = lv_label_create(circle);
-    lv_label_set_text(icon, LV_SYMBOL_PLUS);
+    lv_label_set_text(icon, LV_SYMBOL_LIST);  // neutral — not "+" (which implies add)
     lv_obj_set_style_text_font(icon, FRIJ_FONT_SYMBOL, LV_PART_MAIN);
-    lv_obj_set_style_text_color(icon, lv_color_hex(FRIJ_PRIMARY), LV_PART_MAIN);
+    lv_obj_set_style_text_color(icon, lv_color_hex(FRIJ_TEXT_2), LV_PART_MAIN);
     lv_obj_center(icon);
 
     frij_label(box, text, FRIJ_FONT_BODY, FRIJ_TEXT_2);
@@ -706,6 +706,50 @@ void frij_toast(const char* text)
     lv_anim_set_path_cb(&in, lv_anim_path_ease_out);
     lv_anim_set_completed_cb(&in, toast_in_done_cb);
     lv_anim_start(&in);
+}
+
+lv_obj_t* frij_value_row(lv_obj_t* parent, const char* label, const char* value)
+{
+    lv_obj_t* r = frij_surface_row(parent);
+    lv_obj_t* l = frij_label(r, label, FRIJ_FONT_BODY, FRIJ_TEXT);
+    lv_obj_set_flex_grow(l, 1);
+    frij_label(r, value, FRIJ_FONT_BODY, FRIJ_TEXT_2);
+    return r;
+}
+
+lv_obj_t* frij_circle_button(lv_obj_t* parent, int diameter, uint32_t bg, const char* symbol,
+                             const lv_font_t* font, uint32_t fg, lv_event_cb_t on_click)
+{
+    static lv_style_prop_t           props[] = {LV_STYLE_TRANSFORM_SCALE_X,
+                                                LV_STYLE_TRANSFORM_SCALE_Y, LV_STYLE_PROP_INV};
+    static lv_style_transition_dsc_t tr;
+    static bool                      tr_ready = false;
+    if (!tr_ready) {
+        lv_style_transition_dsc_init(&tr, props, lv_anim_path_ease_out, 120, 0, NULL);
+        tr_ready = true;
+    }
+
+    lv_obj_t* b = lv_button_create(parent);
+    lv_obj_set_size(b, diameter, diameter);
+    lv_obj_set_style_radius(b, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(b, lv_color_hex(bg), LV_PART_MAIN);
+    lv_obj_set_style_shadow_width(b, 0, LV_PART_MAIN);
+    // tactile press-pop (shrinks slightly, eases back)
+    lv_obj_set_style_transform_pivot_x(b, diameter / 2, LV_PART_MAIN);
+    lv_obj_set_style_transform_pivot_y(b, diameter / 2, LV_PART_MAIN);
+    lv_obj_set_style_transform_scale(b, 236, LV_STATE_PRESSED);
+    lv_obj_set_style_transition(b, &tr, LV_PART_MAIN);
+    frij_haptic_attach(b);
+    if (on_click) {
+        lv_obj_add_event_cb(b, on_click, LV_EVENT_CLICKED, NULL);
+    }
+
+    lv_obj_t* l = lv_label_create(b);
+    lv_label_set_text(l, symbol);
+    lv_obj_set_style_text_font(l, font, LV_PART_MAIN);
+    lv_obj_set_style_text_color(l, lv_color_hex(fg), LV_PART_MAIN);
+    lv_obj_center(l);
+    return b;
 }
 
 lv_obj_t* frij_toggle(lv_obj_t* parent, bool on, uint32_t accent)

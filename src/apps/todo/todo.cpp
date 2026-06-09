@@ -121,6 +121,15 @@ static void on_toggle(lv_event_t* e)
 
 static lv_obj_t* s_list_col = NULL;  // the checklist page, for in-place refresh
 
+// Clear the cached page pointer when its page is destroyed (layer closed), so a
+// later refresh can't act on freed memory.
+static void on_list_deleted(lv_event_t* e)
+{
+    if (s_list_col == lv_event_get_target(e)) {
+        s_list_col = NULL;
+    }
+}
+
 // Fill the page with rows from the current s_text/s_done.
 static void populate_list(lv_obj_t* col)
 {
@@ -149,6 +158,7 @@ static void build_list(lv_obj_t* parent)
     // The shared header (back + "Todo" + refresh) is provided by the launcher;
     // this is the scrollable content (sits in the area below the header).
     s_list_col = frij_page(parent);
+    lv_obj_add_event_cb(s_list_col, on_list_deleted, LV_EVENT_DELETE, NULL);
     populate_list(s_list_col);
 }
 
@@ -217,16 +227,8 @@ static void build_add(lv_obj_t* parent)
 {
     lv_obj_t* col = frij_page(parent);
 
-    lv_obj_t* btn = lv_button_create(col);
-    lv_obj_set_size(btn, 104, 104);
-    lv_obj_set_style_radius(btn, LV_RADIUS_CIRCLE, LV_PART_MAIN);
-    lv_obj_set_style_bg_color(btn, lv_color_hex(ACCENT), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(btn, LV_OPA_80, LV_STATE_PRESSED);
-    lv_obj_set_style_shadow_width(btn, 0, LV_PART_MAIN);
-    frij_haptic_attach(btn);
-    lv_obj_add_event_cb(btn, on_add_voice, LV_EVENT_CLICKED, NULL);
-    lv_obj_t* plus = frij_label(btn, "+", FRIJ_FONT_DISPLAY, 0x101216);  // big, dark on accent
-    lv_obj_center(plus);
+    // big accent circle with a dark "+" (amber accent reads better with dark text)
+    frij_circle_button(col, 104, ACCENT, "+", FRIJ_FONT_DISPLAY, 0x101216, on_add_voice);
 
     frij_label(col, "Add by voice", FRIJ_FONT_TITLE, FRIJ_TEXT);
     frij_label(col, "Tap to speak", FRIJ_FONT_BODY, FRIJ_TEXT_2);
