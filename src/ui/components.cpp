@@ -362,7 +362,8 @@ lv_obj_t* frij_slider_row(lv_obj_t* parent, const char* label, int min, int max,
     lv_obj_set_width(s, LV_PCT(100));
     lv_obj_set_height(s, FRIJ_ROW_H);  // matches the other rows
     lv_slider_set_range(s, min, max);
-    lv_slider_set_value(s, value, LV_ANIM_OFF);
+    lv_obj_set_style_anim_duration(s, FRIJ_ANIM_MS, LV_PART_MAIN);
+    lv_slider_set_value(s, value, LV_ANIM_ON);  // fill sweeps to its value on build
 
     // card body (MAIN), accent fill (INDICATOR), no visible knob
     grad_v(s, FRIJ_SURFACE_2, 0x101216);
@@ -515,6 +516,20 @@ static lv_obj_t* modal_card(lv_obj_t* modal)
     lv_obj_set_flex_align(card, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_row(card, FRIJ_SP_M, LV_PART_MAIN);
     frij_anim_enter(card, 30);  // fade + rise entrance
+
+    // …plus a subtle scale-in pop (pivot at the card's center)
+    lv_obj_set_style_transform_pivot_x(card, lv_pct(50), LV_PART_MAIN);
+    lv_obj_set_style_transform_pivot_y(card, lv_pct(50), LV_PART_MAIN);
+    lv_obj_set_style_transform_scale(card, 236, LV_PART_MAIN);  // ~0.92
+    lv_anim_t pop;
+    lv_anim_init(&pop);
+    lv_anim_set_var(&pop, card);
+    lv_anim_set_exec_cb(&pop, frij_anim_exec_scale);
+    lv_anim_set_values(&pop, 236, 256);
+    lv_anim_set_duration(&pop, FRIJ_ANIM_MS);
+    lv_anim_set_delay(&pop, 30);
+    lv_anim_set_path_cb(&pop, lv_anim_path_ease_out);
+    lv_anim_start(&pop);
     return card;
 }
 
@@ -715,6 +730,17 @@ void frij_toast(const char* text)
     lv_anim_set_path_cb(&in, lv_anim_path_ease_out);
     lv_anim_set_completed_cb(&in, toast_in_done_cb);
     lv_anim_start(&in);
+
+    // rise into place (snackbar feel)
+    lv_obj_set_style_translate_y(t, 16, LV_PART_MAIN);
+    lv_anim_t rise;
+    lv_anim_init(&rise);
+    lv_anim_set_var(&rise, t);
+    lv_anim_set_exec_cb(&rise, frij_anim_exec_translate_y);
+    lv_anim_set_values(&rise, 16, 0);
+    lv_anim_set_duration(&rise, FRIJ_ANIM_MS);
+    lv_anim_set_path_cb(&rise, lv_anim_path_ease_out);
+    lv_anim_start(&rise);
 }
 
 lv_obj_t* frij_value_row(lv_obj_t* parent, const char* label, const char* value)

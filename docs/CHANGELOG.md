@@ -2,6 +2,18 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-09 — UI/UX motion pass (5 improvements)
+
+- **Strikethrough done todos**: checking an item now strikes the text through and
+  dims it (was dim-only), on toggle and on list build.
+- **Sliders sweep to value**: Settings sliders animate their fill 0 → value on
+  open (`anim_duration` + `LV_ANIM_ON`) instead of snapping.
+- **Progress ring sweep**: the big ring fills 0 → % with ease-out on open.
+- **Toast rises in**: the snackbar translates up ~16px while fading in (proper
+  snackbar feel), then holds + fades out.
+- **Modal scale-in pop**: confirm / action-sheet cards scale 0.92 → 1 (center
+  pivot) alongside the fade + rise, so dialogs pop rather than appear.
+
 ## 2026-06-09 — quality pass (5 improvements)
 
 - **Empty state** uses a neutral muted glyph instead of "+" (which implied add —

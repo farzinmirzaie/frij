@@ -116,6 +116,8 @@ static void on_toggle(lv_event_t* e)
     lv_obj_t* label   = lv_obj_get_child(row, 1);
     frij_check_set(check, s_done[i], true);
     lv_obj_set_style_text_color(label, lv_color_hex(s_done[i] ? FRIJ_TEXT_2 : FRIJ_TEXT), LV_PART_MAIN);
+    lv_obj_set_style_text_decor(label, s_done[i] ? LV_TEXT_DECOR_STRIKETHROUGH : LV_TEXT_DECOR_NONE,
+                                LV_PART_MAIN);
     save_todo();
 }
 
@@ -149,6 +151,9 @@ static void populate_list(lv_obj_t* col)
         // one line, ellipsized — pin the height so LONG_DOT dots instead of wrapping
         lv_obj_set_height(label, lv_font_get_line_height(FRIJ_FONT_BODY));
         lv_label_set_long_mode(label, LV_LABEL_LONG_DOT);
+        if (s_done[i]) {
+            lv_obj_set_style_text_decor(label, LV_TEXT_DECOR_STRIKETHROUGH, LV_PART_MAIN);
+        }
     }
     frij_stagger_in(col, 45);  // staggered fade + rise (shared helper)
 }
@@ -197,6 +202,12 @@ static void glance(lv_obj_t* parent)
     }
 }
 
+// anim exec: sweep the ring's value.
+static void arc_set_value_cb(void* arc, int32_t v)
+{
+    lv_arc_set_value((lv_obj_t*)arc, (int32_t)v);
+}
+
 // Progress screen: a large ring with the % in the middle.
 static void build_progress(lv_obj_t* parent)
 {
@@ -207,6 +218,16 @@ static void build_progress(lv_obj_t* parent)
     lv_obj_t* arc = frij_progress_ring(col, sz, done_pct(), ACCENT);
     lv_obj_set_style_arc_width(arc, 12, LV_PART_MAIN);
     lv_obj_set_style_arc_width(arc, 12, LV_PART_INDICATOR);
+
+    // sweep the fill from 0 to the value on open
+    lv_anim_t sweep;
+    lv_anim_init(&sweep);
+    lv_anim_set_var(&sweep, arc);
+    lv_anim_set_exec_cb(&sweep, arc_set_value_cb);
+    lv_anim_set_values(&sweep, 0, done_pct());
+    lv_anim_set_duration(&sweep, FRIJ_ANIM_MS * 2);
+    lv_anim_set_path_cb(&sweep, lv_anim_path_ease_out);
+    lv_anim_start(&sweep);
 
     lv_obj_t* inner = frij_col(arc, 2);  // stacked, centered inside the ring
     lv_obj_center(inner);
