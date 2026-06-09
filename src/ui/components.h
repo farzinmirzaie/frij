@@ -24,7 +24,7 @@ void frij_apply_bg(lv_obj_t* obj);
 lv_obj_t* frij_glow(lv_obj_t* parent, uint32_t accent);
 
 // A restrained accent wash along the top edge that fades to nothing — a subtle
-// per-app color cue behind a header (replaces the old glowing halo). FLOATING.
+// per-app color cue behind a header. FLOATING (doesn't scroll or grow bounds).
 lv_obj_t* frij_top_tint(lv_obj_t* parent, uint32_t accent);
 
 // A vertical, centered flex column with `gap` px between children.

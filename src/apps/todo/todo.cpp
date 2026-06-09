@@ -11,13 +11,14 @@
 #include "ui/theme.h"
 
 /*
- * Todo — a checklist backed by the shared store (so it syncs to Supabase),
- * styled with the Frij design system.
+ * Todo — a checklist backed by the shared store (key "todo"). The list can be
+ * fed from a shared Google Keep list via the off-device bridge (see bridge/),
+ * so today the device is effectively read-only; editing happens in Keep.
  *
  * Data: a JSON array under the key "todo": [{"t":"Milk","d":false}, ...].
  *   glance   : progress ring + "<done> of <total>"
  *   screen 0 : the checklist (tap a row to toggle; animated)
- *   screen 1 : add-item placeholder
+ *   screen 1 : add-item hint (adding happens in Google Keep for now)
  *   screen 2 : stats
  */
 
@@ -167,7 +168,7 @@ static void screen(lv_obj_t* parent, int index)
         load_todo();
         build_list(parent);
     } else if (index == 1) {
-        frij_empty_state(frij_page(parent), "Add from\nthe web app");
+        frij_empty_state(frij_page(parent), "Add in\nGoogle Keep");
     } else {
         load_todo();
         lv_obj_t* col   = frij_page(parent);
@@ -189,7 +190,7 @@ static const char* td_action(int index)
 
 static void td_on_action(int index)
 {
-    (void)index;  // TODO: add-item flow (on-device keyboard or via the web app)
+    (void)index;  // TODO: on-device add (needs a keyboard + Keep write-back via the bridge)
 }
 
 const frij_app_t* todo_app(void)
