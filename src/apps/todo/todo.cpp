@@ -99,7 +99,7 @@ static int done_count(void)
 
 static int done_pct(void)
 {
-    return s_n > 0 ? (done_count() * 100 / s_n) : 0;
+    return s_n > 0 ? ((done_count() * 100 + s_n / 2) / s_n) : 0;  // rounded, not truncated
 }
 
 // ---- the checklist screen --------------------------------------------------
@@ -231,6 +231,7 @@ static void build_progress(lv_obj_t* parent)
 
     lv_obj_t* inner = frij_col(arc, 2);  // stacked, centered inside the ring
     lv_obj_center(inner);
+    frij_anim_enter(inner, FRIJ_ANIM_MS / 2);  // fade/rise in as the ring sweeps
     lv_obj_t* pct = frij_label(inner, "", FRIJ_FONT_DISPLAY, FRIJ_TEXT);
     lv_obj_t* sub = frij_label(inner, "", FRIJ_FONT_BODY, FRIJ_TEXT_2);
 

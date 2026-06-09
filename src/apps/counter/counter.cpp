@@ -1,6 +1,7 @@
 #include "counter.h"
 
 #include "store/store.h"
+#include "ui/anim.h"
 #include "ui/components.h"
 #include "ui/theme.h"
 
@@ -32,11 +33,28 @@ static void refresh(void)
     }
 }
 
+// A quick scale-pop on the number so a tap reads as a change, not a silent swap.
+static void pop_value(void)
+{
+    if (!s_value) {
+        return;
+    }
+    lv_anim_t a;
+    lv_anim_init(&a);
+    lv_anim_set_var(&a, s_value);
+    lv_anim_set_exec_cb(&a, frij_anim_exec_scale);
+    lv_anim_set_values(&a, 224, 256);  // 0.875 -> 1.0
+    lv_anim_set_duration(&a, 160);
+    lv_anim_set_path_cb(&a, lv_anim_path_overshoot);
+    lv_anim_start(&a);
+}
+
 static void on_minus(lv_event_t* e)
 {
     (void)e;
     s_count--;
     refresh();
+    pop_value();
     save_count();
 }
 
@@ -45,6 +63,7 @@ static void on_plus(lv_event_t* e)
     (void)e;
     s_count++;
     refresh();
+    pop_value();
     save_count();
 }
 
@@ -74,6 +93,8 @@ static void screen(lv_obj_t* parent, int index)
 
     lv_obj_t* col = frij_page(parent);
     s_value       = frij_label(col, "", FRIJ_FONT_DISPLAY, FRIJ_TEXT);
+    lv_obj_set_style_transform_pivot_x(s_value, lv_pct(50), LV_PART_MAIN);  // pop from center
+    lv_obj_set_style_transform_pivot_y(s_value, lv_pct(50), LV_PART_MAIN);
     lv_obj_add_event_cb(s_value, on_value_deleted, LV_EVENT_DELETE, NULL);
     refresh();
 

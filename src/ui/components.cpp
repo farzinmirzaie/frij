@@ -718,6 +718,11 @@ void frij_toast(const char* text)
     lv_obj_align(t, LV_ALIGN_BOTTOM_MID, 0, -frij_screen_min() * 14 / 100);
 
     lv_obj_t* l = frij_label(t, text, FRIJ_FONT_BODY, FRIJ_TEXT);
+    // cap the label width so long messages wrap instead of pushing the pill off
+    // the round edge; the pill (content-sized) then grows to the wrapped text
+    lv_obj_set_style_max_width(l, frij_screen_min() * 70 / 100, LV_PART_MAIN);
+    lv_label_set_long_mode(l, LV_LABEL_LONG_WRAP);
+    lv_obj_set_style_text_align(l, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     lv_obj_center(l);
 
     // Fade in; toast_in_done_cb then holds and fades it back out.

@@ -2,6 +2,19 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-09 — polish pass (5 improvements)
+
+- **Home battery stays live**: the watch-face battery readout is now re-read each
+  tick (was built once → went stale on a long-running face).
+- **Counter value pops**: `+`/`−` now give the number a quick scale-pop so a tap
+  reads as a change, not a silent swap.
+- **Progress inner fades in**: the %/sub text fades + rises in as the ring sweeps
+  (was a flat appearance).
+- **Rounded percentage**: Todo progress rounds instead of truncating (2/3 → 67%,
+  not 66%).
+- **Toast wraps long text**: the snackbar caps its label width and wraps, so long
+  messages (e.g. "Connected to <long SSID>") no longer clip the round edge.
+
 ## 2026-06-09 — UI/UX motion pass (5 improvements)
 
 - **Strikethrough done todos**: checking an item now strikes the text through and
