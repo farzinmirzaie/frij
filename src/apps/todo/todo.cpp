@@ -211,9 +211,18 @@ static void build_progress(lv_obj_t* parent)
     lv_obj_t* inner = frij_col(arc, 2);  // stacked, centered inside the ring
     lv_obj_center(inner);
     lv_obj_t* pct = frij_label(inner, "", FRIJ_FONT_DISPLAY, FRIJ_TEXT);
-    lv_label_set_text_fmt(pct, "%d%%", done_pct());
     lv_obj_t* sub = frij_label(inner, "", FRIJ_FONT_BODY, FRIJ_TEXT_2);
-    lv_label_set_text_fmt(sub, "%d of %d done", done_count(), s_n);
+
+    if (s_n == 0) {
+        lv_label_set_text(pct, "—");
+        lv_label_set_text(sub, "No todos");
+    } else if (done_count() == s_n) {
+        lv_label_set_text(pct, "100%");
+        lv_label_set_text(sub, "All done!");
+    } else {
+        lv_label_set_text_fmt(pct, "%d%%", done_pct());
+        lv_label_set_text_fmt(sub, "%d of %d done", done_count(), s_n);
+    }
 }
 
 // Add-by-voice screen: a big mic-style button. Placeholder — no STT yet.

@@ -72,6 +72,9 @@ lv_obj_t* frij_glow(lv_obj_t* parent, uint32_t accent)
 
     // true radial gradient: accent at the center fading to transparent at the edge
     lv_grad_dsc_t* d = (lv_grad_dsc_t*)lv_malloc(sizeof(lv_grad_dsc_t));
+    if (d == NULL) {
+        return g;  // OOM — a plain (gradient-less) object is fine
+    }
     lv_memzero(d, sizeof(*d));
     lv_grad_radial_init(d, LV_GRAD_CENTER, LV_GRAD_CENTER, LV_GRAD_RIGHT, LV_GRAD_CENTER,
                         LV_GRAD_EXTEND_PAD);
@@ -104,6 +107,9 @@ lv_obj_t* frij_top_tint(lv_obj_t* parent, uint32_t accent)
     // Vertical: fades up FROM the background at the very top edge, peaks behind
     // the title, then fades back to nothing — so it never hits the top harshly.
     lv_grad_dsc_t* d = (lv_grad_dsc_t*)lv_malloc(sizeof(lv_grad_dsc_t));
+    if (d == NULL) {
+        return g;  // OOM — skip the tint
+    }
     lv_memzero(d, sizeof(*d));
     // Top→bottom (frac 0 = top): the upper 3/4 is fully transparent (shows the
     // dark background), then a single accent band low down, fading out at the
@@ -618,8 +624,11 @@ void frij_action_sheet(const char* title, const char* const* options, int count,
                        frij_sheet_cb cb, void* user)
 {
     sheet_ctx_t* c = (sheet_ctx_t*)lv_malloc(sizeof(sheet_ctx_t));
-    c->cb          = cb;
-    c->user        = user;
+    if (c == NULL) {
+        return;  // OOM — don't open a sheet we can't track
+    }
+    c->cb   = cb;
+    c->user = user;
 
     lv_obj_t* modal = modal_backdrop();
     lv_obj_set_user_data(modal, c);

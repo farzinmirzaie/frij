@@ -29,9 +29,13 @@ but a crash/assert still prints to the log — use the snapshot tool to actually
 ```sh
 ~/.platformio/penv/bin/pio run -e snapshot
 .pio/build/snapshot/program                       # default: launcher / home
-FRIJ_SNAP=todo .pio/build/snapshot/program        # or counter | settings
+FRIJ_SNAP=todo .pio/build/snapshot/program        # one screen — see set below
 sips -s format png /tmp/frij_snapshot.bmp --out /tmp/frij_snapshot.png
 ```
+
+`FRIJ_SNAP` values: `todo` `todo_progress` `todo_add` `todo_glance` `counter`
+`settings` (General) `network` `netoff` `sheet` `confirm` `about`. (unset = the
+launcher/home.)
 
 Then open/Read `/tmp/frij_snapshot.png`. It renders the real UI offscreen at
 466×466 with the round clip, so it's faithful to the device.

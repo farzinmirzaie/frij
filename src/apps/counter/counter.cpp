@@ -58,6 +58,14 @@ static void glance(lv_obj_t* parent)
     frij_label(col, "Counter", FRIJ_FONT_BODY, FRIJ_TEXT_2);
 }
 
+// Clear the cached value-label pointer when the page is destroyed.
+static void on_value_deleted(lv_event_t* e)
+{
+    if (s_value == lv_event_get_target(e)) {
+        s_value = NULL;
+    }
+}
+
 static void screen(lv_obj_t* parent, int index)
 {
     (void)index;
@@ -66,6 +74,7 @@ static void screen(lv_obj_t* parent, int index)
 
     lv_obj_t* col = frij_page(parent);
     s_value       = frij_label(col, "", FRIJ_FONT_DISPLAY, FRIJ_TEXT);
+    lv_obj_add_event_cb(s_value, on_value_deleted, LV_EVENT_DELETE, NULL);
     refresh();
 
     lv_obj_t* row = lv_obj_create(col);

@@ -15,13 +15,13 @@
 
 /*
  * Settings — a normal app (glance unused; reached by swiping down). Screens:
- *   0 General : brightness / volume / sleep sliders + 24-hour, vibration and
- *               auto-sync toggles
- *   1 Network : Wi-Fi status + "Sync now"
- *   2 About   : name / version + "Reset settings" (behind a confirm dialog)
+ *   0 General : Display (brightness/sleep/raise-to-wake), Sound (volume/touch
+ *               sounds), Preferences (24-hour, vibration, auto-sync)
+ *   1 Network : Wi-Fi toggle + scanned list (connect/disconnect/forget)
+ *   2 About   : name/version, battery, last sync, Sync now, Reset, Erase all
  *
  * Values persist via the shared store under their own keys (see store.h's
- * typed accessors).
+ * typed accessors). Destructive actions go through a confirm dialog.
  */
 
 static const uint32_t ACCENT = FRIJ_PRIMARY;  // purple

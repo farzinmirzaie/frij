@@ -102,6 +102,9 @@ static void build_clock(lv_obj_t* parent)
 {
     lv_obj_t*    col = frij_page(parent);
     clock_ctx_t* c   = (clock_ctx_t*)lv_malloc(sizeof(clock_ctx_t));
+    if (c == NULL) {
+        return;  // out of memory — skip the face rather than deref NULL
+    }
 
     // A thin seconds ring fills most of the face (scales with the screen)...
     int ring = frij_screen_min() * 80 / 100;
