@@ -72,7 +72,10 @@ def fetch_keep_items(email, master_token, title):
     import gkeepapi  # lazy: keeps to_todo_json() importable without the dep
 
     keep = gkeepapi.Keep()
-    keep.resume(email, master_token)  # resume = auth with a master token (all versions)
+    # `authenticate` on newer gkeepapi, `resume` on 0.14.x (Python 3.9) — both take
+    # (email, master_token). Prefer authenticate to avoid the rename deprecation warning.
+    auth = getattr(keep, "authenticate", None) or keep.resume
+    auth(email, master_token)
 
     def is_target(note):
         return (
