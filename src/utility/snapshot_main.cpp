@@ -41,7 +41,11 @@ static void build_app_screen(const frij_app_t* app)
     if (!app) {
         return;
     }
-    frij_glow(root, app->color);
+    // glow behind the header title (mirrors the launcher)
+    int       sz = 466 * 80 / 100;
+    lv_obj_t* g  = frij_glow(root, app->color);
+    lv_obj_align(g, LV_ALIGN_TOP_MID, 0, 466 * 12 / 100 - sz / 2);
+    lv_obj_move_background(g);
 
     // mirror the launcher: header on the layer, content in an area below it
     int       hz      = 466 * 24 / 100;

@@ -4,6 +4,17 @@ Newest first. One short entry per change.
 
 ## 2026-06-09
 
+- On app pages the accent **glow now sits behind the header title** (on the
+  layer), not as a full background.
+- Fixed app pages scrolling when content fit: the full-size glow was inflating
+  the scroll area. The glow is now **FLOATING** (excluded from scroll bounds), so
+  short content stays centered below the header and doesn't scroll.
+- Settings **toggle rows are fully tappable** (the whole card flips the switch).
+- Fleshed out **Settings**: General gained Sleep timeout + Auto-sync; Network got
+  a "Sync now" action; About got "Reset settings". Added `frij_action_row`.
+
+## 2026-06-09
+
 - Page dots **fade out when idle** again (re-added the timer) while staying on
   top of the pages — show on swipe, fade after ~1.4s.
 - **Settings** merged Display + Sound into one **General** page; brightness +

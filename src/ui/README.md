@@ -21,7 +21,9 @@ theme, list rows, …) as patterns repeat.
   - `frij_slider_row` — a full-width card that IS the slider: drag anywhere to
     set, accent fill shows the amount, label on top.
   - `frij_toggle` — themed switch (takes an accent).
-  - `frij_glow` — soft radial accent halo (background; ignores layout).
+  - `frij_action_row` — a tappable card row (label + chevron) for actions.
+  - `frij_glow` — soft radial accent halo; **FLOATING** (doesn't scroll or grow
+    the scroll area). Returns the object so it can be repositioned (e.g. behind a header).
   - `frij_progress_ring` — thin arc gauge.
   - `frij_empty_state` — round "nothing here" placeholder.
   - `frij_header` — shared app top bar: back button (returns to the launcher) +

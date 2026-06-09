@@ -75,14 +75,15 @@ static void glow_free_cb(lv_event_t* e)
     lv_free(lv_event_get_user_data(e));  // the gradient descriptor outlives the call
 }
 
-void frij_glow(lv_obj_t* parent, uint32_t accent)
+lv_obj_t* frij_glow(lv_obj_t* parent, uint32_t accent)
 {
     int       sz = frij_screen_min() * 80 / 100;
     lv_obj_t* g  = lv_obj_create(parent);
     lv_obj_remove_style_all(g);
     lv_obj_set_size(g, sz, sz);
     lv_obj_center(g);
-    lv_obj_add_flag(g, LV_OBJ_FLAG_IGNORE_LAYOUT);  // background, not a flex item
+    // FLOATING: fixed background that doesn't scroll or grow the scroll area
+    lv_obj_add_flag(g, LV_OBJ_FLAG_FLOATING);
     lv_obj_clear_flag(g, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_clear_flag(g, LV_OBJ_FLAG_SCROLLABLE);
 
@@ -102,6 +103,7 @@ void frij_glow(lv_obj_t* parent, uint32_t accent)
     lv_obj_set_style_bg_grad(g, d, LV_PART_MAIN);
     lv_obj_set_style_bg_opa(g, LV_OPA_COVER, LV_PART_MAIN);
     lv_obj_add_event_cb(g, glow_free_cb, LV_EVENT_DELETE, d);
+    return g;
 }
 
 lv_obj_t* frij_col(lv_obj_t* parent, int gap)
@@ -299,6 +301,19 @@ lv_obj_t* frij_slider_row(lv_obj_t* parent, const char* label, int min, int max,
 
     frij_haptic_attach(s);
     return s;
+}
+
+lv_obj_t* frij_action_row(lv_obj_t* parent, const char* label, lv_event_cb_t on_click)
+{
+    lv_obj_t* row = frij_surface_row(parent);
+    lv_obj_t* l   = frij_label(row, label, FRIJ_FONT_BODY, FRIJ_TEXT);
+    lv_obj_set_flex_grow(l, 1);
+    lv_obj_t* chev = lv_label_create(row);
+    lv_label_set_text(chev, LV_SYMBOL_RIGHT);
+    lv_obj_set_style_text_font(chev, FRIJ_FONT_SYMBOL, LV_PART_MAIN);
+    lv_obj_set_style_text_color(chev, lv_color_hex(FRIJ_TEXT_2), LV_PART_MAIN);
+    lv_obj_add_event_cb(row, on_click, LV_EVENT_CLICKED, NULL);
+    return row;
 }
 
 lv_obj_t* frij_toggle(lv_obj_t* parent, bool on, uint32_t accent)

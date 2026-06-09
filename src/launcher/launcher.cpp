@@ -77,8 +77,7 @@ static void app_screen_builder(lv_obj_t* page, int index, void* user)
     if (!app) {
         return;
     }
-    frij_apply_bg(page);
-    frij_glow(page, app->color);
+    frij_apply_bg(page);  // glow is on the layer (behind the header), not here
     if (app->build_screen) {
         app->build_screen(page, index);
     }
@@ -123,9 +122,15 @@ static void layer_change_cb(int index, void* user)
     frij_header_set_action(s_layer_header, sym);
 }
 
-// Add the shared header above a layer's content carousel.
+// Add the shared header above a layer's content carousel, with the accent glow
+// sitting behind the header title (not as a full-screen background).
 static void add_layer_header(lv_obj_t* layer, const frij_app_t* app, frij_carousel_t* car)
 {
+    int       sz = frij_screen_min() * 80 / 100;
+    lv_obj_t* g  = frij_glow(layer, app->color);
+    lv_obj_align(g, LV_ALIGN_TOP_MID, 0, frij_screen_min() * 12 / 100 - sz / 2);
+    lv_obj_move_background(g);  // behind header + content
+
     s_layer_app = app;
     frij_carousel_set_change_cb(car, layer_change_cb, NULL);
     s_layer_header = frij_header(layer, app->name, header_action_clicked);

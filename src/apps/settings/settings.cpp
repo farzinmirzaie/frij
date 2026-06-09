@@ -76,7 +76,56 @@ static void on_vibration(lv_event_t* e)
     save_bool("haptics", on);
 }
 
+static void on_sleep(lv_event_t* e)
+{
+    lv_obj_t* sl = (lv_obj_t*)lv_event_get_target(e);
+    save_int("sleep", lv_slider_get_value(sl));  // minutes until display sleeps
+    // TODO(device): apply a screen-off timeout.
+}
+
+static void on_autosync(lv_event_t* e)
+{
+    lv_obj_t* sw = (lv_obj_t*)lv_event_get_target(e);
+    save_bool("autosync", lv_obj_has_state(sw, LV_STATE_CHECKED));
+}
+
+static void on_sync_now(lv_event_t* e)
+{
+    (void)e;
+    frij_store_pull_async("todo");  // best-effort cloud refresh
+    frij_store_pull_async("counter");
+    frij_haptic(FRIJ_HAPTIC_SUCCESS);
+}
+
+static void on_reset(lv_event_t* e)
+{
+    (void)e;
+    save_int("brightness", 80);
+    save_int("volume", 60);
+    save_int("sleep", 5);
+    save_bool("clock24", true);
+    save_bool("haptics", true);
+    save_bool("autosync", true);
+    frij_set_brightness(80);
+    frij_haptics_set_enabled(true);
+    frij_haptic(FRIJ_HAPTIC_SUCCESS);
+}
+
 // ---- screens ---------------------------------------------------------------
+
+// The whole row toggles (not just the switch), so tapping anywhere flips it.
+static void on_toggle_row_click(lv_event_t* e)
+{
+    lv_obj_t* row = (lv_obj_t*)lv_event_get_current_target(e);
+    lv_obj_t* tog = lv_obj_get_child(row, lv_obj_get_child_count(row) - 1);
+    bool      on  = !lv_obj_has_state(tog, LV_STATE_CHECKED);
+    if (on) {
+        lv_obj_add_state(tog, LV_STATE_CHECKED);
+    } else {
+        lv_obj_remove_state(tog, LV_STATE_CHECKED);
+    }
+    lv_obj_send_event(tog, LV_EVENT_VALUE_CHANGED, NULL);  // run the persist handler
+}
 
 static void toggle_row(lv_obj_t* col, const char* text, const char* key, bool def, lv_event_cb_t cb)
 {
@@ -84,7 +133,16 @@ static void toggle_row(lv_obj_t* col, const char* text, const char* key, bool de
     lv_obj_t* lbl = frij_label(row, text, FRIJ_FONT_BODY, FRIJ_TEXT);
     lv_obj_set_flex_grow(lbl, 1);
     lv_obj_t* tog = frij_toggle(row, load_bool(key, def), ACCENT);
+    lv_obj_remove_flag(tog, LV_OBJ_FLAG_CLICKABLE);  // the row drives it
     lv_obj_add_event_cb(tog, cb, LV_EVENT_VALUE_CHANGED, NULL);
+    lv_obj_add_event_cb(row, on_toggle_row_click, LV_EVENT_CLICKED, NULL);
+}
+
+static void slider_row(lv_obj_t* col, const char* text, int min, int max, const char* key,
+                       int def, lv_event_cb_t cb)
+{
+    lv_obj_t* s = frij_slider_row(col, text, min, max, load_int(key, def), ACCENT);
+    lv_obj_add_event_cb(s, cb, LV_EVENT_VALUE_CHANGED, NULL);
 }
 
 static void screen(lv_obj_t* parent, int index)
@@ -92,17 +150,13 @@ static void screen(lv_obj_t* parent, int index)
     lv_obj_t* col = frij_page(parent);
 
     switch (index) {
-        case 0:  // General (brightness + volume + 24h + vibration)
-            {
-                lv_obj_t* b = frij_slider_row(col, "Brightness", 10, 100,
-                                              load_int("brightness", 80), ACCENT);
-                lv_obj_add_event_cb(b, on_brightness, LV_EVENT_VALUE_CHANGED, NULL);
-                lv_obj_t* v = frij_slider_row(col, "Volume", 0, 100,
-                                              load_int("volume", 60), ACCENT);
-                lv_obj_add_event_cb(v, on_volume, LV_EVENT_VALUE_CHANGED, NULL);
-                toggle_row(col, "24-hour time", "clock24", true, on_clock24);
-                toggle_row(col, "Vibration", "haptics", true, on_vibration);
-            }
+        case 0:  // General
+            slider_row(col, "Brightness", 10, 100, "brightness", 80, on_brightness);
+            slider_row(col, "Volume", 0, 100, "volume", 60, on_volume);
+            slider_row(col, "Sleep (min)", 1, 30, "sleep", 5, on_sleep);
+            toggle_row(col, "24-hour time", "clock24", true, on_clock24);
+            toggle_row(col, "Vibration", "haptics", true, on_vibration);
+            toggle_row(col, "Auto-sync", "autosync", true, on_autosync);
             break;
 
         case 1:  // Network
@@ -111,14 +165,14 @@ static void screen(lv_obj_t* parent, int index)
                 lv_obj_t* lbl = frij_label(row, "Wi-Fi", FRIJ_FONT_BODY, FRIJ_TEXT);
                 lv_obj_set_flex_grow(lbl, 1);
                 frij_label(row, "on device", FRIJ_FONT_BODY, FRIJ_TEXT_2);
-                frij_label(col, "Syncs to the cloud", FRIJ_FONT_BODY, FRIJ_TEXT_2);
+                frij_action_row(col, "Sync now", on_sync_now);
             }
             break;
 
-        default:  // About
+        default:  // System / About
             frij_label(col, "Frij", FRIJ_FONT_TITLE, FRIJ_TEXT);
-            frij_label(col, "on-device UI", FRIJ_FONT_BODY, FRIJ_TEXT_2);
-            frij_label(col, "v0.1", FRIJ_FONT_BODY, FRIJ_TEXT_2);
+            frij_label(col, "on-device UI  -  v0.1", FRIJ_FONT_BODY, FRIJ_TEXT_2);
+            frij_action_row(col, "Reset settings", on_reset);
             break;
     }
 }

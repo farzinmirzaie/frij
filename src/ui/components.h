@@ -18,9 +18,10 @@ void frij_haptic_attach(lv_obj_t* obj);
 // Apply the standard subtle page-background gradient to an object's MAIN part.
 void frij_apply_bg(lv_obj_t* obj);
 
-// Add a soft accent glow (centered halo) behind content. Call before building
-// the foreground so it sits underneath. `accent` is 0xRRGGBB.
-void frij_glow(lv_obj_t* parent, uint32_t accent);
+// Add a soft accent glow (centered halo). It's a FLOATING background (doesn't
+// scroll or affect the parent's scroll area). Returns the object so the caller
+// can reposition it (e.g. behind a header). `accent` is 0xRRGGBB.
+lv_obj_t* frij_glow(lv_obj_t* parent, uint32_t accent);
 
 // A vertical, centered flex column with `gap` px between children.
 lv_obj_t* frij_col(lv_obj_t* parent, int gap);
@@ -62,6 +63,10 @@ lv_obj_t* frij_slider_row(lv_obj_t* parent, const char* label, int min, int max,
 
 // A themed on/off switch. Attach your own LV_EVENT_VALUE_CHANGED handler.
 lv_obj_t* frij_toggle(lv_obj_t* parent, bool on, uint32_t accent);
+
+// A tappable card row: label + right chevron. Attach via the returned row's
+// LV_EVENT_CLICKED. Use for actions like "Sync now" / "Reset".
+lv_obj_t* frij_action_row(lv_obj_t* parent, const char* label, lv_event_cb_t on_click);
 
 // Entrance animation: fade in + rise. `delay_ms` lets callers stagger a list.
 void frij_anim_enter(lv_obj_t* obj, uint32_t delay_ms);
