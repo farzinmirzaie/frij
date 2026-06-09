@@ -119,17 +119,15 @@ static void on_toggle(lv_event_t* e)
     save_todo();
 }
 
-static void build_list(lv_obj_t* parent)
-{
-    // The shared header (back + "Todo" + "+") is provided by the launcher; this
-    // is the scrollable content (sits in the area below the header).
-    lv_obj_t* col = frij_page(parent);
+static lv_obj_t* s_list_col = NULL;  // the checklist page, for in-place refresh
 
+// Fill the page with rows from the current s_text/s_done.
+static void populate_list(lv_obj_t* col)
+{
     if (s_n == 0) {
         frij_empty_state(col, "Nothing yet");
         return;
     }
-
     for (int i = 0; i < s_n; i++) {
         lv_obj_t* row = frij_surface_row(col);
         lv_obj_set_user_data(row, (void*)(intptr_t)i);
@@ -142,6 +140,14 @@ static void build_list(lv_obj_t* parent)
         lv_label_set_long_mode(label, LV_LABEL_LONG_DOT);  // ellipsize long text
     }
     frij_stagger_in(col, 45);  // staggered fade + rise (shared helper)
+}
+
+static void build_list(lv_obj_t* parent)
+{
+    // The shared header (back + "Todo" + refresh) is provided by the launcher;
+    // this is the scrollable content (sits in the area below the header).
+    s_list_col = frij_page(parent);
+    populate_list(s_list_col);
 }
 
 // ---- app contract ---------------------------------------------------------
@@ -182,15 +188,24 @@ static void screen(lv_obj_t* parent, int index)
     }
 }
 
-// Header action: a "+" on the list screen (add item — TODO).
+// Header action: a refresh button on the list screen — pulls the latest from the
+// cloud (which the Keep→Supabase bridge keeps current) and rebuilds the list.
 static const char* td_action(int index)
 {
-    return index == 0 ? LV_SYMBOL_PLUS : NULL;
+    return index == 0 ? LV_SYMBOL_REFRESH : NULL;
 }
 
 static void td_on_action(int index)
 {
-    (void)index;  // TODO: on-device add (needs a keyboard + Keep write-back via the bridge)
+    if (index != 0 || !s_list_col) {
+        return;
+    }
+    bool ok = frij_store_pull(STORE_KEY);  // blocking fetch from the cloud
+    load_todo();
+    lv_obj_clean(s_list_col);  // keeps the page's styles/padding, drops the rows
+    populate_list(s_list_col);
+    frij_page_settle(s_list_col);
+    frij_toast(ok ? "Synced" : "Sync failed");
 }
 
 const frij_app_t* todo_app(void)
