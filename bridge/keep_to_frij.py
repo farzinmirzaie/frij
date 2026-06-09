@@ -129,32 +129,84 @@ def upsert_supabase(url, anon_key, table, store_key, value):
         sys.exit(f"error: Supabase upsert failed: {e.code} {e.read().decode(errors='replace')}")
 
 
-def main():
-    dry_run = "--dry-run" in sys.argv
-    load_dotenv()
-
+def run_sync():
+    """Read the Keep list and upsert it into Supabase. Returns the item count."""
     items = fetch_keep_items(
         env("GKEEP_EMAIL", required=True),
         env("GKEEP_MASTER_TOKEN", required=True),
         env("GKEEP_LIST_TITLE", required=True),
     )
     value = to_todo_json(items)
-    print(json.dumps(value, ensure_ascii=False))
+    table = env("SUPABASE_TABLE") or "store"   # tolerate unset/empty (no secret needed)
+    store_key = env("FRIJ_STORE_KEY") or "todo"
+    upsert_supabase(
+        env("SUPABASE_URL", required=True),
+        env("SUPABASE_ANON_KEY", required=True),
+        table, store_key, value,
+    )
+    return len(value), table, store_key
 
-    if dry_run:
+
+def serve(port):
+    """Run a tiny HTTP server so the device can trigger a Keep->Supabase sync on
+    demand: GET /sync runs run_sync() and returns JSON. Deploy on an always-on
+    host reachable from the device's network (see bridge/README.md). If
+    KEEP_SYNC_TOKEN is set, the request must carry ?token=<it>."""
+    import http.server
+    import urllib.parse
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def _json(self, code, obj):
+            self.send_response(code)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(obj).encode())
+
+        def do_GET(self):
+            u = urllib.parse.urlparse(self.path)
+            if u.path != "/sync":
+                self._json(404, {"error": "not found"})
+                return
+            want = os.environ.get("KEEP_SYNC_TOKEN")
+            if want and urllib.parse.parse_qs(u.query).get("token", [""])[0] != want:
+                self._json(403, {"error": "forbidden"})
+                return
+            try:
+                count, table, key = run_sync()
+                self._json(200, {"ok": True, "items": count, "row": f"{table}:{key}"})
+            except SystemExit as e:
+                self._json(502, {"ok": False, "error": str(e)})
+            except Exception as e:  # noqa: BLE001 — report any failure to the caller
+                self._json(500, {"ok": False, "error": str(e)})
+
+        def log_message(self, *args):
+            pass  # quiet
+
+    print(f"serving Keep->Supabase trigger on :{port}/sync", file=sys.stderr)
+    http.server.HTTPServer(("0.0.0.0", port), Handler).serve_forever()
+
+
+def main():
+    load_dotenv()
+
+    if "--serve" in sys.argv:
+        i = sys.argv.index("--serve")
+        port = int(sys.argv[i + 1]) if i + 1 < len(sys.argv) else 8765
+        serve(port)
+        return
+
+    if "--dry-run" in sys.argv:
+        items = fetch_keep_items(
+            env("GKEEP_EMAIL", required=True),
+            env("GKEEP_MASTER_TOKEN", required=True),
+            env("GKEEP_LIST_TITLE", required=True),
+        )
+        print(json.dumps(to_todo_json(items), ensure_ascii=False))
         print("dry-run: not writing to Supabase", file=sys.stderr)
         return
 
-    table = env("SUPABASE_TABLE") or "store"   # tolerate unset/empty (no secret needed)
-    store_key = env("FRIJ_STORE_KEY") or "todo"
-    status = upsert_supabase(
-        env("SUPABASE_URL", required=True),
-        env("SUPABASE_ANON_KEY", required=True),
-        table,
-        store_key,
-        value,
-    )
-    print(f"upserted {len(value)} item(s) -> {table}:{store_key} (HTTP {status})", file=sys.stderr)
+    count, table, key = run_sync()
+    print(f"upserted {count} item(s) -> {table}:{key}", file=sys.stderr)
 
 
 if __name__ == "__main__":

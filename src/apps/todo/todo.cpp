@@ -188,8 +188,9 @@ static void screen(lv_obj_t* parent, int index)
     }
 }
 
-// Header action: a refresh button on the list screen — pulls the latest from the
-// cloud (which the Keep→Supabase bridge keeps current) and rebuilds the list.
+// Header action: a refresh button on the list screen. It first asks the bridge
+// to sync Google Keep → cloud (if a sync URL is configured), then pulls the
+// fresh row and rebuilds the list. Both calls block briefly (deliberate tap).
 static const char* td_action(int index)
 {
     return index == 0 ? LV_SYMBOL_REFRESH : NULL;
@@ -200,7 +201,8 @@ static void td_on_action(int index)
     if (index != 0 || !s_list_col) {
         return;
     }
-    bool ok = frij_store_pull(STORE_KEY);  // blocking fetch from the cloud
+    frij_keep_sync();                      // Keep → cloud (no-op if not configured)
+    bool ok = frij_store_pull(STORE_KEY);  // cloud → local cache
     load_todo();
     lv_obj_clean(s_list_col);  // keeps the page's styles/padding, drops the rows
     populate_list(s_list_col);

@@ -53,6 +53,11 @@ and a Google master token (as GitHub Actions secrets). Setup + token steps:
 [`../bridge/README.md`](../bridge/README.md). Writing edits back to Keep is a
 later phase (needs on-device add/edit first).
 
+**On-demand:** besides the cron, the device's Todo refresh button can trigger a
+sync itself — it GETs the bridge's `--serve` endpoint (`frij_keep_sync()` →
+`KEEP_SYNC_URL` / the `FRIJ_KEEP_SYNC_URL` build flag), which runs Keep→cloud
+synchronously, then the device pulls the fresh row. See the bridge README.
+
 ## Phasing
 
 1. **Local store:** API + emulator file backend. ✅

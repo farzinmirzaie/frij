@@ -35,6 +35,13 @@ void frij_store_pull_async(const char* key);
 // touch the cloud; apps fall back to their defaults on the next read.
 void frij_store_clear(void);
 
+// Trigger an external source→cloud sync by calling the configured bridge URL
+// (KEEP_SYNC_URL in .env, or the FRIJ_KEEP_SYNC_URL build flag on device). It
+// runs synchronously; follow it with frij_store_pull() to read the fresh data.
+// Returns false when not configured or the request fails. Blocking — call from a
+// deliberate user action, not the render path.
+bool frij_keep_sync(void);
+
 // Typed convenience accessors built on load/save. Values are stored as plain
 // text (a decimal for ints, "1"/"0" for bools); `def` is returned when the key
 // is absent. Saves go through the same cloud-backed path as frij_store_save.
