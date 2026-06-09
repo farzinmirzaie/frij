@@ -62,7 +62,8 @@ static void glance_builder(lv_obj_t* page, int index, void* user)
     if (!app) {
         return;
     }
-    frij_apply_bg(page);  // subtle dark gradient; apps use their accent inside
+    frij_apply_bg(page);  // subtle dark gradient
+    frij_glow(page, app->color);  // soft per-app accent halo behind the content
     if (app->build_glance) {
         app->build_glance(page);
     }
@@ -75,6 +76,7 @@ static void app_screen_builder(lv_obj_t* page, int index, void* user)
         return;
     }
     frij_apply_bg(page);
+    frij_glow(page, app->color);
     if (app->build_screen) {
         app->build_screen(page, index);
     }

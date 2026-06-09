@@ -38,6 +38,9 @@ static void build_app_screen(const frij_app_t* app)
     lv_obj_set_style_clip_corner(root, true, LV_PART_MAIN);
     lv_obj_clear_flag(root, LV_OBJ_FLAG_SCROLLABLE);
     frij_apply_bg(root);
+    if (app) {
+        frij_glow(root, app->color);
+    }
     if (app && app->build_screen) {
         app->build_screen(root, 0);
     }

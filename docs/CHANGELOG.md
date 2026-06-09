@@ -4,6 +4,17 @@ Newest first. One short entry per change.
 
 ## 2026-06-09
 
+- Fixed gradient/glow **banding**: switched `LV_COLOR_DEPTH` 16 → **32** (RGB565
+  banded badly) and enabled complex gradients; the glow is now a **true radial
+  gradient** (accent → transparent) instead of stacked circles. Smooth.
+  (Device: the port flush must match the panel's pixel format — see HARDWARE.md.)
+
+- Added a soft per-app **accent glow** behind every glance + app screen
+  (`frij_glow`, layered translucent circles): Home/Settings purple, Todo amber,
+  Counter blue. More color/depth without a heavy radial-gradient dependency.
+
+## 2026-06-09
+
 - Page dots are now **always visible** (kept above the pages with
   `lv_obj_move_foreground`; dropped the idle auto-fade). Verified on home.
 - The app **header is now persistent**, owned by the launcher above the content

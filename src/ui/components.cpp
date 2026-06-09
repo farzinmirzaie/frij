@@ -70,6 +70,39 @@ void frij_haptic_attach(lv_obj_t* obj)
     lv_obj_add_event_cb(obj, on_press_haptic, LV_EVENT_PRESSED, NULL);
 }
 
+static void glow_free_cb(lv_event_t* e)
+{
+    lv_free(lv_event_get_user_data(e));  // the gradient descriptor outlives the call
+}
+
+void frij_glow(lv_obj_t* parent, uint32_t accent)
+{
+    int       sz = frij_screen_min() * 80 / 100;
+    lv_obj_t* g  = lv_obj_create(parent);
+    lv_obj_remove_style_all(g);
+    lv_obj_set_size(g, sz, sz);
+    lv_obj_center(g);
+    lv_obj_clear_flag(g, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_clear_flag(g, LV_OBJ_FLAG_SCROLLABLE);
+
+    // true radial gradient: accent at the center fading to transparent at the edge
+    lv_grad_dsc_t* d = (lv_grad_dsc_t*)lv_malloc(sizeof(lv_grad_dsc_t));
+    lv_memzero(d, sizeof(*d));
+    lv_grad_radial_init(d, LV_GRAD_CENTER, LV_GRAD_CENTER, LV_GRAD_RIGHT, LV_GRAD_CENTER,
+                        LV_GRAD_EXTEND_PAD);
+    d->stops_count   = 2;
+    d->stops[0].color = lv_color_hex(accent);
+    d->stops[0].opa   = 120;
+    d->stops[0].frac  = 0;
+    d->stops[1].color = lv_color_hex(accent);
+    d->stops[1].opa   = 0;
+    d->stops[1].frac  = 255;
+
+    lv_obj_set_style_bg_grad(g, d, LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(g, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_add_event_cb(g, glow_free_cb, LV_EVENT_DELETE, d);
+}
+
 lv_obj_t* frij_col(lv_obj_t* parent, int gap)
 {
     lv_obj_t* c = lv_obj_create(parent);

@@ -48,6 +48,10 @@ lib_deps =
 ```
 
 **Bring-up gotchas (for `src/utility/` on device):**
+- LVGL renders at **32-bit color** (`LV_COLOR_DEPTH 32`, for smooth gradients).
+  The CO5300 panel is fed a narrower format over QSPI, so the port's flush must
+  convert (M5GFX handles this when given the right pixel format) — verify colors
+  on first flash.
 - Init the M5IOE1 expander and release the panel reset before/around `gfx.init()`
   (M5Unified's board init handles this — easiest path is to let M5Unified bring
   the board up, then hand the display to our LVGL port).

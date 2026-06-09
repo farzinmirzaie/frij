@@ -20,7 +20,9 @@
  *====================*/
 
 /** Color depth: 1 (I1), 8 (L8), 16 (RGB565), 24 (RGB888), 32 (XRGB8888) */
-#define LV_COLOR_DEPTH 16
+/* Frij: 32-bit so gradients/glows are smooth (16-bit RGB565 bands badly).
+ * Device note: the port flush must match the panel format (see docs/HARDWARE.md). */
+#define LV_COLOR_DEPTH 32
 
 /*=========================
    STDLIB WRAPPER SETTINGS
@@ -221,7 +223,7 @@
     #endif
 
     /** Enable drawing complex gradients in software: linear at an angle, radial or conical */
-    #define LV_USE_DRAW_SW_COMPLEX_GRADIENTS    0
+    #define LV_USE_DRAW_SW_COMPLEX_GRADIENTS    1   /* Frij: radial glow */
 
 #endif
 

@@ -18,6 +18,10 @@ void frij_haptic_attach(lv_obj_t* obj);
 // Apply the standard subtle page-background gradient to an object's MAIN part.
 void frij_apply_bg(lv_obj_t* obj);
 
+// Add a soft accent glow (centered halo) behind content. Call before building
+// the foreground so it sits underneath. `accent` is 0xRRGGBB.
+void frij_glow(lv_obj_t* parent, uint32_t accent);
+
 // A vertical, centered flex column with `gap` px between children.
 lv_obj_t* frij_col(lv_obj_t* parent, int gap);
 
