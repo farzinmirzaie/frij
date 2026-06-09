@@ -1,0 +1,28 @@
+name: Keep → Frij sync
+
+# Mirrors the shared Google Keep list into the Frij store (read-only: Keep →
+# Supabase). The device pulls the same row, so no firmware change is needed.
+# Configure the secrets below in: Settings → Secrets and variables → Actions.
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # every 10 min (GitHub may delay scheduled runs)
+  workflow_dispatch: {}       # also run on demand from the Actions tab
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r bridge/requirements.txt
+      - run: python bridge/keep_to_frij.py
+        env:
+          GKEEP_EMAIL: ${{ secrets.GKEEP_EMAIL }}
+          GKEEP_MASTER_TOKEN: ${{ secrets.GKEEP_MASTER_TOKEN }}
+          GKEEP_LIST_TITLE: ${{ secrets.GKEEP_LIST_TITLE }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_TABLE: ${{ secrets.SUPABASE_TABLE }}

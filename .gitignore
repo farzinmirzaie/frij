@@ -5,3 +5,8 @@
 .frij_store/
 .env
 .agents/
+
+# python venv (bridge tooling)
+.venv/
+__pycache__/
+*.pyc

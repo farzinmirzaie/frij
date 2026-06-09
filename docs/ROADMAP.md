@@ -29,6 +29,10 @@ target whatever board we run on (see [HARDWARE.md](HARDWARE.md)).
   Counter persists. See [STORAGE.md](STORAGE.md).
 - [ ] **Storage 2**: Supabase backend on device (wifi, scoped key, offline queue).
 - [ ] **Storage 3**: web app reading the same data (Google-Keep-style).
+- [~] **Keep sync**: off-device bridge mirrors a shared Google Keep list into
+  `store:todo` (read-only). Code + docs in [`../bridge/`](../bridge/README.md);
+  needs the owner's Supabase + Google master token to go live. Write-back is a
+  later phase (after on-device add/edit).
 - [ ] **P3 — Persistence**: migrate remaining app state onto `frij_store`.
 - [ ] **P4 — More apps**: grocery, reminders, photos.
 - [ ] **P5 — Device bring-up**: `esp32s3box` board + M5Unified; init the M5IOE1

@@ -2,6 +2,21 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-09 — Google Keep → todo bridge (read-only)
+
+- New **`bridge/`**: an off-device Python sync (`keep_to_frij.py`) that reads a
+  shared Google Keep checklist via the unofficial `gkeepapi` and upserts it into
+  the `store:todo` row the device already pulls — so **read-only needs no
+  firmware change**. Includes a master-token helper, an offline mapping test
+  (passing), `requirements.txt`, and `.env.example`.
+- **GitHub Actions cron** (`.github/workflows/keep-sync.yml`) runs it ~every
+  10 min + on demand, driven by repo secrets.
+- Docs: `bridge/README.md` (what to provide + token steps), STORAGE.md +
+  ROADMAP integration sections.
+- The bridge **strips emoji** from items (the device font has no emoji glyphs),
+  auto-loads the repo `.env` (one consolidated `.env.example`), and uses
+  `keep.resume()` so it works on Python 3.9's `gkeepapi` 0.14.x and newer.
+
 ## 2026-06-09 — header polish + doc audit
 
 - **Header tint even darker on top** — 5-stop gradient: the upper ~3/4 is fully

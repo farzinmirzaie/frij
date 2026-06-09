@@ -36,6 +36,23 @@ REST and a web app reads the same rows.
 The anon key + RLS is what the device and web app use; the `service_role` key is
 admin-only and must never ship on the device.
 
+## Google Keep sync (the todo list)
+
+The todo list can be mirrored from a **shared Google Keep checklist**. Keep has
+no official consumer API, so a small **off-device bridge**
+([`../bridge/`](../bridge/README.md)) reads the Keep list with the unofficial
+`gkeepapi` and **upserts the same `store:todo` row** the device already pulls:
+
+```
+Google Keep ──(read)──> bridge (GitHub Actions cron) ──(REST upsert)──> store:todo ──> device
+```
+
+So **read-only Keep→device needs no firmware change** — the device just keeps
+pulling `todo`. You provide a Supabase project (this table), the Keep list title,
+and a Google master token (as GitHub Actions secrets). Setup + token steps:
+[`../bridge/README.md`](../bridge/README.md). Writing edits back to Keep is a
+later phase (needs on-device add/edit first).
+
 ## Phasing
 
 1. **Local store:** API + emulator file backend. ✅
