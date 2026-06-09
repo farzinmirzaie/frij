@@ -37,7 +37,6 @@
 static std::string s_url;
 static std::string s_key;
 static std::string s_table;
-static std::string s_sync_url;  // optional: GET this to trigger a Keep->cloud sync
 
 // ---- .env -----------------------------------------------------------------
 
@@ -72,8 +71,6 @@ static void load_env(void)
             s_key = v;
         } else if (k == "SUPABASE_TABLE") {
             s_table = v;
-        } else if (k == "KEEP_SYNC_URL") {
-            s_sync_url = v;
         }
     }
     fclose(f);
@@ -240,29 +237,6 @@ void frij_store_pull_async(const char* key)
     std::thread([k = std::string(key)] { cloud_fetch_to_cache(k); }).detach();
 }
 
-bool frij_keep_sync(void)
-{
-    // GET the bridge's trigger URL; it runs the Keep->cloud sync synchronously
-    // and returns when the row is updated. Then a normal pull sees fresh data.
-    if (s_sync_url.empty()) {
-        return false;
-    }
-    CURL* curl = curl_easy_init();
-    if (curl == NULL) {
-        return false;
-    }
-    std::string resp;
-    curl_easy_setopt(curl, CURLOPT_URL, s_sync_url.c_str());
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, collect);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &resp);
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 25L);  // the bridge fetches Keep first
-    CURLcode rc   = curl_easy_perform(curl);
-    long     code = 0;
-    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &code);
-    curl_easy_cleanup(curl);
-    return rc == CURLE_OK && code >= 200 && code < 300;
-}
-
 void frij_store_clear(void)
 {
     DIR* d = opendir(STORE_DIR);
@@ -286,10 +260,6 @@ void frij_store_clear(void)
 // Device backend: TODO — Supabase over WiFiClientSecure + NVS/LittleFS cache,
 // the network calls dispatched to a FreeRTOS task (same "never block UI" rule).
 // ============================================================================
-#if defined(FRIJ_KEEP_SYNC_URL)
-#include <HTTPClient.h>  // Arduino-ESP32 core; used by frij_keep_sync()
-#endif
-
 void frij_store_init(void) {}
 
 bool frij_store_load(const char* key, char* buf, size_t buf_size)
@@ -319,22 +289,6 @@ void frij_store_pull_async(const char* key)
 }
 
 void frij_store_clear(void) {}  // device: TODO — erase NVS/LittleFS namespace
-
-bool frij_keep_sync(void)
-{
-    // Over WiFi, GET the bridge's trigger URL. Define FRIJ_KEEP_SYNC_URL (a
-    // build flag) with the always-on host's address, e.g.
-    //   -D FRIJ_KEEP_SYNC_URL='"http://192.168.1.50:8765/sync?token=..."'
-#if defined(FRIJ_KEEP_SYNC_URL)
-    HTTPClient http;
-    http.begin(FRIJ_KEEP_SYNC_URL);
-    int code = http.GET();
-    http.end();
-    return code >= 200 && code < 300;
-#else
-    return false;  // not configured
-#endif
-}
 
 #endif
 

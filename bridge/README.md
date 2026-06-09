@@ -58,28 +58,6 @@ python3 keep_to_frij.py             # read Keep, upsert Supabase store:todo
 The GitHub Actions workflow ([`../.github/workflows/keep-sync.yml`](../.github/workflows/keep-sync.yml))
 runs it every ~10 min and on demand (Actions tab → Run workflow).
 
-## On-demand trigger (the Todo refresh button)
-
-The device's Todo refresh button can kick a Keep→cloud sync itself instead of
-waiting for the cron. Run the bridge as a tiny HTTP server on an **always-on
-host reachable from the device's Wi-Fi** (a Pi, a NAS, a small VM):
-
-```bash
-# on the host (creds in its .env, same keys as above)
-python3 keep_to_frij.py --serve 8765
-# optional: require a token — set KEEP_SYNC_TOKEN in the env, then callers add ?token=...
-```
-
-`GET /sync` runs the sync synchronously and returns `{"ok":true,"items":N}`.
-Point the device at it:
-
-- **Emulator:** `KEEP_SYNC_URL=http://<host>:8765/sync` in the repo `.env`.
-- **Device:** build flag `-D FRIJ_KEEP_SYNC_URL='"http://<host>:8765/sync"'`.
-
-The device's refresh then does: `GET /sync` (Keep→cloud) → pull the row → redraw.
-Run the server under a process manager (systemd / `pm2` / a `launchd` plist) so
-it survives reboots.
-
 ## Test (no credentials)
 
 ```bash
