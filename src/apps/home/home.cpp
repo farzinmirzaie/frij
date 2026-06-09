@@ -4,6 +4,7 @@
 
 #include "core/datetime.h"
 #include "system/battery.h"
+#include "ui/anim.h"
 #include "ui/components.h"
 #include "ui/theme.h"
 
@@ -47,6 +48,12 @@ static const char* battery_glyph(uint8_t pct, bool charging)
     return LV_SYMBOL_BATTERY_EMPTY;
 }
 
+// anim exec: drive an arc's value (for the gliding seconds hand).
+static void arc_set_value_cb(void* arc, int32_t v)
+{
+    lv_arc_set_value((lv_obj_t*)arc, (int32_t)v);
+}
+
 static void render(clock_ctx_t* c)
 {
     bool      h24 = frij_clock_is_24h();  // re-read each tick so the setting reflects live
@@ -79,7 +86,21 @@ static void render(clock_ctx_t* c)
     }
 
     if (c->arc) {
-        lv_arc_set_value(c->arc, tmv.tm_sec);  // seconds sweep once a minute
+        // glide the seconds hand between ticks (skip the 59->0 wrap + reduce-motion)
+        int target = tmv.tm_sec;
+        int cur    = lv_arc_get_value(c->arc);
+        if (frij_anim_enabled() && target > cur) {
+            lv_anim_t a;
+            lv_anim_init(&a);
+            lv_anim_set_var(&a, c->arc);
+            lv_anim_set_exec_cb(&a, arc_set_value_cb);
+            lv_anim_set_values(&a, cur, target);
+            lv_anim_set_duration(&a, 950);  // finishes before the next 1s tick
+            lv_anim_set_path_cb(&a, lv_anim_path_linear);
+            lv_anim_start(&a);
+        } else {
+            lv_arc_set_value(c->arc, target);
+        }
     }
     if (c->arc_min) {
         lv_arc_set_value(c->arc_min, tmv.tm_min);  // minutes sweep once an hour

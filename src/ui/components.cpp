@@ -294,15 +294,17 @@ void frij_check_set(lv_obj_t* check, bool checked, bool animate)
     }
 
     if (animate) {
-        lv_anim_t a;
-        lv_anim_init(&a);
-        lv_anim_set_var(&a, check);
-        lv_anim_set_exec_cb(&a, frij_anim_exec_scale);
-        lv_anim_set_values(&a, 210, 256);  // 256 = 100%
-        lv_anim_set_duration(&a, 180);
-        lv_anim_set_path_cb(&a, lv_anim_path_overshoot);
-        lv_anim_start(&a);
-        frij_haptic(FRIJ_HAPTIC_SUCCESS);
+        if (frij_anim_enabled()) {
+            lv_anim_t a;
+            lv_anim_init(&a);
+            lv_anim_set_var(&a, check);
+            lv_anim_set_exec_cb(&a, frij_anim_exec_scale);
+            lv_anim_set_values(&a, 210, 256);  // 256 = 100%
+            lv_anim_set_duration(&a, 180);
+            lv_anim_set_path_cb(&a, lv_anim_path_overshoot);
+            lv_anim_start(&a);
+        }
+        frij_haptic(FRIJ_HAPTIC_SUCCESS);  // haptic regardless of reduce-motion
     }
 }
 
@@ -389,7 +391,8 @@ lv_obj_t* frij_slider_row(lv_obj_t* parent, const char* label, int min, int max,
     lv_obj_set_height(s, FRIJ_ROW_H);  // matches the other rows
     lv_slider_set_range(s, min, max);
     lv_obj_set_style_anim_duration(s, FRIJ_ANIM_MS, LV_PART_MAIN);
-    lv_slider_set_value(s, value, LV_ANIM_ON);  // fill sweeps to its value on build
+    // fill sweeps to its value on build (unless reduce-motion is on)
+    lv_slider_set_value(s, value, frij_anim_enabled() ? LV_ANIM_ON : LV_ANIM_OFF);
 
     // card body (MAIN), accent fill (INDICATOR), no visible knob
     grad_v(s, FRIJ_SURFACE_2, 0x101216);
@@ -433,13 +436,23 @@ lv_obj_t* frij_action_row(lv_obj_t* parent, const char* label, lv_event_cb_t on_
 
 lv_obj_t* frij_section_label(lv_obj_t* parent, const char* text)
 {
+    // UPPERCASE the heading for an iOS-like grouped-list look (labels are short).
+    char up[32];
+    size_t i = 0;
+    for (; text[i] != '\0' && i < sizeof(up) - 1; i++) {
+        char ch = text[i];
+        up[i]   = (ch >= 'a' && ch <= 'z') ? (char)(ch - 'a' + 'A') : ch;
+    }
+    up[i] = '\0';
+
     lv_obj_t* l = lv_label_create(parent);
-    lv_label_set_text(l, text);
-    lv_obj_set_style_text_font(l, FRIJ_FONT_BODY, LV_PART_MAIN);
+    lv_label_set_text(l, up);
+    lv_obj_set_style_text_font(l, FRIJ_FONT_SMALL, LV_PART_MAIN);
     lv_obj_set_style_text_color(l, lv_color_hex(FRIJ_TEXT_2), LV_PART_MAIN);
+    lv_obj_set_style_text_letter_space(l, 2, LV_PART_MAIN);  // airier, heading-like
     lv_obj_set_width(l, LV_PCT(100));
     lv_obj_set_style_text_align(l, LV_TEXT_ALIGN_LEFT, LV_PART_MAIN);
-    lv_obj_set_style_pad_left(l, FRIJ_SP_S, LV_PART_MAIN);
+    lv_obj_set_style_pad_left(l, FRIJ_SP_M, LV_PART_MAIN);
     lv_obj_set_style_pad_top(l, FRIJ_SP_S, LV_PART_MAIN);  // space above the group
     return l;
 }
@@ -541,21 +554,23 @@ static lv_obj_t* modal_card(lv_obj_t* modal)
     lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(card, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_row(card, FRIJ_SP_M, LV_PART_MAIN);
-    frij_anim_enter(card, 30);  // fade + rise entrance
+    frij_anim_enter(card, 30);  // fade + rise entrance (no-op under reduce-motion)
 
     // …plus a subtle scale-in pop (pivot at the card's center)
-    lv_obj_set_style_transform_pivot_x(card, lv_pct(50), LV_PART_MAIN);
-    lv_obj_set_style_transform_pivot_y(card, lv_pct(50), LV_PART_MAIN);
-    lv_obj_set_style_transform_scale(card, 236, LV_PART_MAIN);  // ~0.92
-    lv_anim_t pop;
-    lv_anim_init(&pop);
-    lv_anim_set_var(&pop, card);
-    lv_anim_set_exec_cb(&pop, frij_anim_exec_scale);
-    lv_anim_set_values(&pop, 236, 256);
-    lv_anim_set_duration(&pop, FRIJ_ANIM_MS);
-    lv_anim_set_delay(&pop, 30);
-    lv_anim_set_path_cb(&pop, lv_anim_path_ease_out);
-    lv_anim_start(&pop);
+    if (frij_anim_enabled()) {
+        lv_obj_set_style_transform_pivot_x(card, lv_pct(50), LV_PART_MAIN);
+        lv_obj_set_style_transform_pivot_y(card, lv_pct(50), LV_PART_MAIN);
+        lv_obj_set_style_transform_scale(card, 236, LV_PART_MAIN);  // ~0.92
+        lv_anim_t pop;
+        lv_anim_init(&pop);
+        lv_anim_set_var(&pop, card);
+        lv_anim_set_exec_cb(&pop, frij_anim_exec_scale);
+        lv_anim_set_values(&pop, 236, 256);
+        lv_anim_set_duration(&pop, FRIJ_ANIM_MS);
+        lv_anim_set_delay(&pop, 30);
+        lv_anim_set_path_cb(&pop, lv_anim_path_ease_out);
+        lv_anim_start(&pop);
+    }
     return card;
 }
 
@@ -724,6 +739,21 @@ static void toast_in_done_cb(lv_anim_t* a)
     lv_anim_start(&out);
 }
 
+// Tap a toast to dismiss it early: cancel its in/hold anims and fade out now.
+static void toast_tap_cb(lv_event_t* e)
+{
+    lv_obj_t* t = (lv_obj_t*)lv_event_get_target(e);
+    lv_anim_delete(t, NULL);  // drop the pending fade-in / hold / rise
+    lv_anim_t out;
+    lv_anim_init(&out);
+    lv_anim_set_var(&out, t);
+    lv_anim_set_exec_cb(&out, frij_anim_exec_opa);
+    lv_anim_set_values(&out, lv_obj_get_style_opa(t, LV_PART_MAIN), LV_OPA_TRANSP);
+    lv_anim_set_duration(&out, FRIJ_ANIM_MS / 2);
+    lv_anim_set_completed_cb(&out, toast_gone_cb);
+    lv_anim_start(&out);
+}
+
 // Shared builder: a pill with an optional leading status glyph + the message.
 static void toast_show(const char* glyph, uint32_t glyph_color, const char* text)
 {
@@ -742,6 +772,8 @@ static void toast_show(const char* glyph, uint32_t glyph_color, const char* text
     lv_obj_set_style_pad_top(t, FRIJ_SP_S, LV_PART_MAIN);
     lv_obj_set_style_pad_bottom(t, FRIJ_SP_S, LV_PART_MAIN);
     lv_obj_clear_flag(t, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(t, LV_OBJ_FLAG_CLICKABLE);  // tap to dismiss early
+    lv_obj_add_event_cb(t, toast_tap_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_align(t, LV_ALIGN_BOTTOM_MID, 0, -frij_screen_min() * 14 / 100);
     // row: [glyph] text — centered, with a small gap when a glyph is present
     lv_obj_set_flex_flow(t, LV_FLEX_FLOW_ROW);
@@ -769,16 +801,18 @@ static void toast_show(const char* glyph, uint32_t glyph_color, const char* text
     lv_anim_set_completed_cb(&in, toast_in_done_cb);
     lv_anim_start(&in);
 
-    // rise into place (snackbar feel)
-    lv_obj_set_style_translate_y(t, 16, LV_PART_MAIN);
-    lv_anim_t rise;
-    lv_anim_init(&rise);
-    lv_anim_set_var(&rise, t);
-    lv_anim_set_exec_cb(&rise, frij_anim_exec_translate_y);
-    lv_anim_set_values(&rise, 16, 0);
-    lv_anim_set_duration(&rise, FRIJ_ANIM_MS);
-    lv_anim_set_path_cb(&rise, lv_anim_path_ease_out);
-    lv_anim_start(&rise);
+    // rise into place (snackbar feel) — skipped under reduce-motion
+    if (frij_anim_enabled()) {
+        lv_obj_set_style_translate_y(t, 16, LV_PART_MAIN);
+        lv_anim_t rise;
+        lv_anim_init(&rise);
+        lv_anim_set_var(&rise, t);
+        lv_anim_set_exec_cb(&rise, frij_anim_exec_translate_y);
+        lv_anim_set_values(&rise, 16, 0);
+        lv_anim_set_duration(&rise, FRIJ_ANIM_MS);
+        lv_anim_set_path_cb(&rise, lv_anim_path_ease_out);
+        lv_anim_start(&rise);
+    }
 }
 
 void frij_toast(const char* text)
@@ -872,6 +906,7 @@ static lv_obj_t* icon_button(lv_obj_t* parent, const char* sym)
 
     lv_obj_t* b = lv_button_create(parent);
     lv_obj_set_size(b, 36, 36);
+    lv_obj_set_ext_click_area(b, 10);  // enlarge the touch target past the 36px icon
     lv_obj_set_style_bg_opa(b, LV_OPA_TRANSP, LV_PART_MAIN);  // no background, icon only
     lv_obj_set_style_shadow_width(b, 0, LV_PART_MAIN);
     // shrink the icon on press, ease back on release; cancel the theme's grow

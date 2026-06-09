@@ -53,7 +53,8 @@ theme, list rows, …) as patterns repeat.
 - `carousel.*` — a horizontal, looping, finger-following pager. Input-free: the
   owner calls `drag(dx)` / `end(dx)`. No loop when `count <= 1`. Shows an
   auto-fading **page-dot indicator** at the bottom (active dot uses the accent
-  passed to `init`; hidden entirely for a single page).
+  passed to `init`; hidden entirely for a single page). Tap a dot to jump to its
+  page.
 
 ## Guideline
 

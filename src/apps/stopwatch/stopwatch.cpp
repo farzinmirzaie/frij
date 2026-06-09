@@ -64,16 +64,41 @@ static void set_button(lv_obj_t* btn, const char* glyph, uint32_t bg, uint32_t f
     }
 }
 
+// Split for lap i: time since the previous lap (lap 0 == its own cumulative).
+static uint32_t lap_split(int i)
+{
+    return i == 0 ? s_laps[0] : s_laps[i] - s_laps[i - 1];
+}
+
 static void populate_laps(lv_obj_t* col)
 {
     lv_obj_clean(col);
-    // newest lap on top
+
+    // find the fastest/slowest split to highlight (only with 2+ laps)
+    int fast = -1, slow = -1;
+    if (s_lap_n >= 2) {
+        fast = slow = 0;
+        for (int i = 1; i < s_lap_n; i++) {
+            if (lap_split(i) < lap_split(fast)) fast = i;
+            if (lap_split(i) > lap_split(slow)) slow = i;
+        }
+    }
+
+    // newest lap on top; show "split   cumulative"
     for (int i = s_lap_n - 1; i >= 0; i--) {
-        char num[12];
-        char tm[16];
+        char num[12], sp[16], tot[16], val[36];
         lv_snprintf(num, sizeof(num), "Lap %d", i + 1);
-        fmt_time(tm, sizeof(tm), s_laps[i]);
-        frij_value_row(col, num, tm);
+        fmt_time(sp, sizeof(sp), lap_split(i));
+        fmt_time(tot, sizeof(tot), s_laps[i]);
+        lv_snprintf(val, sizeof(val), "%s   %s", sp, tot);
+        lv_obj_t* row = frij_value_row(col, num, val);
+        if (i == fast) {
+            lv_obj_set_style_text_color(lv_obj_get_child(row, 1), lv_color_hex(FRIJ_SECONDARY),
+                                        LV_PART_MAIN);
+        } else if (i == slow) {
+            lv_obj_set_style_text_color(lv_obj_get_child(row, 1), lv_color_hex(FRIJ_WARNING),
+                                        LV_PART_MAIN);
+        }
     }
 }
 

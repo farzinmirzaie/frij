@@ -220,15 +220,18 @@ static void build_progress(lv_obj_t* parent)
     lv_obj_set_style_arc_width(arc, 12, LV_PART_MAIN);
     lv_obj_set_style_arc_width(arc, 12, LV_PART_INDICATOR);
 
-    // sweep the fill from 0 to the value on open
-    lv_anim_t sweep;
-    lv_anim_init(&sweep);
-    lv_anim_set_var(&sweep, arc);
-    lv_anim_set_exec_cb(&sweep, arc_set_value_cb);
-    lv_anim_set_values(&sweep, 0, done_pct());
-    lv_anim_set_duration(&sweep, FRIJ_ANIM_MS * 2);
-    lv_anim_set_path_cb(&sweep, lv_anim_path_ease_out);
-    lv_anim_start(&sweep);
+    // sweep the fill from 0 to the value on open (skipped under reduce-motion;
+    // the ring is already drawn at done_pct() by frij_progress_ring)
+    if (frij_anim_enabled()) {
+        lv_anim_t sweep;
+        lv_anim_init(&sweep);
+        lv_anim_set_var(&sweep, arc);
+        lv_anim_set_exec_cb(&sweep, arc_set_value_cb);
+        lv_anim_set_values(&sweep, 0, done_pct());
+        lv_anim_set_duration(&sweep, FRIJ_ANIM_MS * 2);
+        lv_anim_set_path_cb(&sweep, lv_anim_path_ease_out);
+        lv_anim_start(&sweep);
+    }
 
     lv_obj_t* inner = frij_col(arc, 2);  // stacked, centered inside the ring
     lv_obj_center(inner);
@@ -243,18 +246,20 @@ static void build_progress(lv_obj_t* parent)
         lv_label_set_text(pct, "100%");
         lv_label_set_text(sub, "All done!");
         // celebrate: a gentle one-shot pulse of the ring + a success buzz
-        lv_obj_set_style_transform_pivot_x(arc, lv_pct(50), LV_PART_MAIN);
-        lv_obj_set_style_transform_pivot_y(arc, lv_pct(50), LV_PART_MAIN);
-        lv_anim_t pulse;
-        lv_anim_init(&pulse);
-        lv_anim_set_var(&pulse, arc);
-        lv_anim_set_exec_cb(&pulse, frij_anim_exec_scale);
-        lv_anim_set_values(&pulse, 256, 280);
-        lv_anim_set_duration(&pulse, 260);
-        lv_anim_set_playback_duration(&pulse, 260);
-        lv_anim_set_delay(&pulse, FRIJ_ANIM_MS);  // after the fill sweep
-        lv_anim_set_path_cb(&pulse, lv_anim_path_ease_in_out);
-        lv_anim_start(&pulse);
+        if (frij_anim_enabled()) {
+            lv_obj_set_style_transform_pivot_x(arc, lv_pct(50), LV_PART_MAIN);
+            lv_obj_set_style_transform_pivot_y(arc, lv_pct(50), LV_PART_MAIN);
+            lv_anim_t pulse;
+            lv_anim_init(&pulse);
+            lv_anim_set_var(&pulse, arc);
+            lv_anim_set_exec_cb(&pulse, frij_anim_exec_scale);
+            lv_anim_set_values(&pulse, 256, 280);
+            lv_anim_set_duration(&pulse, 260);
+            lv_anim_set_playback_duration(&pulse, 260);
+            lv_anim_set_delay(&pulse, FRIJ_ANIM_MS);  // after the fill sweep
+            lv_anim_set_path_cb(&pulse, lv_anim_path_ease_in_out);
+            lv_anim_start(&pulse);
+        }
         frij_haptic(FRIJ_HAPTIC_SUCCESS);
     } else {
         lv_label_set_text_fmt(pct, "%d%%", done_pct());

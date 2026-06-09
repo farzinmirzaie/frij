@@ -2,6 +2,27 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-09 — refinement pass (10 bigger changes)
+
+- **Reduce-motion is now complete**: the Animations toggle also gates the modal
+  pop, toast rise, slider/progress-ring sweep, check pop, counter pop and the
+  all-done celebration (haptics still fire). Was only gating entrance/stagger.
+- **Brightness visibly dims the emulator**: a black scrim on the top layer tracks
+  the inverse of the slider (gentle — 80% ≈ 8% dim), faking the backlight the
+  emulator lacks.
+- **Tappable page dots**: tap a carousel dot to jump straight to that page
+  (enlarged hit area).
+- **Stopwatch lap splits**: each lap shows its split (since the previous lap)
+  next to the cumulative time.
+- **Stopwatch fastest/slowest** laps are colored green / amber (2+ laps).
+- **Bigger header tap targets**: back/action icons get a 10px ext-click area.
+- **Section labels restyled**: UPPERCASE + letter-spacing + small font for a
+  cleaner grouped-list heading.
+- **Counter press-and-hold** to repeat ±; the value is saved once on release.
+- **Toast tap-to-dismiss**: tap a toast to fade it out immediately.
+- **Gliding seconds ring**: the home seconds hand animates between ticks instead
+  of jumping (skips the 59→0 wrap; respects reduce-motion).
+
 ## 2026-06-09 — feature pass (10 bigger changes)
 
 - **New Stopwatch app** (on-brand for the dev kit): MM:SS.cs readout, Start/Stop,

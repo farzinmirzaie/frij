@@ -84,6 +84,14 @@ static void on_viewport_delete(lv_event_t* e)
     c->dots = NULL;
 }
 
+// Tap a dot to jump straight to that page.
+static void dot_click_cb(lv_event_t* e)
+{
+    frij_carousel_t* c = (frij_carousel_t*)lv_event_get_user_data(e);
+    lv_obj_t*        d = (lv_obj_t*)lv_event_get_target(e);
+    frij_carousel_goto(c, (int)(intptr_t)lv_obj_get_user_data(d));
+}
+
 static void make_dots(frij_carousel_t* c)
 {
     c->dots = lv_obj_create(c->viewport);
@@ -101,7 +109,11 @@ static void make_dots(frij_carousel_t* c)
         lv_obj_remove_style_all(d);
         lv_obj_set_size(d, DOT, DOT);
         lv_obj_set_style_radius(d, LV_RADIUS_CIRCLE, LV_PART_MAIN);
-        lv_obj_clear_flag(d, LV_OBJ_FLAG_CLICKABLE);
+        // tap a dot to jump to its page (dots are tiny, so grow the hit area)
+        lv_obj_add_flag(d, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_set_ext_click_area(d, 10);
+        lv_obj_set_user_data(d, (void*)(intptr_t)i);
+        lv_obj_add_event_cb(d, dot_click_cb, LV_EVENT_CLICKED, c);
     }
     lv_obj_set_style_opa(c->dots, LV_OPA_TRANSP, LV_PART_MAIN);  // hidden until a swipe
     refresh_dots(c);

@@ -37,7 +37,7 @@ static void refresh(void)
 // A quick scale-pop on the number so a tap reads as a change, not a silent swap.
 static void pop_value(void)
 {
-    if (!s_value) {
+    if (!s_value || !frij_anim_enabled()) {
         return;
     }
     lv_anim_t a;
@@ -83,6 +83,29 @@ static void on_plus(lv_event_t* e)
     save_count();
 }
 
+// Holding a button auto-repeats: step + refresh only (no pop/save per tick —
+// the pop would jitter and a save-per-tick would hammer the store). The final
+// value is saved once on release (on_step_release).
+static void on_minus_repeat(lv_event_t* e)
+{
+    (void)e;
+    s_count--;
+    refresh();
+}
+
+static void on_plus_repeat(lv_event_t* e)
+{
+    (void)e;
+    s_count++;
+    refresh();
+}
+
+static void on_step_release(lv_event_t* e)
+{
+    (void)e;
+    save_count();  // persist once after a hold-repeat (cheap no-op if unchanged)
+}
+
 static void glance(lv_obj_t* parent)
 {
     load_count();
@@ -125,8 +148,15 @@ static void screen(lv_obj_t* parent, int index)
     lv_obj_set_flex_align(row, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_column(row, FRIJ_SP_XL, LV_PART_MAIN);
 
-    frij_circle_button(row, 56, FRIJ_SURFACE_2, LV_SYMBOL_MINUS, FRIJ_FONT_SYMBOL, ACCENT, on_minus);
-    frij_circle_button(row, 56, FRIJ_SURFACE_2, LV_SYMBOL_PLUS, FRIJ_FONT_SYMBOL, ACCENT, on_plus);
+    lv_obj_t* minus =
+        frij_circle_button(row, 56, FRIJ_SURFACE_2, LV_SYMBOL_MINUS, FRIJ_FONT_SYMBOL, ACCENT, on_minus);
+    lv_obj_t* plus =
+        frij_circle_button(row, 56, FRIJ_SURFACE_2, LV_SYMBOL_PLUS, FRIJ_FONT_SYMBOL, ACCENT, on_plus);
+    // press-and-hold to repeat; persist once on release
+    lv_obj_add_event_cb(minus, on_minus_repeat, LV_EVENT_LONG_PRESSED_REPEAT, NULL);
+    lv_obj_add_event_cb(plus, on_plus_repeat, LV_EVENT_LONG_PRESSED_REPEAT, NULL);
+    lv_obj_add_event_cb(minus, on_step_release, LV_EVENT_RELEASED, NULL);
+    lv_obj_add_event_cb(plus, on_step_release, LV_EVENT_RELEASED, NULL);
 }
 
 const frij_app_t* counter_app(void)
