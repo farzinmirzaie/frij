@@ -78,12 +78,23 @@ lv_obj_t* frij_toggle(lv_obj_t* parent, bool on, uint32_t accent);
 // LV_EVENT_CLICKED. Use for actions like "Sync now" / "Reset".
 lv_obj_t* frij_action_row(lv_obj_t* parent, const char* label, lv_event_cb_t on_click);
 
+// A small muted, left-aligned heading for grouping rows on a page.
+lv_obj_t* frij_section_label(lv_obj_t* parent, const char* text);
+
+// A brief auto-dismissing message pill near the bottom of the screen (fades in,
+// holds, fades out, removes itself). Use for transient confirmations.
+void frij_toast(const char* text);
+
 // A modal confirmation dialog: a dimmed backdrop + a centered card with `title`,
 // optional `message`, a "Cancel" button and an accent button labelled
 // `confirm_text`. `on_confirm` fires when confirmed; the dialog closes itself
 // either way (tapping the backdrop cancels). Use for destructive actions.
 void frij_confirm(const char* title, const char* message, const char* confirm_text,
                   uint32_t accent, lv_event_cb_t on_confirm);
+
+// Close the topmost open modal (confirm/sheet), if any. Returns true if one was
+// closed — the launcher's Back action calls this before navigating.
+bool frij_modal_close_top(void);
 
 // Callback for frij_action_sheet: `option` is the tapped option's index (0..n-1).
 typedef void (*frij_sheet_cb)(int option, void* user);

@@ -3,6 +3,7 @@
 #include <time.h>
 
 #include "store/store.h"
+#include "system/battery.h"
 #include "ui/components.h"
 #include "ui/theme.h"
 
@@ -28,6 +29,27 @@ typedef struct {
 static bool read_clock24(void)
 {
     return frij_store_load_bool("clock24", true);
+}
+
+// Battery glyph for a charge level (or the charging bolt while plugged in).
+static const char* battery_glyph(uint8_t pct, bool charging)
+{
+    if (charging) {
+        return LV_SYMBOL_CHARGE;
+    }
+    if (pct >= 90) {
+        return LV_SYMBOL_BATTERY_FULL;
+    }
+    if (pct >= 65) {
+        return LV_SYMBOL_BATTERY_3;
+    }
+    if (pct >= 40) {
+        return LV_SYMBOL_BATTERY_2;
+    }
+    if (pct >= 15) {
+        return LV_SYMBOL_BATTERY_1;
+    }
+    return LV_SYMBOL_BATTERY_EMPTY;
 }
 
 static void render(clock_ctx_t* c)
@@ -119,6 +141,15 @@ static void build_clock(lv_obj_t* parent)
 
     lv_timer_t* timer = lv_timer_create(tick, 1000, c);
     lv_obj_add_event_cb(col, on_delete, LV_EVENT_DELETE, timer);
+
+    // Battery at 12 o'clock — floating so it doesn't shift the centered face.
+    uint8_t   pct = frij_battery_pct();
+    lv_obj_t* bat = lv_label_create(parent);
+    lv_label_set_text_fmt(bat, "%s %d%%", battery_glyph(pct, frij_battery_charging()), pct);
+    lv_obj_set_style_text_font(bat, FRIJ_FONT_SYMBOL, LV_PART_MAIN);
+    lv_obj_set_style_text_color(bat, lv_color_hex(FRIJ_TEXT_2), LV_PART_MAIN);
+    lv_obj_add_flag(bat, LV_OBJ_FLAG_FLOATING);
+    lv_obj_align(bat, LV_ALIGN_TOP_MID, 0, frij_screen_min() * 9 / 100);
 }
 
 static void glance(lv_obj_t* parent)

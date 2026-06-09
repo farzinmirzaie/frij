@@ -385,6 +385,9 @@ static void on_input(lv_event_t* e)
 
 void frij_back(void)
 {
+    if (frij_modal_close_top()) {
+        return;  // a dialog/sheet is open: Back closes it instead of navigating
+    }
     if (s_anim) {
         return;
     }

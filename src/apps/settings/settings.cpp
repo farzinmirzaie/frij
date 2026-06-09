@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "store/store.h"
+#include "system/battery.h"
 #include "system/brightness.h"
 #include "system/haptics.h"
 #include "system/wifi.h"
@@ -72,6 +73,7 @@ static void on_sync_now(lv_event_t* e)
     frij_store_pull_async("todo");  // best-effort cloud refresh
     frij_store_pull_async("counter");
     frij_haptic(FRIJ_HAPTIC_SUCCESS);
+    frij_toast("Syncing...");
 }
 
 static void do_reset(lv_event_t* e)
@@ -86,6 +88,7 @@ static void do_reset(lv_event_t* e)
     frij_set_brightness(80);
     frij_haptics_set_enabled(true);
     frij_haptic(FRIJ_HAPTIC_SUCCESS);
+    frij_toast("Settings reset");
 }
 
 static void on_reset(lv_event_t* e)
@@ -241,9 +244,12 @@ static void screen(lv_obj_t* parent, int index)
 
     switch (index) {
         case 0:  // General
+            frij_section_label(col, "Display");
             slider_row(col, "Brightness", 10, 100, "brightness", 80, on_brightness, "%");
-            slider_row(col, "Volume", 0, 100, "volume", 60, on_volume, "%");
             slider_row(col, "Sleep", 1, 30, "sleep", 5, on_sleep, " min");
+            frij_section_label(col, "Sound");
+            slider_row(col, "Volume", 0, 100, "volume", 60, on_volume, "%");
+            frij_section_label(col, "Preferences");
             toggle_row(col, "24-hour time", "clock24", true, on_clock24);
             toggle_row(col, "Vibration", "haptics", true, on_vibration);
             toggle_row(col, "Auto-sync", "autosync", true, on_autosync);
@@ -255,10 +261,21 @@ static void screen(lv_obj_t* parent, int index)
             break;
 
         default:  // System / About
-            frij_label(col, "Frij", FRIJ_FONT_TITLE, FRIJ_TEXT);
-            frij_label(col, "on-device UI  -  v0.1", FRIJ_FONT_BODY, FRIJ_TEXT_2);
-            frij_action_row(col, "Sync now", on_sync_now);
-            frij_action_row(col, "Reset settings", on_reset);
+            {
+                frij_label(col, "Frij", FRIJ_FONT_TITLE, FRIJ_TEXT);
+                frij_label(col, "on-device UI  -  v0.1", FRIJ_FONT_BODY, FRIJ_TEXT_2);
+
+                lv_obj_t* brow = frij_surface_row(col);
+                lv_obj_t* blbl = frij_label(brow, "Battery", FRIJ_FONT_BODY, FRIJ_TEXT);
+                lv_obj_set_flex_grow(blbl, 1);
+                char bbuf[24];
+                lv_snprintf(bbuf, sizeof(bbuf), "%d%%%s", frij_battery_pct(),
+                            frij_battery_charging() ? "  " LV_SYMBOL_CHARGE : "");
+                frij_label(brow, bbuf, FRIJ_FONT_BODY, FRIJ_TEXT_2);
+
+                frij_action_row(col, "Sync now", on_sync_now);
+                frij_action_row(col, "Reset settings", on_reset);
+            }
             break;
     }
 }

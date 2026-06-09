@@ -2,6 +2,18 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-09 — polish pass (battery, UX, feedback)
+
+- **Battery** — new `system/battery` service (emulator mock + device TODO). The
+  watch face shows a battery glyph + % at 12 o'clock; Settings → About has a
+  Battery row.
+- **Back closes modals first** — the hardware Back / header back now dismisses an
+  open dialog or action sheet before navigating (`frij_modal_close_top`).
+- **Grouped Settings** — General is split under "Display / Sound / Preferences"
+  section headings (new reusable `frij_section_label`).
+- **Toasts** — new `frij_toast` snackbar (built on LVGL's fade/auto-delete
+  helpers); "Sync now" and "Reset" now show brief confirmation.
+
 ## 2026-06-09
 
 - **Wi-Fi settings** — new `system/wifi` service (interface + emulator mock) and

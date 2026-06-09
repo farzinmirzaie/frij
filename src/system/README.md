@@ -19,3 +19,6 @@ Apps call these instead of touching `utility/`, keeping app isolation.
   neutral interface. The emulator ships a working **in-memory mock** (a fake
   neighbourhood with connected/saved state) so Settings → Network is fully
   interactive; the device backend is a stub (TODO: `esp_wifi` + NVS creds).
+- `battery.*` — `frij_battery_pct()` + `frij_battery_charging()`. A steady mock
+  on the emulator (for the watch-face indicator + About); the device reads the
+  M5PM1 PMIC (TODO).

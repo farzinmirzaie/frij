@@ -30,7 +30,11 @@ theme, list rows, …) as patterns repeat.
     card with Cancel / accent-Confirm). Use it before destructive actions.
   - `frij_action_sheet` — a modal with a stacked list of options (first is the
     accent/primary) + Cancel; the callback gets the chosen index. Both modals
-    animate in (dim fades, card rises) and dismiss on a backdrop tap.
+    animate in (dim fades, card rises) and dismiss on a backdrop tap; the
+    launcher's Back closes the open one first (`frij_modal_close_top`).
+  - `frij_section_label` — a small muted heading to group rows on a page.
+  - `frij_toast` — a brief auto-dismissing snackbar near the bottom (fades in,
+    holds, fades out, self-removes). For transient confirmations.
   - `frij_glow` — soft radial accent halo; **FLOATING** (doesn't scroll or grow
     the scroll area). Returns the object so it can be repositioned (e.g. behind a header).
   - `frij_progress_ring` — thin arc gauge.

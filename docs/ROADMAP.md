@@ -35,6 +35,37 @@ target whatever board we run on (see [HARDWARE.md](HARDWARE.md)).
   expander (panel reset) around `gfx.init()`; map Back to Key A (G2); flash, test
   touch/buttons. M5GFX/M5Unified support the board — see [HARDWARE.md](HARDWARE.md).
 
+## Polish & tech notes (assessment)
+
+Ideas surfaced while polishing; not yet committed to a phase.
+
+**Custom code vs libraries**
+- **Reactive settings via LVGL Observer** (`lv_subject`/`lv_observer`, built into
+  v9): today the Home clock re-reads `clock24` from the store on each build, and
+  brightness/volume apply imperatively. A subject per setting would let widgets
+  bind to values and update live without manual re-reads. Worth adopting if
+  settings grow.
+- **JSON** already uses ArduinoJson (good). **HTTP** uses libcurl on the
+  emulator; the device will use `WiFiClientSecure`. No change needed.
+- **Carousel / radial glow** are intentionally custom — LVGL has no equivalent
+  and they're small. Keep.
+- Prefer LVGL built-ins where they exist (we now use `lv_obj_fade_in/out` +
+  `lv_obj_delete_delayed` for toasts instead of hand-rolled timers).
+
+**UX/UI ideas (cheap wins)**
+- Live brightness preview while dragging (apply on `VALUE_CHANGED`, persist on
+  release) — partly there.
+- A persistent top status sliver (time + battery) across app screens.
+- Pull-to-refresh affordance on cloud screens instead of a Settings button.
+- Sync state: show a spinner/`lv_spinner` while a pull is in flight, then a toast.
+- Empty/error states for the network list (no networks, connect failure).
+
+**Settings polish (further)**
+- On-device Wi-Fi password entry (needs a keyboard/numpad component).
+- Per-app settings pages (e.g. Todo: clear completed).
+- Date/time + timezone, units, theme/accent picker, factory-reset of all data.
+- Storage usage / "about device" (uptime, free space) read from real services.
+
 ## Open questions
 - Where do photos/data live? On-device flash vs Wi-Fi sync vs SD.
 

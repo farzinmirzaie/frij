@@ -153,6 +153,8 @@ int main(int, char**)
         build_app_screen(settings_app(), 1);
         static const char* opts[] = {"Connect", "Forget"};
         frij_action_sheet("Linksys-5G", opts, 2, FRIJ_PRIMARY, NULL, NULL);
+    } else if (scr && strcmp(scr, "about") == 0) {
+        build_app_screen(settings_app(), 2);
     } else if (scr && strcmp(scr, "confirm") == 0) {
         build_app_screen(settings_app(), 2);
         frij_confirm("Reset settings?", "Restore everything to defaults.", "Reset",

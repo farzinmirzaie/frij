@@ -362,7 +362,41 @@ lv_obj_t* frij_action_row(lv_obj_t* parent, const char* label, lv_event_cb_t on_
     return row;
 }
 
+lv_obj_t* frij_section_label(lv_obj_t* parent, const char* text)
+{
+    lv_obj_t* l = lv_label_create(parent);
+    lv_label_set_text(l, text);
+    lv_obj_set_style_text_font(l, FRIJ_FONT_BODY, LV_PART_MAIN);
+    lv_obj_set_style_text_color(l, lv_color_hex(FRIJ_TEXT_2), LV_PART_MAIN);
+    lv_obj_set_width(l, LV_PCT(100));
+    lv_obj_set_style_text_align(l, LV_TEXT_ALIGN_LEFT, LV_PART_MAIN);
+    lv_obj_set_style_pad_left(l, FRIJ_SP_S, LV_PART_MAIN);
+    lv_obj_set_style_pad_top(l, FRIJ_SP_S, LV_PART_MAIN);  // space above the group
+    return l;
+}
+
 // ---- modals (shared) -------------------------------------------------------
+
+// The currently-open modal (we never stack them), so the Back action can close
+// it instead of navigating the launcher. Cleared when the modal is deleted.
+static lv_obj_t* s_modal_top = NULL;
+
+static void modal_clear_top_cb(lv_event_t* e)
+{
+    if (s_modal_top == lv_event_get_target(e)) {
+        s_modal_top = NULL;
+    }
+}
+
+bool frij_modal_close_top(void)
+{
+    if (s_modal_top) {
+        lv_obj_delete(s_modal_top);
+        s_modal_top = NULL;
+        return true;
+    }
+    return false;
+}
 
 // Tap on the backdrop itself (not a child) closes the modal.
 static void modal_dismiss_cb(lv_event_t* e)
@@ -384,6 +418,8 @@ static lv_obj_t* modal_backdrop(void)
     lv_obj_clear_flag(modal, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(modal, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_event_cb(modal, modal_dismiss_cb, LV_EVENT_CLICKED, modal);
+    s_modal_top = modal;  // Back closes this first (see frij_modal_close_top)
+    lv_obj_add_event_cb(modal, modal_clear_top_cb, LV_EVENT_DELETE, NULL);
 
     lv_anim_t a;
     lv_anim_init(&a);
@@ -543,6 +579,33 @@ void frij_action_sheet(const char* title, const char* const* options, int count,
     lv_obj_t* cancel = pill_button(card, "Cancel", FRIJ_SURFACE_2, FRIJ_TEXT_2, sheet_cancel_cb, modal);
     lv_obj_set_flex_grow(cancel, 0);
     lv_obj_set_width(cancel, LV_PCT(100));
+}
+
+// ---- toast (auto-dismissing snackbar) --------------------------------------
+
+void frij_toast(const char* text)
+{
+    lv_obj_t* t = lv_obj_create(lv_screen_active());
+    lv_obj_remove_style_all(t);
+    lv_obj_set_size(t, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_set_style_bg_color(t, lv_color_hex(FRIJ_SURFACE_3), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(t, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_radius(t, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+    lv_obj_set_style_pad_left(t, FRIJ_SP_L, LV_PART_MAIN);
+    lv_obj_set_style_pad_right(t, FRIJ_SP_L, LV_PART_MAIN);
+    lv_obj_set_style_pad_top(t, FRIJ_SP_S, LV_PART_MAIN);
+    lv_obj_set_style_pad_bottom(t, FRIJ_SP_S, LV_PART_MAIN);
+    lv_obj_clear_flag(t, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_align(t, LV_ALIGN_BOTTOM_MID, 0, -frij_screen_min() * 12 / 100);
+
+    lv_obj_t* l = frij_label(t, text, FRIJ_FONT_BODY, FRIJ_TEXT);
+    lv_obj_center(l);
+
+    // Fade in, hold, fade out, then self-delete — all via LVGL's built-in helpers.
+    lv_obj_set_style_opa(t, LV_OPA_TRANSP, LV_PART_MAIN);
+    lv_obj_fade_in(t, FRIJ_ANIM_MS, 0);
+    lv_obj_fade_out(t, FRIJ_ANIM_MS, 1500);
+    lv_obj_delete_delayed(t, 1500 + FRIJ_ANIM_MS + 20);
 }
 
 lv_obj_t* frij_toggle(lv_obj_t* parent, bool on, uint32_t accent)
