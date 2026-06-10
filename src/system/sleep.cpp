@@ -9,7 +9,7 @@
  * Idle-sleep manager. App-agnostic: it watches LVGL's input-inactivity timer and
  * turns the panel off once it exceeds the user's "Sleep" setting, then back on
  * the moment any input arrives (a touch resets the inactivity timer; so does a
- * wrist raise, which system/motion signals via lv_display_trig_activity()).
+ * wrist raise, which system/motion signals via lv_display_trigger_activity()).
  */
 
 static bool s_asleep = false;

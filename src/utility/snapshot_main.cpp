@@ -19,6 +19,7 @@
 
 #include "apps/counter/counter.h"
 #include "apps/scoreboard/scoreboard.h"
+#include "system/battery.h"
 #include "apps/settings/settings.h"
 #include "apps/stopwatch/stopwatch.h"
 #include "apps/todo/todo.h"
@@ -156,6 +157,8 @@ int main(int, char**)
     lv_display_set_flush_cb(disp, flush_cb);
 
     lv_timer_handler();  // warm the draw units (first render is slow)
+
+    frij_battery_init();  // init battery subjects (screens bind to them)
 
     const char* scr = getenv("FRIJ_SNAP");
     if (scr && strcmp(scr, "todo") == 0) {

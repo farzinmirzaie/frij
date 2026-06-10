@@ -41,7 +41,7 @@ void frij_motion_update(void)
     }
     bool up = (az > RAISE_Z);  // screen pointing up against gravity
     if (up && !s_face_up) {
-        lv_display_trig_activity(NULL);  // treat a raise as input → wakes the display
+        lv_display_trigger_activity(NULL);  // treat a raise as input → wakes the display
     }
     s_face_up = up;
 }

@@ -3,6 +3,7 @@
 #include "launcher/launcher.h"
 #include "store/store.h"
 #include "system/audio.h"
+#include "system/battery.h"
 #include "system/brightness.h"
 #include "system/haptics.h"
 #include "system/motion.h"
@@ -54,6 +55,7 @@ void user_app(void)
     // idle-sleep manager (turns the panel off after the "Sleep" minutes). Create
     // its timer under the LVGL lock since we're outside the LVGL task here.
     if (lvgl_port_lock()) {
+        frij_battery_init();  // battery subjects + refresh timer (observer sources)
         frij_sleep_init();
         lvgl_port_unlock();
     }

@@ -24,7 +24,6 @@ typedef struct {
     lv_obj_t* arc_min;  // minutes ring (inner, dimmer)
     lv_obj_t* time;
     lv_obj_t* date;
-    lv_obj_t* bat;      // battery readout (kept live, not built-once)
 } clock_ctx_t;
 
 // Battery glyph for a charge level (or the charging bolt while plugged in).
@@ -105,16 +104,21 @@ static void render(clock_ctx_t* c)
     if (c->arc_min) {
         lv_arc_set_value(c->arc_min, tmv.tm_min);  // minutes sweep once an hour
     }
+    // battery is observer-driven (see battery_observer_cb) — not polled here
+}
 
-    if (c->bat) {
-        uint8_t pct      = frij_battery_pct();  // re-read so the face stays current
-        bool    charging = frij_battery_charging();
-        lv_label_set_text_fmt(c->bat, "%s %d%%", battery_glyph(pct, charging), pct);
-        // warn (amber) when low and unplugged; muted otherwise
-        lv_obj_set_style_text_color(
-            c->bat, lv_color_hex((pct <= 15 && !charging) ? FRIJ_WARNING : FRIJ_TEXT_2),
-            LV_PART_MAIN);
-    }
+// Observer: refresh the battery readout whenever the level/charging subjects
+// change. Bound to both subjects, so either one firing updates the label.
+static void battery_observer_cb(lv_observer_t* obs, lv_subject_t* subject)
+{
+    (void)subject;
+    lv_obj_t* lbl      = (lv_obj_t*)lv_observer_get_target(obs);
+    uint8_t   pct      = frij_battery_pct();
+    bool      charging = frij_battery_charging();
+    lv_label_set_text_fmt(lbl, "%s %d%%", battery_glyph(pct, charging), pct);
+    // warn (amber) when low and unplugged; muted otherwise
+    lv_obj_set_style_text_color(
+        lbl, lv_color_hex((pct <= 15 && !charging) ? FRIJ_WARNING : FRIJ_TEXT_2), LV_PART_MAIN);
 }
 
 static void tick(lv_timer_t* t)
@@ -167,10 +171,12 @@ static void build_clock(lv_obj_t* parent)
     c->time = frij_label(inner, "--:--", FRIJ_FONT_CLOCK, FRIJ_TEXT);
     c->date = frij_label(inner, "", FRIJ_FONT_BODY, FRIJ_TEXT_2);
 
-    // Small battery readout under the date (text set live in render()).
-    c->bat = lv_label_create(inner);
-    lv_obj_set_style_text_font(c->bat, FRIJ_FONT_SMALL, LV_PART_MAIN);
-    lv_obj_set_style_text_color(c->bat, lv_color_hex(FRIJ_TEXT_2), LV_PART_MAIN);
+    // Small battery readout under the date — bound to the battery subjects, so it
+    // updates live (and everywhere) via the observer, not a per-tick poll.
+    lv_obj_t* bat = lv_label_create(inner);
+    lv_obj_set_style_text_font(bat, FRIJ_FONT_SMALL, LV_PART_MAIN);
+    lv_subject_add_observer_obj(frij_battery_level_subject(), battery_observer_cb, bat, NULL);
+    lv_subject_add_observer_obj(frij_battery_charging_subject(), battery_observer_cb, bat, NULL);
 
     render(c);
 

@@ -333,6 +333,18 @@ static void on_about_deleted(lv_event_t* e)
     }
 }
 
+// Observer: keep the About "Battery" value live (bound to both battery subjects).
+static void about_battery_cb(lv_observer_t* obs, lv_subject_t* subject)
+{
+    (void)subject;
+    lv_obj_t* val      = (lv_obj_t*)lv_observer_get_target(obs);
+    uint8_t   pct      = frij_battery_pct();
+    bool      charging = frij_battery_charging();
+    lv_label_set_text_fmt(val, "%d%%%s", pct, charging ? "  " LV_SYMBOL_CHARGE : "");
+    lv_obj_set_style_text_color(
+        val, lv_color_hex((pct <= 15 && !charging) ? FRIJ_WARNING : FRIJ_TEXT_2), LV_PART_MAIN);
+}
+
 static void build_about(lv_obj_t* col)
 {
     // hero: name + version, with generous breathing room around it
@@ -341,15 +353,12 @@ static void build_about(lv_obj_t* col)
     lv_obj_t* ver = frij_label(col, "on-device UI  -  v0.1", FRIJ_FONT_BODY, FRIJ_TEXT_2);
     lv_obj_set_style_margin_bottom(ver, FRIJ_SP_XXL * 4, LV_PART_MAIN);  // 36
 
-    uint8_t pct      = frij_battery_pct();
-    bool    charging = frij_battery_charging();
-    char    bbuf[24];
-    lv_snprintf(bbuf, sizeof(bbuf), "%d%%%s", pct, charging ? "  " LV_SYMBOL_CHARGE : "");
-    lv_obj_t* brow = frij_value_row(col, "Battery", bbuf);
-    if (pct <= 15 && !charging) {  // flag a low battery in the readout
-        lv_obj_set_style_text_color(lv_obj_get_child(brow, 1), lv_color_hex(FRIJ_WARNING),
-                                    LV_PART_MAIN);
-    }
+    // Battery row — bound to the battery subjects so it tracks live (observer),
+    // instead of sampling once when About is built.
+    lv_obj_t* brow = frij_value_row(col, "Battery", "");
+    lv_obj_t* bval = lv_obj_get_child(brow, 1);
+    lv_subject_add_observer_obj(frij_battery_level_subject(), about_battery_cb, bval, NULL);
+    lv_subject_add_observer_obj(frij_battery_charging_subject(), about_battery_cb, bval, NULL);
 
     char sbuf[24];
     int  ls = frij_store_load_int("last_sync", 0);
