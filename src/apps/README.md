@@ -77,6 +77,11 @@ every app shares the look but has its own scheme.
   count. Amber.
 - `stopwatch/` — MM:SS.cs stopwatch with Start/Stop, laps, and reset; timing
   lives in module state so it keeps running off-screen. Green.
+- `scoreboard/` — two-player score keeper (game-night companion). Full-bleed
+  left/right split of two transparent touch halves (Farzin/Farah) with a center
+  divider + "VS", no chrome: tap a half +1 / hold -1; header reset (confirm);
+  scores persist + sync via the store (`sb_a`/`sb_b`). Uses `frij_page_full_bleed`.
+  Glance shows the line + who leads. Blue.
 - `counter/` — a number with ±, persists; long-press the number to reset. Blue.
 - `settings/` — 3 screens: General (Display: brightness/sleep/raise-to-wake;
   Sound: volume/touch-sounds; Preferences: 24-hour/vibration/animations/auto-sync), Network

@@ -3,6 +3,7 @@
 #include "launcher/registry.h"
 #include "counter/counter.h"
 #include "home/home.h"
+#include "scoreboard/scoreboard.h"
 #include "settings/settings.h"
 #include "stopwatch/stopwatch.h"
 #include "todo/todo.h"
@@ -15,6 +16,7 @@ void frij_register_apps(void)
     frij_registry_add(home_app());
     frij_registry_add(todo_app());
     frij_registry_add(stopwatch_app());
+    frij_registry_add(scoreboard_app());
     frij_registry_add(counter_app());
     frij_registry_set_settings(settings_app());
 }

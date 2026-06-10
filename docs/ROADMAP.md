@@ -10,6 +10,7 @@ target whatever board we run on (see [HARDWARE.md](HARDWARE.md)).
 
 - **Todos** — quick check-off list.
 - **Stopwatch** — count-up timer with laps (shipped; on-brand for the dev kit).
+- **Scoreboard** — two-player, cloud-synced score keeper for game nights (shipped).
 - **Reminders** — time/day-based nudges.
 - **Grocery list** — add/remove items, clear bought.
 - **Photos** — slideshow of family pics.

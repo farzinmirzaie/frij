@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "anim.h"
+#include "system/audio.h"
 #include "system/haptics.h"
 #include "theme.h"
 
@@ -10,6 +11,7 @@ static void on_press_haptic(lv_event_t* e)
 {
     (void)e;
     frij_haptic(FRIJ_HAPTIC_TAP);
+    frij_audio_click();  // touch sound (only if enabled in Settings)
 }
 
 // ---- helpers ---------------------------------------------------------------
@@ -169,8 +171,20 @@ lv_obj_t* frij_page(lv_obj_t* parent)
     return parent;
 }
 
+// Full-bleed pages (e.g. the Scoreboard's split) own the whole area below the
+// header and want NO safe-area inset or auto-centering. Reuse a spare flag.
+#define FRIJ_FLAG_FULL_BLEED LV_OBJ_FLAG_USER_2
+
+void frij_page_full_bleed(lv_obj_t* page)
+{
+    lv_obj_add_flag(page, FRIJ_FLAG_FULL_BLEED);
+}
+
 void frij_page_under_header(lv_obj_t* page, int header_px)
 {
+    if (lv_obj_has_flag(page, FRIJ_FLAG_FULL_BLEED)) {
+        return;  // full-bleed: no safe-area padding
+    }
     // The page lives in the area below the header. Add breathing room under the
     // bar, then a matching bottom inset so the *centered* content still lands at
     // the screen's true middle (not the middle of the shorter area). Reusable
@@ -191,6 +205,9 @@ void frij_page_pin_top(lv_obj_t* page)
 
 void frij_page_settle(lv_obj_t* page)
 {
+    if (lv_obj_has_flag(page, FRIJ_FLAG_FULL_BLEED)) {
+        return;  // full-bleed owns its own layout
+    }
     // Pinned pages always stay top-aligned (content doesn't jump when it's short).
     if (lv_obj_has_flag(page, FRIJ_FLAG_PIN_TOP)) {
         lv_obj_set_flex_align(page, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);

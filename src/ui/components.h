@@ -47,6 +47,11 @@ void frij_page_settle(lv_obj_t* page);
 // content it has (use for lists whose first row should never jump to center).
 void frij_page_pin_top(lv_obj_t* page);
 
+// Opt a page out of the header safe-area inset AND auto-centering entirely: the
+// content owns the whole area below the header (use for full-bleed layouts like
+// the Scoreboard's left/right split). Call before adding children.
+void frij_page_full_bleed(lv_obj_t* page);
+
 // A label using a theme font + color (0xRRGGBB).
 lv_obj_t* frij_label(lv_obj_t* parent, const char* text, const lv_font_t* font, uint32_t color);
 

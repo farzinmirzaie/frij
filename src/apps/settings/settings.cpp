@@ -4,6 +4,7 @@
 #include <time.h>
 
 #include "store/store.h"
+#include "system/audio.h"
 #include "system/battery.h"
 #include "system/brightness.h"
 #include "system/haptics.h"
@@ -48,8 +49,9 @@ static void on_clock24(lv_event_t* e)
 static void on_volume(lv_event_t* e)
 {
     lv_obj_t* sl = (lv_obj_t*)lv_event_get_target(e);
-    frij_store_save_int("volume", lv_slider_get_value(sl));
-    // TODO(device): apply to the ES8311 codec.
+    int       v  = lv_slider_get_value(sl);
+    frij_store_save_int("volume", v);
+    frij_set_volume((uint8_t)v);  // ES8311 codec (via M5.Speaker on device)
 }
 
 static void on_vibration(lv_event_t* e)
@@ -64,7 +66,7 @@ static void on_sleep(lv_event_t* e)
 {
     lv_obj_t* sl = (lv_obj_t*)lv_event_get_target(e);
     frij_store_save_int("sleep", lv_slider_get_value(sl));  // minutes until display sleeps
-    // TODO(device): apply a screen-off timeout.
+    // The idle sleep manager (system/sleep) reads this each tick — no apply needed.
 }
 
 static void on_autosync(lv_event_t* e)
@@ -85,14 +87,15 @@ static void on_raise_wake(lv_event_t* e)
 {
     lv_obj_t* sw = (lv_obj_t*)lv_event_get_target(e);
     frij_store_save_bool("raisewake", lv_obj_has_state(sw, LV_STATE_CHECKED));
-    // TODO(device): arm BMI270 tilt/raise interrupt to wake the display.
+    // system/motion polls the BMI270 each loop and wakes on a raise when this is on.
 }
 
 static void on_touch_sfx(lv_event_t* e)
 {
     lv_obj_t* sw = (lv_obj_t*)lv_event_get_target(e);
-    frij_store_save_bool("touchsfx", lv_obj_has_state(sw, LV_STATE_CHECKED));
-    // TODO(device): play a click on the ES8311 codec on touch.
+    bool      on = lv_obj_has_state(sw, LV_STATE_CHECKED);
+    frij_audio_set_click_enabled(on);  // press click on the ES8311 codec
+    frij_store_save_bool("touchsfx", on);
 }
 
 static void on_sync_now(lv_event_t* e)
@@ -100,6 +103,8 @@ static void on_sync_now(lv_event_t* e)
     (void)e;
     frij_store_pull_async("todo");  // best-effort cloud refresh
     frij_store_pull_async("counter");
+    frij_store_pull_async("sb_a");
+    frij_store_pull_async("sb_b");
     frij_store_save_int("last_sync", (int)time(NULL));
     frij_haptic(FRIJ_HAPTIC_SUCCESS);
     if (s_about_col) {  // reflect the new "Last sync" immediately

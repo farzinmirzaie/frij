@@ -32,15 +32,14 @@ void frij_set_brightness(uint8_t pct)
 
 #else
 
-#include <M5GFX.h>
-extern M5GFX gfx;  // defined in src/main.cpp
+#include <M5Unified.h>
 
 void frij_set_brightness(uint8_t pct)
 {
     if (pct > 100) {
         pct = 100;
     }
-    gfx.setBrightness((uint8_t)(pct * 255 / 100));
+    M5.Display.setBrightness((uint8_t)(pct * 255 / 100));
 }
 
 #endif

@@ -2,6 +2,47 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-10 — hardware wiring (device features made real)
+
+- **Device bring-up via M5Unified**: `src/main.cpp` now calls `M5.begin()` (panel
+  reset via M5IOE1, touch, BMI270 IMU, PMIC) and hands `M5.Display` to the LVGL
+  port — replaces the bare `gfx.init()` and fixes the panel-reset blocker. `device`
+  env gains the M5Unified dep + 16MB partition. *(Not built in CI here — no ESP
+  toolchain in this env; verify on flash. The device target does compile through
+  our sources.)*
+- **Sleep is real + cross-platform**: new `system/sleep` idle manager (watches
+  LVGL inactivity, reads the "Sleep" minutes) turns the panel off and wakes on the
+  next touch. New `system/display` does the on/off (black overlay on emulator,
+  `M5.Display.sleep()`/`wakeup()` + brightness restore on device). Works on the
+  emulator now.
+- **Brightness** now drives `M5.Display.setBrightness()` on device (was already
+  wired; repointed off the removed `gfx` global).
+- **Raise-to-wake**: new `system/motion` polls the BMI270 (`M5.Imu`) each loop and
+  signals input activity on a wrist raise → wakes the panel. Device-only; Z-axis
+  threshold tunable on hardware.
+- **Volume + touch sounds**: new `system/audio` — `frij_set_volume` →
+  `M5.Speaker` (ES8311); a short press-click when "Touch sounds" is on (played
+  from the shared press handler). Both applied at boot.
+- **Vibration**: `frij_haptic` now pulses the motor via `M5.Power.setVibration`
+  on device (per-kind pulse lengths). No more device TODOs in General settings.
+- All settings apply at boot (brightness/haptics/animations/volume/touch-sounds);
+  the only remaining device stub is Network Wi-Fi (needs on-screen text entry).
+
+## 2026-06-09 — new app: Scoreboard
+
+- **Scoreboard** — a two-player score keeper for board/card game nights. The whole
+  area below the header is a **full-bleed left/right split** of two *transparent*
+  touch halves (Farzin blue / Farah amber) with a thin center divider + a "VS"
+  chip — no panels, borders or buttons. **Tap a half to score +1, hold it to take
+  one back** (+1 fires on `SHORT_CLICKED` so a long-press's -1 isn't undone on
+  release). A header **reset** action (danger-confirmed modal) zeroes both. New
+  `frij_page_full_bleed()` lets a screen skip the header safe-area inset +
+  auto-centering so it owns the whole area below the header. Scores persist
+  in the shared store under `sb_a` / `sb_b`, so
+  they **sync via the cloud** like the other apps and survive leaving the app
+  mid-game. Glance shows "Farzin 3 – 2 Farah" + who leads. Registered between
+  Stopwatch and Counter. Blue accent. Auto-sync + "Sync now" pull the keys.
+
 ## 2026-06-09 — refinement pass (10 bigger changes)
 
 - **Reduce-motion is now complete**: the Animations toggle also gates the modal
