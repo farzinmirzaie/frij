@@ -219,6 +219,12 @@ int main(int, char**)
         user_app();  // default: the launcher (home)
     }
 
+    // round boundary above everything (overlays included), like the live
+    // emulator's system-layer ring — added last so it draws on top. The
+    // snapshot only captures the screen, so it's parented there, not sys.
+    lv_obj_clear_flag(lv_screen_active(), LV_OBJ_FLAG_SCROLLABLE);
+    frij_round_mask(lv_screen_active(), FRIJ_OUTSIDE);
+
     // settle past entrance anims; the toast is transient, so sample it mid-hold
     s_tick_offset += (scr && strcmp(scr, "toast") == 0) ? 600 : 3000;
     lv_refr_now(disp);  // render the settled UI once

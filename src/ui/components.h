@@ -19,8 +19,15 @@ int frij_header_zone(void);
 // apps can call it on their own custom widgets).
 void frij_haptic_attach(lv_obj_t* obj);
 
-// Apply the standard subtle page-background gradient to an object's MAIN part.
+// Apply the standard page background (pure black — AMOLED-friendly) to an
+// object's MAIN part.
 void frij_apply_bg(lv_obj_t* obj);
+
+// A top-layer ring in `color` whose hole is the round panel: hides the square
+// window's corners above ALL content (overlays too), so the emulator always
+// shows the true round display. Emulator/snapshot only — pass lv_layer_sys()
+// (live) or the screen (snapshot, added last). Never created on the device.
+lv_obj_t* frij_round_mask(lv_obj_t* parent, uint32_t color);
 
 // Add a soft accent glow (centered halo). It's a FLOATING background (doesn't
 // scroll or affect the parent's scroll area). Returns the object so the caller

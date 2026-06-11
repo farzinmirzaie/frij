@@ -13,6 +13,9 @@
 
 #include "lvgl.h"
 
+#include "ui/components.h"
+#include "ui/theme.h"
+
 extern void user_app(void);
 
 extern "C" {
@@ -34,9 +37,11 @@ int main(int, char**)
     lv_sdl_window_set_title(disp, "Frij");  // default says "LVGL Simulator"
     lv_sdl_mouse_create();  // drag = touch
 
-    // The launcher clips its UI to a circle and fills the corners with the
-    // "outside" color, so the round shape is simulated here automatically.
+    // The launcher clips its UI to a circle, but overlays (prompts, numpad…)
+    // attach to the screen itself and would cover the corners. A ring on the
+    // system layer keeps the round boundary above everything, always.
     user_app();
+    frij_round_mask(lv_layer_sys(), FRIJ_OUTSIDE);
 
     while (true) {
         // lv_timer_handler says when it next needs to run — sleep that long

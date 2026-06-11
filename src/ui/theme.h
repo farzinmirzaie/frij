@@ -27,7 +27,7 @@
 // every app shares the look but has its own scheme (e.g. Todo amber, Counter
 // blue, Home purple).
 
-#define FRIJ_SURFACE_1  0x0D0D10  // app background
+#define FRIJ_SURFACE_1  0x000000  // app background — pure black (true off on AMOLED)
 #define FRIJ_SURFACE_2  0x16161B  // cards / rows
 #define FRIJ_SURFACE_3  0x1F1F26  // pressed / elevated
 #define FRIJ_BORDER     0x2A2A33

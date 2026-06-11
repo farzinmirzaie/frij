@@ -2,6 +2,18 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-11 — pure-black backgrounds + always-on-top round bezel
+
+- **Pure-black backgrounds**: `FRIJ_SURFACE_1` is now `0x000000` and
+  `frij_apply_bg` is a solid fill (the old `0x0D0D10` + gradient wash read as
+  gray) — launcher pages, the seams between them, and every app screen are
+  true black, so AMOLED pixels switch fully off on the device.
+- **Round bezel above overlays**: new reusable `frij_round_mask` — a thick
+  FLOATING ring whose hole is the round panel. The live emulator puts it on
+  `lv_layer_sys()` so full-screen overlays (prompts, numpad, results) can no
+  longer cover the square window's corners; the snapshot harness adds the same
+  ring last on the screen. Device builds never create it.
+
 ## 2026-06-11 — Events fixes: timezone, time ranges, all-day, location
 
 - **Timezone fix**: the family calendar's own timezone is UTC, so Google's

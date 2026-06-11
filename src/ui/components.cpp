@@ -51,8 +51,35 @@ int frij_header_zone(void)
 
 void frij_apply_bg(lv_obj_t* obj)
 {
-    // calm dark page wash, slightly darker toward the bottom
-    grad_v(obj, FRIJ_SURFACE_1, 0x07070A);
+    // pure black, no gradient: pixels switch fully off on the AMOLED panel and
+    // launcher pages can't show a gray seam between each other
+    lv_obj_set_style_bg_color(obj, lv_color_hex(FRIJ_SURFACE_1), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(obj, LV_OPA_COVER, LV_PART_MAIN);
+}
+
+lv_obj_t* frij_round_mask(lv_obj_t* parent, uint32_t color)
+{
+    // A thick circular ring whose hole is exactly the round panel: parented to
+    // a top layer it hides the square window's corners ABOVE everything —
+    // overlays included — so the emulator always shows the true round display.
+    // (The real panel has no corners; nothing creates this on the device.)
+    int       m = frij_screen_min();
+    const int b = (m * 30) / 100;  // thick enough to reach past the corners
+    lv_obj_t* ring = lv_obj_create(parent);
+    lv_obj_remove_style_all(ring);
+    lv_obj_set_size(ring, m + 2 * b, m + 2 * b);
+    lv_obj_center(ring);
+    lv_obj_set_style_radius(ring, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+    lv_obj_set_style_border_width(ring, b, LV_PART_MAIN);
+    lv_obj_set_style_border_color(ring, lv_color_hex(color), LV_PART_MAIN);
+    lv_obj_set_style_border_opa(ring, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(ring, LV_OPA_TRANSP, LV_PART_MAIN);
+    // FLOATING: the oversized ring must not grow the parent's scroll area or
+    // shift its layout — it's pure chrome pinned over the center.
+    lv_obj_add_flag(ring, LV_OBJ_FLAG_FLOATING);
+    lv_obj_clear_flag(ring, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_clear_flag(ring, LV_OBJ_FLAG_SCROLLABLE);
+    return ring;
 }
 
 void frij_haptic_attach(lv_obj_t* obj)
