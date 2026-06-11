@@ -5,8 +5,10 @@ Newest first. One short entry per change.
 ## 2026-06-10 — Wi-Fi fully wired + on-screen keyboard
 
 - **`frij_keyboard_prompt`** — a reusable full-screen text-entry overlay (title +
-  one-line textarea + LVGL `lv_keyboard`), password-mask option; ✓ confirms, ⌨
-  cancels. Built on the active screen so it sits above the launcher/header.
+  one-line textarea + LVGL `lv_keyboard`), password-mask + `numeric` options; ✓
+  confirms, ⌨ cancels. Built on the active screen so it sits above the
+  launcher/header. The Wi-Fi password prompt uses **numeric** mode (number pad,
+  bigger keys — fits the round screen).
 - **Wi-Fi is real**: tapping a new secured network opens the keyboard for the
   password → `frij_wifi_connect(ssid, pw)`; saved networks reconnect without
   asking; open networks join directly. Connect result drives the toast (✓/✗).

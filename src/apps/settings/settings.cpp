@@ -269,9 +269,9 @@ static void net_row_cb(lv_event_t* e)
     } else if (nw->known) {  // saved creds — connect without re-asking
         s_sel_kind = 1;
         frij_action_sheet(nw->ssid, opt_saved, 2, ACCENT, net_action_cb, NULL);
-    } else if (nw->secured) {  // new + secured — ask for the password
+    } else if (nw->secured) {  // new + secured — ask for the password (numeric pad)
         s_sel_kind = 0;
-        frij_keyboard_prompt(nw->ssid, /*password=*/true, wifi_pw_done, NULL);
+        frij_keyboard_prompt(nw->ssid, /*password=*/true, /*numeric=*/true, wifi_pw_done, NULL);
     } else {  // new + open — just join
         s_sel_kind = 0;
         wifi_pw_done(NULL, NULL);

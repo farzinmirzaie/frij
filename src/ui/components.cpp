@@ -752,7 +752,7 @@ static void kb_event_cb(lv_event_t* e)
     lv_obj_delete(overlay);  // READY or CANCEL both dismiss
 }
 
-void frij_keyboard_prompt(const char* title, bool password, frij_kb_cb cb, void* user)
+void frij_keyboard_prompt(const char* title, bool password, bool numeric, frij_kb_cb cb, void* user)
 {
     kb_ctx_t* c = (kb_ctx_t*)lv_malloc(sizeof(kb_ctx_t));
     if (c == NULL) {
@@ -787,6 +787,9 @@ void frij_keyboard_prompt(const char* title, bool password, frij_kb_cb cb, void*
     c->ta = ta;
 
     lv_obj_t* kb = lv_keyboard_create(overlay);  // sits at the bottom, full width
+    if (numeric) {
+        lv_keyboard_set_mode(kb, LV_KEYBOARD_MODE_NUMBER);  // number pad (bigger keys)
+    }
     lv_keyboard_set_textarea(kb, ta);
     lv_obj_add_event_cb(kb, kb_event_cb, LV_EVENT_READY, overlay);
     lv_obj_add_event_cb(kb, kb_event_cb, LV_EVENT_CANCEL, overlay);

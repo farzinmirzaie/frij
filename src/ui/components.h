@@ -127,11 +127,12 @@ void frij_confirm(const char* title, const char* message, const char* confirm_te
 bool frij_modal_close_top(void);
 
 // Full-screen text-entry overlay: a title, a one-line textarea, and an on-screen
-// keyboard. `password` masks the input. `cb` fires with the entered text when
-// the user confirms (keyboard ✓); cancelling (✕) closes without calling `cb`.
-// Closes itself either way. Used for the Wi-Fi password prompt.
+// keyboard. `password` masks the input; `numeric` shows a number pad instead of
+// the full QWERTY (fewer, bigger keys — good for the round screen + PIN-style
+// passwords). `cb` fires with the entered text when the user confirms (keyboard
+// ✓); cancelling (✕) closes without calling `cb`. Closes itself either way.
 typedef void (*frij_kb_cb)(const char* text, void* user);
-void frij_keyboard_prompt(const char* title, bool password, frij_kb_cb cb, void* user);
+void frij_keyboard_prompt(const char* title, bool password, bool numeric, frij_kb_cb cb, void* user);
 
 // Callback for frij_action_sheet: `option` is the tapped option's index (0..n-1).
 typedef void (*frij_sheet_cb)(int option, void* user);
