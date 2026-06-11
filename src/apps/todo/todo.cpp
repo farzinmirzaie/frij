@@ -49,31 +49,19 @@ static void save_todo(void)
     frij_store_save(STORE_KEY, out);
 }
 
-static void seed_defaults(void)
-{
-    static const char* defaults[] = {"Milk", "Eggs", "Bread", "Coffee"};
-    s_n = sizeof(defaults) / sizeof(defaults[0]);
-    for (int i = 0; i < s_n; i++) {
-        strncpy(s_text[i], defaults[i], TEXT_LEN - 1);
-        s_text[i][TEXT_LEN - 1] = '\0';
-        s_done[i]               = false;
-    }
-    save_todo();
-}
-
 static void load_todo(void)
 {
+    // No seeded defaults — an absent/empty/corrupt store is simply an empty
+    // list (the UI shows its empty states; the Keep bridge fills the real one).
+    s_n = 0;
     char buf[2048];
     if (!frij_store_load(STORE_KEY, buf, sizeof(buf))) {
-        seed_defaults();
         return;
     }
     JsonDocument doc;
     if (deserializeJson(doc, buf) != DeserializationError::Ok || !doc.is<JsonArray>()) {
-        seed_defaults();
         return;
     }
-    s_n = 0;
     for (JsonObject o : doc.as<JsonArray>()) {
         if (s_n >= MAX_ITEMS) {
             break;
@@ -83,9 +71,6 @@ static void load_todo(void)
         s_text[s_n][TEXT_LEN - 1] = '\0';
         s_done[s_n]               = o["d"] | false;
         s_n++;
-    }
-    if (s_n == 0) {
-        seed_defaults();
     }
 }
 
@@ -326,10 +311,11 @@ static void td_refresh_cb(lv_timer_t* t)
     if (!s_list_col) {
         return;  // the page was closed in the meantime
     }
+    int32_t y = lv_obj_get_scroll_y(s_list_col);  // keep the user's place
     load_todo();
     lv_obj_clean(s_list_col);  // keeps the page's styles/padding, drops the rows
     populate_list(s_list_col);
-    frij_page_settle(s_list_col);
+    frij_page_settle_at(s_list_col, y);
 }
 
 static void td_on_action(int index)

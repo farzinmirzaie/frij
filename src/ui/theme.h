@@ -35,13 +35,16 @@
 #define FRIJ_TEXT_2     0xA1A1AA  // secondary / muted
 #define FRIJ_OUTSIDE    0xCED0D5  // outside the round panel (emulator bezel area)
 
-// ---- Type (SF Pro Rounded, converted via lv_font_conv) --------------------
+// ---- Type (SF Rounded, converted via lv_font_conv) ------------------------
 #define FRIJ_FONT_CLOCK   (&frij_sf_clock)    // 64 Semibold (digits + colon)
+#define FRIJ_FONT_LOGO    (&frij_sf_logo)     // 56 Semibold ("Frij" glyphs only)
 #define FRIJ_FONT_DISPLAY (&frij_sf_display)  // 34 Semibold
 #define FRIJ_FONT_TITLE   (&frij_sf_title)    // 26 Semibold
+#define FRIJ_FONT_HEADER  (&frij_sf_header)   // 22 Semibold (app header title)
 #define FRIJ_FONT_BODY    (&frij_sf_body)     // 18 Regular
 // Symbols (✓ ± +) aren't in the SF subset — symbol labels use these. Montserrat
 // also carries digits/%, so it doubles as the small caption font (battery, etc).
+#define FRIJ_FONT_SYMBOL_L (&lv_font_montserrat_40)  // big ring glyphs (prompt/result)
 #define FRIJ_FONT_SYMBOL  (&lv_font_montserrat_20)
 #define FRIJ_FONT_SMALL   (&lv_font_montserrat_14)
 

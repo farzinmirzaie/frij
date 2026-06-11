@@ -47,9 +47,10 @@ plus whatever shared headers it needs):
   `frij_page_settle` (scroll/center), `frij_surface_row`, `frij_action_row`,
   `frij_slider_row`, `frij_toggle`, `frij_check`, `frij_section_label`,
   `frij_progress_ring`, `frij_empty_state`, `frij_label`.
-- **Modals/feedback**: `frij_confirm` (destructive actions — pass `FRIJ_DANGER`),
-  `frij_action_sheet` (multi-choice), `frij_toast` / `frij_toast_status` (a
-  transient confirmation, optionally with a ✓/✗ status glyph).
+- **Modals/feedback**: `frij_prompt_screen` (full-screen confirm/notice — pass
+  `FRIJ_DANGER` for destructive primaries), `frij_result_screen` (flow
+  conclusion), `frij_action_sheet` (multi-choice), `frij_toast` /
+  `frij_toast_status` (transient, optionally with a ✓/✗ glyph).
 - **Motion** ([`ui/anim.h`](../ui/README.md)): `frij_stagger_in` for list
   entrances; `frij_anim_enter` for one widget.
 - **Time** ([`core/datetime.h`](../core/README.md)): `frij_format_time` /

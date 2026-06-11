@@ -23,9 +23,10 @@ void frij_apply_bg(lv_obj_t* obj);
 // can reposition it (e.g. behind a header). `accent` is 0xRRGGBB.
 lv_obj_t* frij_glow(lv_obj_t* parent, uint32_t accent);
 
-// A restrained accent wash along the top edge that fades to nothing — a subtle
-// per-app color cue behind a header. FLOATING (doesn't scroll or grow bounds).
-lv_obj_t* frij_top_tint(lv_obj_t* parent, uint32_t accent);
+// A horizontal strip fading the background color to transparent downward. Place
+// it just below a header (full width, `top_px` from the top): rows scrolling up
+// fade into the black header zone instead of clipping at a hard line.
+lv_obj_t* frij_header_fade(lv_obj_t* parent, int top_px);
 
 // A vertical, centered flex column with `gap` px between children.
 lv_obj_t* frij_col(lv_obj_t* parent, int gap);
@@ -42,6 +43,11 @@ void frij_page_under_header(lv_obj_t* page, int header_px);
 // Finalize a page once its children exist: center the content if it fits, or
 // top-align it if it overflows (so the first row never hides above the scroll).
 void frij_page_settle(lv_obj_t* page);
+
+// Like frij_page_settle, but for IN-PLACE rebuilds: restores `scroll_y`
+// (captured with lv_obj_get_scroll_y before the rebuild) instead of jumping
+// back to the top — refreshes shouldn't lose the user's place.
+void frij_page_settle_at(lv_obj_t* page, int32_t scroll_y);
 
 // Opt a page out of auto-centering: it stays top-aligned regardless of how much
 // content it has (use for lists whose first row should never jump to center).
@@ -89,8 +95,10 @@ void frij_result_screen(bool ok, const char* title, const char* subtitle, const 
 
 // A shared app header near the top: a back button (left, returns to the
 // launcher), a centered `title`, and a right action button (hidden until set).
-// `action_cb` fires when the action is tapped. Round-screen-safe placement.
-lv_obj_t* frij_header(lv_obj_t* parent, const char* title, lv_event_cb_t action_cb);
+// Title + icons take the app's `accent` color; the background stays the dark
+// base. `action_cb` fires when the action is tapped. Round-screen-safe.
+lv_obj_t* frij_header(lv_obj_t* parent, const char* title, uint32_t accent,
+                      lv_event_cb_t action_cb);
 
 // Show/hide + set the icon of the header's action button (NULL/"" hides it).
 void frij_header_set_action(lv_obj_t* header, const char* symbol);
@@ -132,12 +140,14 @@ void frij_toast(const char* text);
 // a red cross otherwise. Use for action results (sync done / failed).
 void frij_toast_status(const char* text, bool ok);
 
-// A modal confirmation dialog: a dimmed backdrop + a centered card with `title`,
-// optional `message`, a "Cancel" button and an accent button labelled
-// `confirm_text`. `on_confirm` fires when confirmed; the dialog closes itself
-// either way (tapping the backdrop cancels). Use for destructive actions.
-void frij_confirm(const char* title, const char* message, const char* confirm_text,
-                  uint32_t accent, lv_event_cb_t on_confirm);
+// A full-screen prompt in the result-screen style: a big `primary_color` ring
+// with `symbol`, a title, an optional message, and one or two pill actions.
+// `primary_color` is usually the app accent — or FRIJ_DANGER for destructive
+// flows. With `cancel_text` NULL it's a single-action notice; otherwise the
+// secondary (and Back) dismiss without firing `on_primary`. Closes itself.
+void frij_prompt_screen(const char* symbol, uint32_t primary_color, const char* title,
+                        const char* message, const char* primary_text, const char* cancel_text,
+                        lv_event_cb_t on_primary);
 
 // Close the topmost open modal (confirm/sheet), if any. Returns true if one was
 // closed — the launcher's Back action calls this before navigating.

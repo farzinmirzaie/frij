@@ -32,8 +32,9 @@ theme, list rows, …) as patterns repeat.
   - `frij_value_row` — a read-only row: label + muted value (Battery, Last sync…).
   - `frij_circle_button` — a circular icon button (press-pop + haptic); counter's
     ± and Todo's add button.
-  - `frij_confirm` — a modal confirmation dialog (dimmed backdrop + centered
-    card with Cancel / accent-Confirm). Use it before destructive actions.
+  - `frij_prompt_screen` — a full-screen prompt (big colored ring + title +
+    message + 1–2 pill actions; primary = app accent or FRIJ_DANGER). Use it
+    before destructive actions; Back/Cancel dismiss without firing.
   - `frij_action_sheet` — a modal with a stacked list of options (first is the
     accent/primary) + Cancel; the callback gets the chosen index. Both modals
     animate in (dim fades, card rises) and dismiss on a backdrop tap; the
@@ -49,8 +50,8 @@ theme, list rows, …) as patterns repeat.
   - `frij_lock_icon` — a tiny drawn padlock (the symbol font has none).
   - `frij_glow` — soft radial accent halo; **FLOATING** (doesn't scroll or grow
     the scroll area). Returns the object so it can be repositioned.
-  - `frij_top_tint` — a restrained accent wash along the top edge that fades to
-    nothing (the per-app color cue behind a header). FLOATING.
+  - `frij_header_fade` — a base-color→transparent strip just below the header,
+    so scrolling rows dissolve into the dark zone instead of hard-clipping.
   - `frij_progress_ring` — thin arc gauge.
   - `frij_empty_state` — round "nothing here" placeholder.
   - `frij_header` — shared app top bar: back button (returns to the launcher) +

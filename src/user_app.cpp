@@ -12,6 +12,20 @@
 #include "ui/anim.h"
 #include "utility/lvgl_port_m5stack.hpp"
 
+// Auto-sync: periodically pull the cloud-synced keys while the setting is on
+// (a boot-only pull made the toggle nearly meaningless).
+static void autosync_tick(lv_timer_t* t)
+{
+    (void)t;
+    if (!frij_store_load_bool("autosync", true)) {
+        return;
+    }
+    frij_store_pull_async("todo");
+    frij_store_pull_async("counter");
+    frij_store_pull_async("sb_a");
+    frij_store_pull_async("sb_b");
+}
+
 /*
  * Frij entry point — called once at startup after display + LVGL are ready.
  *
@@ -52,6 +66,14 @@ void user_app(void)
         frij_store_pull_async("sb_b");
     }
 
+    // Battery subjects MUST exist before any screen binds to them (the home
+    // glance binds at launcher start) — binding to uninitialized subjects left
+    // the readout showing LVGL's default "Text".
+    if (lvgl_port_lock()) {
+        frij_battery_init();
+        lvgl_port_unlock();
+    }
+
     frij_register_apps();
     frij_launcher_start();
     frij_input_init();
@@ -61,8 +83,8 @@ void user_app(void)
     // idle-sleep manager (turns the panel off after the "Sleep" minutes). Create
     // its timer under the LVGL lock since we're outside the LVGL task here.
     if (lvgl_port_lock()) {
-        frij_battery_init();  // battery subjects + refresh timer (observer sources)
         frij_sleep_init();
+        lv_timer_create(autosync_tick, 5 * 60 * 1000, NULL);  // periodic auto-sync
         lvgl_port_unlock();
     }
 }

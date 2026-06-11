@@ -45,12 +45,8 @@ static void build_app_screen(const frij_app_t* app, int index)
     if (!app) {
         return;
     }
-    // subtle accent wash behind the header (mirrors the launcher)
-    lv_obj_t* g = frij_top_tint(root, app->color);
-    lv_obj_move_background(g);
-
     // mirror the launcher: header on the layer, content in an area below it
-    int       hz      = 466 * 24 / 100;
+    int hz = 466 * 19 / 100;
     lv_obj_t* content = lv_obj_create(root);
     lv_obj_set_pos(content, 0, hz);
     lv_obj_set_size(content, 466, 466 - hz);
@@ -63,7 +59,8 @@ static void build_app_screen(const frij_app_t* app, int index)
         frij_page_settle(content);
     }
 
-    lv_obj_t* hdr = frij_header(root, app->name, NULL);
+    frij_header_fade(root, hz);  // fades scrolled rows under the header
+    lv_obj_t* hdr = frij_header(root, app->name, app->color, NULL);
     if (app->action_symbol) {
         frij_header_set_action(hdr, app->action_symbol(index));
     }
@@ -203,8 +200,9 @@ int main(int, char**)
         frij_toast("Syncing...");
     } else if (scr && strcmp(scr, "confirm") == 0) {
         build_app_screen(settings_app(), 2);
-        frij_confirm("Reset settings?", "Restore everything to defaults.", "Reset",
-                     FRIJ_DANGER, NULL);
+        frij_prompt_screen(LV_SYMBOL_TRASH, FRIJ_DANGER, "Erase all data?",
+                           "Clears this device. Synced data re-downloads.", "Erase", "Cancel",
+                           NULL);
     } else {
         if (scr && scr[0]) {  // typo'd key would silently render the launcher
             printf("unknown FRIJ_SNAP '%s' — valid: todo todo_progress todo_add todo_glance "

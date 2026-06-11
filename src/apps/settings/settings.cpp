@@ -18,6 +18,18 @@
 static void build_about(lv_obj_t* col);  // forward (used by Sync now's refresh)
 static lv_obj_t* s_about_col = NULL;     // the About page, for in-place refresh
 
+// Rebuild the About page in place, keeping the user's scroll position.
+static void about_refresh(void)
+{
+    if (!s_about_col) {
+        return;
+    }
+    int32_t y = lv_obj_get_scroll_y(s_about_col);
+    lv_obj_clean(s_about_col);
+    build_about(s_about_col);
+    frij_page_settle_at(s_about_col, y);
+}
+
 /*
  * Settings — a normal app (glance unused; reached by swiping down). Screens:
  *   0 General : Display (brightness/sleep/raise-to-wake), Sound (volume/touch
@@ -113,11 +125,7 @@ static void on_sync_now(lv_event_t* e)
     frij_store_pull_async("sb_b");
     frij_store_save_int("last_sync", (int)time(NULL));
     frij_haptic(FRIJ_HAPTIC_SUCCESS);
-    if (s_about_col) {  // reflect the new "Last sync" immediately
-        lv_obj_clean(s_about_col);
-        build_about(s_about_col);
-        frij_page_settle(s_about_col);
-    }
+    about_refresh();  // reflect the new "Last sync" immediately
     frij_toast("Syncing...");
 }
 
@@ -134,19 +142,16 @@ static void do_reset(lv_event_t* e)
     frij_set_brightness(80);
     frij_haptics_set_enabled(true);
     frij_anim_set_enabled(true);
-    if (s_about_col) {  // refresh the visible rows (Last sync etc.)
-        lv_obj_clean(s_about_col);
-        build_about(s_about_col);
-        frij_page_settle(s_about_col);
-    }
+    about_refresh();  // refresh the visible rows
     frij_haptic(FRIJ_HAPTIC_SUCCESS);
     frij_toast_status("Settings reset", true);
 }
 
 static void on_reset(lv_event_t* e)
 {
-    (void)e;  // destructive: confirm with a danger-colored button
-    frij_confirm("Reset settings?", "Restore everything to defaults.", "Reset", FRIJ_DANGER, do_reset);
+    (void)e;  // destructive: full-screen prompt, danger primary
+    frij_prompt_screen(LV_SYMBOL_REFRESH, FRIJ_DANGER, "Reset settings?",
+                       "Restore everything to defaults.", "Reset", "Cancel", do_reset);
 }
 
 static void do_erase(lv_event_t* e)
@@ -156,21 +161,18 @@ static void do_erase(lv_event_t* e)
     frij_set_brightness(80);
     frij_haptics_set_enabled(true);
     frij_anim_set_enabled(true);
-    if (s_about_col) {  // refresh the visible rows (Last sync -> Never, etc.)
-        lv_obj_clean(s_about_col);
-        build_about(s_about_col);
-        frij_page_settle(s_about_col);
-    }
+    about_refresh();  // refresh the visible rows (Last sync -> Never, etc.)
     frij_haptic(FRIJ_HAPTIC_SUCCESS);
     frij_toast_status("All data erased", true);
 }
 
 static void on_erase(lv_event_t* e)
 {
-    (void)e;  // destructive: confirm with a danger-colored button
+    (void)e;  // destructive: full-screen prompt, danger primary
     // honest scope: this clears the device; cloud-synced rows re-download later
-    frij_confirm("Erase all data?", "Clears this device. Synced data re-downloads.", "Erase",
-                 FRIJ_DANGER, do_erase);
+    frij_prompt_screen(LV_SYMBOL_TRASH, FRIJ_DANGER, "Erase all data?",
+                       "Clears this device. Synced data re-downloads.", "Erase", "Cancel",
+                       do_erase);
 }
 
 // ---- row helpers -----------------------------------------------------------
@@ -217,9 +219,10 @@ static void net_refresh(void)
     if (!s_net_col) {
         return;
     }
+    int32_t y = lv_obj_get_scroll_y(s_net_col);  // keep the user's place
     lv_obj_clean(s_net_col);  // keeps the page's styles/padding, drops the rows
     build_network(s_net_col);
-    frij_page_settle(s_net_col);
+    frij_page_settle_at(s_net_col, y);
 }
 
 static void net_action_cb(int opt, void* user)
@@ -374,10 +377,10 @@ static void about_battery_cb(lv_observer_t* obs, lv_subject_t* subject)
 static void build_about(lv_obj_t* col)
 {
     // hero: the logo clover + wordmark, with generous breathing room around it
-    lv_obj_t* hero = frij_logo(col, 44, true);
-    lv_obj_set_style_margin_top(hero, FRIJ_SP_XXL * 4, LV_PART_MAIN);  // 36
-    lv_obj_t* ver = frij_label(col, "on-device UI  -  " FRIJ_VERSION, FRIJ_FONT_BODY, FRIJ_TEXT_2);
-    lv_obj_set_style_margin_bottom(ver, FRIJ_SP_XXL * 4, LV_PART_MAIN);  // 36
+    lv_obj_t* hero = frij_logo(col, 72, true);
+    lv_obj_set_style_margin_top(hero, FRIJ_SP_XXL * 2, LV_PART_MAIN);  // 48
+    lv_obj_t* ver = frij_label(col, FRIJ_VERSION, FRIJ_FONT_BODY, FRIJ_TEXT_2);
+    lv_obj_set_style_margin_bottom(ver, FRIJ_SP_XXL * 2, LV_PART_MAIN);  // 48
 
     // Battery row — bound to the battery subjects so it tracks live (observer),
     // instead of sampling once when About is built.
@@ -397,9 +400,13 @@ static void build_about(lv_obj_t* col)
     } else {
         lv_snprintf(sbuf, sizeof(sbuf), "Never");
     }
-    frij_value_row(col, "Last sync", sbuf);
+    // One row does both: tap to sync, right side shows when it last happened.
+    lv_obj_t* srow = frij_surface_row(col);
+    lv_obj_t* slbl = frij_label(srow, "Sync now", FRIJ_FONT_BODY, FRIJ_TEXT);
+    lv_obj_set_flex_grow(slbl, 1);
+    frij_label(srow, sbuf, FRIJ_FONT_BODY, FRIJ_TEXT_2);
+    lv_obj_add_event_cb(srow, on_sync_now, LV_EVENT_CLICKED, NULL);
 
-    frij_action_row(col, "Sync now", on_sync_now);
     frij_action_row(col, "Reset settings", on_reset);
     frij_action_row(col, "Erase all data", on_erase);
     frij_stagger_in(col, 30);

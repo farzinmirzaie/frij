@@ -158,23 +158,23 @@ static void layer_change_cb(int index, void* user)
     frij_header_set_action(s_layer_header, sym);
 }
 
-// Add the shared header above a layer's content carousel, with the accent glow
-// sitting behind the header title (not as a full-screen background).
+// Add the shared header above a layer's content carousel. The header zone stays
+// the dark base color; a small fade strip below it dissolves scrolling rows
+// instead of hard-clipping them; title + icons take the app accent.
 static void add_layer_header(lv_obj_t* layer, const frij_app_t* app, frij_carousel_t* car)
 {
-    lv_obj_t* g = frij_top_tint(layer, app->color);  // subtle accent wash behind the header
-    lv_obj_move_background(g);                        // behind header + content
+    frij_header_fade(layer, header_zone());  // above the content (added after it)
 
     s_layer_app = app;
     frij_carousel_set_change_cb(car, layer_change_cb, NULL);
-    s_layer_header = frij_header(layer, app->name, header_action_clicked);
+    s_layer_header = frij_header(layer, app->name, app->color, header_action_clicked);
     layer_change_cb(frij_carousel_index(car), NULL);
 }
 
 // Push a layer's content carousel below the persistent header.
 static int header_zone(void)
 {
-    return frij_screen_min() * 24 / 100;
+    return frij_screen_min() * 19 / 100;
 }
 
 static void drop_content_below_header(frij_carousel_t* car)

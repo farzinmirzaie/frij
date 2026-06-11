@@ -174,6 +174,7 @@ static void build_clock(lv_obj_t* parent)
     // Small battery readout under the date — bound to the battery subjects, so it
     // updates live (and everywhere) via the observer, not a per-tick poll.
     lv_obj_t* bat = lv_label_create(inner);
+    lv_label_set_text(bat, "");  // never show LVGL's default "Text"
     lv_obj_set_style_text_font(bat, FRIJ_FONT_SMALL, LV_PART_MAIN);
     lv_subject_add_observer_obj(frij_battery_level_subject(), battery_observer_cb, bat, NULL);
     lv_subject_add_observer_obj(frij_battery_charging_subject(), battery_observer_cb, bat, NULL);

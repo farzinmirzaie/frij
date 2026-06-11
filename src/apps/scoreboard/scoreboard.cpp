@@ -258,7 +258,8 @@ static void sb_on_action(int index)
     if (index != 0) {
         return;
     }
-    frij_confirm("Reset scores?", "Set both players back to zero.", "Reset", FRIJ_DANGER, do_reset);
+    frij_prompt_screen(LV_SYMBOL_REFRESH, FRIJ_DANGER, "Reset scores?",
+                       "Set both players back to zero.", "Reset", "Cancel", do_reset);
 }
 
 const frij_app_t* scoreboard_app(void)

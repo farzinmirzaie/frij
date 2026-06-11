@@ -2,6 +2,50 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-11 — header redesign (slim + accent + scroll fade)
+
+- **Slimmer header**: bar 78% → 62% wide, sits higher (11% vs 15%), and the
+  header zone shrank 24% → 19% — more room for content on every app screen.
+- **Accent identity**: the title + back/action icons now take the app's color
+  (Todo amber, Settings purple, …); the **top tint gradient is gone** — the
+  header background stays the dark base.
+- **Scroll fade**: new reusable `frij_header_fade` — a base-color→transparent
+  strip under the header, so rows scrolling up dissolve into the dark zone
+  instead of clipping at a hard line. `frij_top_tint` removed (dead).
+- `frij_header` signature gains the accent: `(parent, title, accent, action_cb)`.
+- Follow-ups: header title rendered a notch smaller (~23px, scaled — no 22px SF
+  cut available without the source OTFs); About hero enlarged (clover 60px,
+  wordmark in the display font) and the version line is just "v0.1" (dropped the
+  "on-device UI" filler); **in-place rebuilds keep the scroll position** — new
+  `frij_page_settle_at` restores the saved offset (Sync now / rescan / todo
+  refresh no longer jump to the top).
+- **`frij_prompt_screen`** — full-screen confirm/notice in the result-screen
+  style (big colored ring + symbol, title, message, 1–2 pill actions; primary =
+  app accent or `FRIJ_DANGER`). Replaces the modal `frij_confirm` (removed) for
+  Reset settings (↻), Erase all data (🗑) and Scoreboard reset. Back/Cancel
+  dismiss without firing.
+- About hero final form: the halo is the hero ROW's own padded background (a
+  radial gradient centered on the clover in px) — the two earlier structures
+  (overflow child, oversized box) both clipped to a square. Wordmark at ~80% of
+  the clover height, tight SP_S gap, padding compensated so the hero centers.
+- Prompt actions are **round icon buttons**: ✕ (neutral) and ✓ (accent/danger)
+  via frij_circle_button, replacing the text pills on two-action prompts.
+- **Blur fixed at the source**: regenerated all SF cuts from the macOS system
+  variable font (fontTools instancing, see fonts README) and added two new ones —
+  `frij_sf_header` (22px, the app header title; replaces the 0.875× scale hack)
+  and `frij_sf_logo` (56px "Frij" wordmark; replaces the ~1.7× upscale). The big
+  prompt/result ring glyphs now use native `montserrat_40` (`FRIJ_FONT_SYMBOL_L`)
+  instead of a 2× scale. Remaining softness in the emulator is macOS Retina
+  upscaling of the 466px SDL window — the device renders 1:1.
+- Polish batch: prompt/numpad overlays **fade in** (no snap to black); About hero
+  margins halved; **Sync now + Last sync merged** into one row (tap to sync, the
+  time sits where the chevron was); **battery "Text" bug fixed** (home bound to
+  the battery subjects before they were initialized — init moved ahead of app
+  registration); **auto-sync is now periodic** (pulls synced keys every 5 min
+  while on; was boot-only); success toasts drop the green border (failures keep
+  red); **no more Milk/Eggs seed todos** — empty list is the default; the header
+  action icon **fades out** too (and in-flight fades cancel cleanly).
+
 ## 2026-06-11 — improvement pass 3 (10: nav feel + fixes)
 
 - **Sleep shield fixes a device bug**: the touch controller stays live while the
