@@ -108,9 +108,48 @@ static lv_obj_t* make_layer(void)
     lv_obj_set_style_border_width(o, 0, LV_PART_MAIN);
     lv_obj_set_style_radius(o, 0, LV_PART_MAIN);
     lv_obj_set_style_pad_all(o, 0, LV_PART_MAIN);
+    lv_obj_set_style_transform_pivot_x(o, lv_pct(50), LV_PART_MAIN);  // zoom from center
+    lv_obj_set_style_transform_pivot_y(o, lv_pct(50), LV_PART_MAIN);
     lv_obj_clear_flag(o, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(o, LV_OBJ_FLAG_EVENT_BUBBLE);
     return o;
+}
+
+// Layer transition FX (mirrors the carousel's page_fx): layers zoom + fade as
+// they leave/enter, tied to the vertical drag. `p` = outness, 0..256.
+#define LFX_SCALE_MIN 220
+#define LFX_OPA_MIN   90
+
+static void layer_fx(lv_obj_t* layer, int32_t p)
+{
+    if (layer == NULL || !frij_anim_enabled()) {
+        return;
+    }
+    if (p < 0) p = 0;
+    if (p > 256) p = 256;
+    lv_obj_set_style_transform_scale(layer, 256 - (256 - LFX_SCALE_MIN) * p / 256, LV_PART_MAIN);
+    lv_obj_set_style_opa(layer, 255 - (255 - LFX_OPA_MIN) * p / 256, LV_PART_MAIN);
+}
+
+static void layer_fx_exec(void* layer, int32_t p)
+{
+    layer_fx((lv_obj_t*)layer, p);
+}
+
+static void layer_fx_to(lv_obj_t* layer, int32_t from, int32_t to)
+{
+    if (layer == NULL || !frij_anim_enabled()) {
+        return;
+    }
+    lv_anim_delete(layer, layer_fx_exec);
+    lv_anim_t a;
+    lv_anim_init(&a);
+    lv_anim_set_var(&a, layer);
+    lv_anim_set_exec_cb(&a, layer_fx_exec);
+    lv_anim_set_values(&a, from, to);
+    lv_anim_set_duration(&a, 160);  // matches slide_y
+    lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
+    lv_anim_start(&a);
 }
 
 static void anim_rotation(void* o, int32_t v)
@@ -127,7 +166,7 @@ static void header_action_clicked(lv_event_t* e)
     if (s_layer_header && frij_anim_enabled()) {
         lv_obj_t* action = lv_obj_get_child(s_layer_header, lv_obj_get_child_count(s_layer_header) - 1);
         lv_obj_t* icon   = lv_obj_get_child(action, 0);
-        if (icon) {
+        if (icon && lv_obj_has_flag(action, LV_OBJ_FLAG_CLICKABLE)) {  // visible action only
             lv_obj_set_style_transform_pivot_x(icon, lv_pct(50), LV_PART_MAIN);
             lv_obj_set_style_transform_pivot_y(icon, lv_pct(50), LV_PART_MAIN);
             lv_anim_t a;
@@ -174,7 +213,7 @@ static void add_layer_header(lv_obj_t* layer, const frij_app_t* app, frij_carous
 // Push a layer's content carousel below the persistent header.
 static int header_zone(void)
 {
-    return frij_screen_min() * 19 / 100;
+    return frij_header_zone();  // one source of truth (ui/components)
 }
 
 static void drop_content_below_header(frij_carousel_t* car)
@@ -251,6 +290,7 @@ static void done_back_home(lv_anim_t* a)
     if (s_settings) { lv_obj_delete(s_settings); s_settings = NULL; }
     s_layer_app = NULL; s_layer_header = NULL;
     s_cur = HOME; s_active = &s_chome; s_anim = false;
+    layer_fx(s_home, 0);  // safety: home settles at native scale/opacity
 }
 
 static void done_revert_simple(lv_anim_t* a) { (void)a; s_anim = false; }
@@ -260,6 +300,7 @@ static void done_revert_simple(lv_anim_t* a) { (void)a; s_anim = false; }
 static void nav_vdrag(int dy)
 {
     int h = height();
+    int p = 256 * (dy < 0 ? -dy : dy) / (h > 0 ? h : 1);  // drag progress as outness
     if (s_cur == HOME) {
         if (dy < 0) {  // swipe up -> reveal app from below
             ensure_app_layer();
@@ -268,6 +309,8 @@ static void nav_vdrag(int dy)
             }
             lv_obj_set_y(s_home, dy);
             lv_obj_set_y(s_app, h + dy);
+            layer_fx(s_home, p);  // home recedes, the app grows in
+            layer_fx(s_app, 256 - p);
         } else if (dy > 0) {  // swipe down -> reveal settings from above
             ensure_settings_layer();
             if (!s_settings) {
@@ -275,16 +318,22 @@ static void nav_vdrag(int dy)
             }
             lv_obj_set_y(s_home, dy);
             lv_obj_set_y(s_settings, -h + dy);
+            layer_fx(s_home, p);
+            layer_fx(s_settings, 256 - p);
         }
     } else if (s_cur == APP) {
         if (dy > 0) {  // swipe down -> back to home
             lv_obj_set_y(s_app, dy);
             lv_obj_set_y(s_home, -h + dy);
+            layer_fx(s_app, p);
+            layer_fx(s_home, 256 - p);
         }
     } else {  // SETTINGS
         if (dy < 0) {  // swipe up -> back to home
             lv_obj_set_y(s_settings, dy);
             lv_obj_set_y(s_home, h + dy);
+            layer_fx(s_settings, p);
+            layer_fx(s_home, 256 - p);
         }
     }
 }
@@ -301,18 +350,29 @@ static void nav_vend(int dy)
     }
     s_anim = true;
 
+    int p = 256 * (dy < 0 ? -dy : dy) / (h > 0 ? h : 1);
+    if (p > 256) p = 256;
+
     if (s_cur == HOME && dy < 0 && s_app) {
-        if (-dy > thr) { slide_y(s_home, -h, NULL); slide_y(s_app, 0, done_enter_app); }
-        else           { slide_y(s_app, h, NULL);   slide_y(s_home, 0, done_back_home); }
+        if (-dy > thr) { slide_y(s_home, -h, NULL); slide_y(s_app, 0, done_enter_app);
+                         layer_fx_to(s_home, p, 256); layer_fx_to(s_app, 256 - p, 0); }
+        else           { slide_y(s_app, h, NULL);   slide_y(s_home, 0, done_back_home);
+                         layer_fx_to(s_home, p, 0);  layer_fx_to(s_app, 256 - p, 256); }
     } else if (s_cur == HOME && dy > 0 && s_settings) {
-        if (dy > thr)  { slide_y(s_home, h, NULL);  slide_y(s_settings, 0, done_enter_settings); }
-        else           { slide_y(s_settings, -h, NULL); slide_y(s_home, 0, done_back_home); }
+        if (dy > thr)  { slide_y(s_home, h, NULL);  slide_y(s_settings, 0, done_enter_settings);
+                         layer_fx_to(s_home, p, 256); layer_fx_to(s_settings, 256 - p, 0); }
+        else           { slide_y(s_settings, -h, NULL); slide_y(s_home, 0, done_back_home);
+                         layer_fx_to(s_home, p, 0);  layer_fx_to(s_settings, 256 - p, 256); }
     } else if (s_cur == APP && dy > 0) {
-        if (dy > thr)  { slide_y(s_app, h, NULL);   slide_y(s_home, 0, done_back_home); }
-        else           { slide_y(s_app, 0, NULL);   slide_y(s_home, -h, done_revert_simple); }
+        if (dy > thr)  { slide_y(s_app, h, NULL);   slide_y(s_home, 0, done_back_home);
+                         layer_fx_to(s_app, p, 256); layer_fx_to(s_home, 256 - p, 0); }
+        else           { slide_y(s_app, 0, NULL);   slide_y(s_home, -h, done_revert_simple);
+                         layer_fx_to(s_app, p, 0);  layer_fx_to(s_home, 256 - p, 256); }
     } else if (s_cur == SETTINGS && dy < 0) {
-        if (-dy > thr) { slide_y(s_settings, -h, NULL); slide_y(s_home, 0, done_back_home); }
-        else           { slide_y(s_settings, 0, NULL);  slide_y(s_home, h, done_revert_simple); }
+        if (-dy > thr) { slide_y(s_settings, -h, NULL); slide_y(s_home, 0, done_back_home);
+                         layer_fx_to(s_settings, p, 256); layer_fx_to(s_home, 256 - p, 0); }
+        else           { slide_y(s_settings, 0, NULL);  slide_y(s_home, h, done_revert_simple);
+                         layer_fx_to(s_settings, p, 0); layer_fx_to(s_home, 256 - p, 256); }
     } else {
         s_anim = false;  // no valid vertical move
     }
@@ -422,9 +482,13 @@ void frij_back(void)
     if (s_cur == APP) {
         slide_y(s_app, h, NULL);
         slide_y(s_home, 0, done_back_home);
+        layer_fx_to(s_app, 0, 256);  // app recedes, home grows back in
+        layer_fx_to(s_home, 256, 0);
     } else {
         slide_y(s_settings, -h, NULL);
         slide_y(s_home, 0, done_back_home);
+        layer_fx_to(s_settings, 0, 256);
+        layer_fx_to(s_home, 256, 0);
     }
 }
 

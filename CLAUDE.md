@@ -91,6 +91,8 @@ seen in the emulator. Keep it short and checkable — not a changelog dump.
 
 ## Gotchas
 
-- The `device` env is a placeholder — no verified board panel yet. Emulator is the daily driver.
+- The `device` env compiles (M5Unified bring-up code is written) but has **never
+  been flashed/verified on hardware**. Emulator is the daily driver; device
+  builds are compile-only checks (~15 min first time).
 - Dev machine is an **Apple Silicon Mac** only (emulator builds with `-arch arm64`).
 - This is a trimmed fork of `m5stack/lv_m5_emulator`; M5GFX is the rendering lib.

@@ -67,7 +67,7 @@ static void on_brightness(lv_event_t* e)
 static void on_clock24(lv_event_t* e)
 {
     lv_obj_t* sw = (lv_obj_t*)lv_event_get_target(e);
-    frij_store_save_bool("clock24", lv_obj_has_state(sw, LV_STATE_CHECKED));
+    frij_clock_set_24h(lv_obj_has_state(sw, LV_STATE_CHECKED));  // caches + persists
 }
 
 static void on_volume(lv_event_t* e)
@@ -135,7 +135,7 @@ static void do_reset(lv_event_t* e)
     frij_store_save_int("brightness", 80);
     frij_store_save_int("volume", 60);
     frij_store_save_int("sleep", 5);
-    frij_store_save_bool("clock24", true);
+    frij_clock_set_24h(true);  // updates the in-memory cache too
     frij_store_save_bool("haptics", true);
     frij_store_save_bool("autosync", true);
     frij_store_save_bool("anim", true);
@@ -161,6 +161,7 @@ static void do_erase(lv_event_t* e)
     frij_set_brightness(80);
     frij_haptics_set_enabled(true);
     frij_anim_set_enabled(true);
+    frij_clock_set_24h(true);  // re-sync the in-memory cache with the defaults
     about_refresh();  // refresh the visible rows (Last sync -> Never, etc.)
     frij_haptic(FRIJ_HAPTIC_SUCCESS);
     frij_toast_status("All data erased", true);
@@ -204,7 +205,7 @@ typedef enum { NET_NEW, NET_SAVED, NET_CONNECTED } net_kind_t;
 static char       s_sel[FRIJ_WIFI_SSID_MAX];  // the network the action sheet acts on
 static net_kind_t s_sel_kind = NET_NEW;
 
-static void build_network(lv_obj_t* col);
+static void build_network(lv_obj_t* col, bool rescan);
 
 // Clear the cached Network page pointer when its page is destroyed.
 static void on_net_deleted(lv_event_t* e)
@@ -214,15 +215,39 @@ static void on_net_deleted(lv_event_t* e)
     }
 }
 
-static void net_refresh(void)
+// Rebuild the Network page. `rescan` runs a radio scan — only wanted for the
+// explicit refresh action / radio-on; row actions (connect/forget/disconnect)
+// update the cached scan in place, since a device scan blocks for 1–2s.
+static void net_refresh(bool rescan)
 {
     if (!s_net_col) {
         return;
     }
     int32_t y = lv_obj_get_scroll_y(s_net_col);  // keep the user's place
     lv_obj_clean(s_net_col);  // keeps the page's styles/padding, drops the rows
-    build_network(s_net_col);
+    build_network(s_net_col, rescan);
     frij_page_settle_at(s_net_col, y);
+}
+
+// Find a cached scan entry by SSID (rows act on these).
+static frij_wifi_net_t* scan_find(const char* ssid)
+{
+    for (int i = 0; i < s_scan_n; i++) {
+        if (strncmp(s_scan[i].ssid, ssid, FRIJ_WIFI_SSID_MAX) == 0) {
+            return &s_scan[i];
+        }
+    }
+    return NULL;
+}
+
+static void scan_mark_connected(const char* ssid)  // NULL = nothing connected
+{
+    for (int i = 0; i < s_scan_n; i++) {
+        s_scan[i].connected = ssid && strncmp(s_scan[i].ssid, ssid, FRIJ_WIFI_SSID_MAX) == 0;
+        if (s_scan[i].connected) {
+            s_scan[i].known = true;
+        }
+    }
 }
 
 static void net_action_cb(int opt, void* user)
@@ -233,16 +258,25 @@ static void net_action_cb(int opt, void* user)
     bool forget = (s_sel_kind != NET_NEW && opt == 1);  // option 1 is Forget when present
     if (forget) {
         frij_wifi_forget(s_sel);
+        frij_wifi_net_t* nw = scan_find(s_sel);
+        if (nw) {
+            nw->known     = false;
+            nw->connected = false;
+        }
         lv_snprintf(msg, sizeof(msg), "Forgot %s", s_sel);
     } else if (s_sel_kind == NET_CONNECTED) {  // Disconnect
         frij_wifi_disconnect();
+        scan_mark_connected(NULL);
         lv_snprintf(msg, sizeof(msg), "Disconnected");
     } else {  // Connect with saved/no credentials
         ok = frij_wifi_connect(s_sel, NULL);
+        if (ok) {
+            scan_mark_connected(s_sel);
+        }
         lv_snprintf(msg, sizeof(msg), ok ? "Connected to %s" : "Couldn't connect", s_sel);
     }
     frij_haptic(FRIJ_HAPTIC_SELECT);
-    net_refresh();
+    net_refresh(false);  // statuses updated locally — no blocking radio rescan
     frij_toast_status(msg, ok);
 }
 
@@ -252,8 +286,11 @@ static void wifi_pw_done(const char* pw, void* user)
 {
     (void)user;
     bool ok = frij_wifi_connect(s_sel, pw);
+    if (ok) {
+        scan_mark_connected(s_sel);
+    }
     frij_haptic(ok ? FRIJ_HAPTIC_SUCCESS : FRIJ_HAPTIC_TAP);
-    net_refresh();
+    net_refresh(false);
     frij_result_screen(ok, ok ? "Connected" : "Couldn't connect", s_sel, ok ? "Done" : "Close");
 }
 
@@ -293,10 +330,10 @@ static void wifi_master_cb(lv_event_t* e)
     bool      on = lv_obj_has_state(sw, LV_STATE_CHECKED);
     frij_wifi_set_enabled(on);
     frij_store_save_bool("wifi_on", on);  // restored at boot (user_app)
-    net_refresh();
+    net_refresh(true);  // radio state changed — scan fresh
 }
 
-static void build_network(lv_obj_t* col)
+static void build_network(lv_obj_t* col, bool rescan)
 {
     // Master Wi-Fi switch (whole row toggles it).
     bool      on = frij_wifi_enabled();
@@ -317,8 +354,11 @@ static void build_network(lv_obj_t* col)
 
     frij_section_label(col, "Networks");  // grouped-list heading, like Display/Sound
 
-    // Visible networks; tap one for Connect / Disconnect / Forget.
-    s_scan_n = frij_wifi_scan(s_scan, (int)(sizeof(s_scan) / sizeof(s_scan[0])));
+    // Visible networks; tap one for Connect / Disconnect / Forget. Only hit the
+    // radio when asked — row actions reuse the cached scan.
+    if (rescan || s_scan_n == 0) {
+        s_scan_n = frij_wifi_scan(s_scan, (int)(sizeof(s_scan) / sizeof(s_scan[0])));
+    }
     if (s_scan_n == 0) {
         frij_empty_state(col, "No networks");
         frij_stagger_in(col, 40);
@@ -439,7 +479,7 @@ static void screen(lv_obj_t* parent, int index)
             s_net_col = col;
             lv_obj_add_event_cb(col, on_net_deleted, LV_EVENT_DELETE, NULL);
             frij_page_pin_top(col);  // keep the Wi-Fi toggle at the top, on or off
-            build_network(col);
+            build_network(col, true);
             break;
 
         default:  // System / About
@@ -461,7 +501,7 @@ static void st_on_action(int index)
     if (index != 1 || !s_net_col) {
         return;
     }
-    net_refresh();  // build_network() rescans
+    net_refresh(true);  // explicit rescan
     frij_toast("Scanning...");
 }
 

@@ -35,6 +35,11 @@ void frij_anim_exec_scale(void* o, int32_t v)
     lv_obj_set_style_transform_scale_y((lv_obj_t*)o, v, LV_PART_MAIN);
 }
 
+void frij_anim_exec_arc(void* o, int32_t v)
+{
+    lv_arc_set_value((lv_obj_t*)o, v);
+}
+
 void frij_anim_enter(lv_obj_t* obj, uint32_t delay_ms)
 {
     if (!s_anim_enabled) {

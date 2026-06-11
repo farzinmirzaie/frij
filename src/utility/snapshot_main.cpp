@@ -46,7 +46,7 @@ static void build_app_screen(const frij_app_t* app, int index)
         return;
     }
     // mirror the launcher: header on the layer, content in an area below it
-    int hz = 466 * 19 / 100;
+    int hz = frij_header_zone();
     lv_obj_t* content = lv_obj_create(root);
     lv_obj_set_pos(content, 0, hz);
     lv_obj_set_size(content, 466, 466 - hz);

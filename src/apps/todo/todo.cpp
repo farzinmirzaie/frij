@@ -188,12 +188,6 @@ static void glance(lv_obj_t* parent)
     }
 }
 
-// anim exec: sweep the ring's value.
-static void arc_set_value_cb(void* arc, int32_t v)
-{
-    lv_arc_set_value((lv_obj_t*)arc, (int32_t)v);
-}
-
 // Progress screen: a large ring with the % in the middle.
 static void build_progress(lv_obj_t* parent)
 {
@@ -211,7 +205,7 @@ static void build_progress(lv_obj_t* parent)
         lv_anim_t sweep;
         lv_anim_init(&sweep);
         lv_anim_set_var(&sweep, arc);
-        lv_anim_set_exec_cb(&sweep, arc_set_value_cb);
+        lv_anim_set_exec_cb(&sweep, frij_anim_exec_arc);
         lv_anim_set_values(&sweep, 0, done_pct());
         lv_anim_set_duration(&sweep, FRIJ_ANIM_MS * 2);
         lv_anim_set_path_cb(&sweep, lv_anim_path_ease_out);

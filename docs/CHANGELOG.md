@@ -2,6 +2,33 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-11 — drag-tied nav FX + perf/hygiene pass (10)
+
+- **Navigation zoom/fade FX**: pages (left/right) and layers (up/down) now zoom
+  (1.0 → ~0.86) and fade (→ ~35%) as they leave, and grow/fade in as they enter —
+  tied 1:1 to the finger during drags, completed by the snap animation on
+  release. Applies to swipes, flings, dot-taps and Back. Reduce-motion gated.
+- **Page dots track the drag too**: the active pill hands its width, accent
+  color and opacity over to the target dot proportionally as you drag (was only
+  morphing after the page settled); reverts settle the dots back.
+- Perf: the sleep manager re-reads the stored minutes every ~2s instead of twice
+  a second; the **24h-clock pref is cached in memory** (was a file read every
+  clock tick) with a setter from Settings.
+- Perf (device): Wi-Fi row actions (connect/disconnect/forget) **no longer
+  trigger a radio rescan** (1–2s block on hardware) — the cached scan list is
+  updated in place; rescans happen only via ↻ or toggling the radio on.
+- Perf: the emulator main loop sleeps for `lv_timer_handler()`'s next-run hint
+  instead of spinning at 200Hz.
+- Hygiene: overlays (modal stack, action sheet, numpad, prompt/result, toast)
+  split out of components.cpp into **ui/overlays.cpp** (pure move; 1417 → 764+653
+  lines); `frij_header_zone()` is the single source of truth for the header
+  height (launcher + snapshot harness); the duplicated arc-anim exec callbacks
+  became `frij_anim_exec_arc`; the header action only spins when visible.
+- Verified `input.cpp` Backspace handling is edge-triggered (no repeat bug) and
+  the store already does async pushes + atomic cache writes (no changes needed).
+- Docs: CLAUDE.md device gotcha updated (compiles, never flashed); ROADMAP P5
+  reflects the real bring-up status.
+
 ## 2026-06-11 — header redesign (slim + accent + scroll fade)
 
 - **Slimmer header**: bar 78% → 62% wide, sits higher (11% vs 15%), and the

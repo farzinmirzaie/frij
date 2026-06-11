@@ -39,8 +39,12 @@ int main(int, char**)
     user_app();
 
     while (true) {
-        lv_timer_handler();
-        SDL_Delay(5);
+        // lv_timer_handler says when it next needs to run — sleep that long
+        // (capped) instead of spinning at a fixed 200Hz.
+        uint32_t wait = lv_timer_handler();
+        if (wait > 10) wait = 10;  // stay responsive to input
+        if (wait < 1) wait = 1;
+        SDL_Delay(wait);
     }
     return 0;
 }

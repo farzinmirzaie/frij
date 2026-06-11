@@ -4,9 +4,23 @@
 
 #include "store/store.h"
 
+static bool s_24h        = true;
+static bool s_24h_loaded = false;
+
 bool frij_clock_is_24h(void)
 {
-    return frij_store_load_bool("clock24", true);
+    if (!s_24h_loaded) {  // first use: read the store once, then stay in memory
+        s_24h        = frij_store_load_bool("clock24", true);
+        s_24h_loaded = true;
+    }
+    return s_24h;
+}
+
+void frij_clock_set_24h(bool on)
+{
+    s_24h        = on;
+    s_24h_loaded = true;
+    frij_store_save_bool("clock24", on);
 }
 
 void frij_format_time(char* buf, size_t n, const struct tm* tmv)

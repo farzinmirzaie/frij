@@ -10,8 +10,11 @@
  * times the same way and reacts to the toggle.
  */
 
-// The "24-hour time" preference (defaults to true when unset).
+// The "24-hour time" preference (defaults to true when unset). Cached — the
+// clock reads it every second, so it mustn't hit the store's file each time.
+// Loaded once on first use; Settings pushes changes via the setter.
 bool frij_clock_is_24h(void);
+void frij_clock_set_24h(bool on);
 
 // Format `tmv` as a clock string into `buf`: "14:30" (24h) or "2:30 PM" (12h).
 void frij_format_time(char* buf, size_t n, const struct tm* tmv);

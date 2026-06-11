@@ -37,9 +37,11 @@ target whatever board we run on (see [HARDWARE.md](HARDWARE.md)).
   GitHub cron. Next: on-device **voice add** → write new items back to Keep.
 - [ ] **P3 — Persistence**: migrate remaining app state onto `frij_store`.
 - [ ] **P4 — More apps**: grocery, reminders, photos.
-- [ ] **P5 — Device bring-up**: `esp32s3box` board + M5Unified; init the M5IOE1
-  expander (panel reset) around `gfx.init()`; map Back to Key A (G2); flash, test
-  touch/buttons. M5GFX/M5Unified support the board — see [HARDWARE.md](HARDWARE.md).
+- [ ] **P5 — Device bring-up**: code side largely DONE (M5Unified `M5.begin` in
+  main.cpp handles the M5IOE1 panel reset; brightness/sleep/raise-to-wake/audio/
+  vibration/Wi-Fi all wired; device target compiles). Remaining: **flash + verify
+  on hardware**, map Back to Key A (G2), tune `RAISE_Z`, device store backend.
+  See [HARDWARE.md](HARDWARE.md).
 
 ## Polish & tech notes (assessment)
 

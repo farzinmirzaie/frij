@@ -42,7 +42,14 @@ static void shade_set(bool sleeping)
 static void sleep_tick(lv_timer_t* t)
 {
     (void)t;
-    int mins = frij_store_load_int("sleep", 5);  // Settings ▸ Display ▸ Sleep
+    // The setting lives in the file-backed store — don't hit the filesystem
+    // twice a second; re-read every ~2s (plenty responsive for a minutes value).
+    static int     mins  = 0;
+    static uint8_t skips = 0;
+    if (mins == 0 || ++skips >= 4) {
+        skips = 0;
+        mins  = frij_store_load_int("sleep", 5);  // Settings ▸ Display ▸ Sleep
+    }
     if (mins < 1) {
         mins = 1;
     }

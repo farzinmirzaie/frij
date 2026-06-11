@@ -49,6 +49,33 @@ static void refresh_dots(frij_carousel_t* c)
     }
 }
 
+// During a drag, hand the active pill over to the target dot proportionally —
+// width, color and opacity all track the finger (`p` = 0..256 progress).
+static void dots_drag_fx(frij_carousel_t* c, int32_t p)
+{
+    if (!c->dots || !frij_anim_enabled()) {
+        return;
+    }
+    lv_obj_t* cur = lv_obj_get_child(c->dots, c->index);
+    lv_obj_t* tgt = lv_obj_get_child(c->dots, c->adj_index);
+    if (cur == NULL || tgt == NULL || cur == tgt) {
+        return;
+    }
+    if (p < 0) p = 0;
+    if (p > 256) p = 256;
+    lv_anim_delete(cur, dot_width_exec);  // don't fight a snap morph
+    lv_anim_delete(tgt, dot_width_exec);
+    lv_obj_set_width(cur, DOT_ACTIVE_W - (DOT_ACTIVE_W - DOT) * p / 256);
+    lv_obj_set_width(tgt, DOT + (DOT_ACTIVE_W - DOT) * p / 256);
+    uint8_t  mix    = (uint8_t)(255 * p / 256);
+    lv_color_t on   = lv_color_hex(c->accent);
+    lv_color_t off  = lv_color_hex(FRIJ_TEXT_2);
+    lv_obj_set_style_bg_color(cur, lv_color_mix(off, on, mix), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(tgt, lv_color_mix(on, off, mix), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(cur, 255 - (255 - LV_OPA_40) * p / 256, LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(tgt, LV_OPA_40 + (255 - LV_OPA_40) * p / 256, LV_PART_MAIN);
+}
+
 static void dots_to_front(frij_carousel_t* c)
 {
     if (c->dots) {
@@ -140,6 +167,44 @@ static void make_dots(frij_carousel_t* c)
 
 // ---- pages ----------------------------------------------------------------
 
+// Transition FX: pages zoom + fade slightly as they leave/enter, tied to the
+// drag. `p` is "outness": 0 = fully in (native), 256 = fully out.
+#define FX_SCALE_MIN 220  // ~0.86 at fully-out
+#define FX_OPA_MIN   90   // ~35% opacity at fully-out
+
+static void page_fx(lv_obj_t* page, int32_t p)
+{
+    if (page == NULL || !frij_anim_enabled()) {
+        return;
+    }
+    if (p < 0) p = 0;
+    if (p > 256) p = 256;
+    lv_obj_set_style_transform_scale(page, 256 - (256 - FX_SCALE_MIN) * p / 256, LV_PART_MAIN);
+    lv_obj_set_style_opa(page, 255 - (255 - FX_OPA_MIN) * p / 256, LV_PART_MAIN);
+}
+
+static void page_fx_exec(void* page, int32_t p)
+{
+    page_fx((lv_obj_t*)page, p);
+}
+
+// Animate a page's outness `from` → `to` alongside the snap slide.
+static void page_fx_to(lv_obj_t* page, int32_t from, int32_t to)
+{
+    if (page == NULL || !frij_anim_enabled()) {
+        return;
+    }
+    lv_anim_delete(page, page_fx_exec);
+    lv_anim_t a;
+    lv_anim_init(&a);
+    lv_anim_set_var(&a, page);
+    lv_anim_set_exec_cb(&a, page_fx_exec);
+    lv_anim_set_values(&a, from, to);
+    lv_anim_set_duration(&a, ANIM_MS);
+    lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
+    lv_anim_start(&a);
+}
+
 static void build_into(frij_carousel_t* c, lv_obj_t* page, int index)
 {
     lv_obj_clean(page);
@@ -154,6 +219,8 @@ static lv_obj_t* make_page(frij_carousel_t* c)
     lv_obj_set_style_border_width(p, 0, LV_PART_MAIN);
     lv_obj_set_style_radius(p, 0, LV_PART_MAIN);
     lv_obj_set_style_pad_all(p, 0, LV_PART_MAIN);
+    lv_obj_set_style_transform_pivot_x(p, lv_pct(50), LV_PART_MAIN);  // zoom from center
+    lv_obj_set_style_transform_pivot_y(p, lv_pct(50), LV_PART_MAIN);
     lv_obj_clear_flag(p, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(p, LV_OBJ_FLAG_EVENT_BUBBLE);
     dots_to_front(c);  // a fresh page is on top — push the dots back above it
@@ -196,6 +263,7 @@ static void commit_done(lv_anim_t* a)
     c->adj   = NULL;
     c->index = c->adj_index;
     c->busy  = false;
+    page_fx(c->cur, 0);  // make sure the settled page is at native scale/opa
     refresh_dots(c);
     dots_show(c);
     notify(c);
@@ -209,6 +277,8 @@ static void revert_done(lv_anim_t* a)
         c->adj = NULL;
     }
     c->busy = false;
+    page_fx(c->cur, 0);
+    refresh_dots(c);  // the drag left the dots mid-handover — settle them back
 }
 
 static void ensure_neighbor(frij_carousel_t* c, int sign)
@@ -282,6 +352,11 @@ void frij_carousel_drag(frij_carousel_t* c, int dx)
     ensure_neighbor(c, sign);
     lv_obj_set_x(c->cur, dx);
     lv_obj_set_x(c->adj, (sign < 0 ? w : -w) + dx);
+    // zoom/fade follows the finger: the leaving page recedes, the entering one grows
+    int p = 256 * abs(dx) / (w > 0 ? w : 1);
+    page_fx(c->cur, p);
+    page_fx(c->adj, 256 - p);
+    dots_drag_fx(c, p);  // the indicator pill hands over with the drag too
     dots_show(c);
 }
 
@@ -292,13 +367,19 @@ void frij_carousel_end(frij_carousel_t* c, int dx)
         return;
     }
     int w   = lv_obj_get_width(c->viewport);
+    int p   = 256 * abs(dx) / (w > 0 ? w : 1);
+    if (p > 256) p = 256;
     c->busy = true;
     if (abs(dx) > w * SNAP_PERCENT / 100) {
         slide(c, c->cur, c->dir_sign < 0 ? -w : w, NULL);
         slide(c, c->adj, 0, commit_done);
+        page_fx_to(c->cur, p, 256);  // finish receding
+        page_fx_to(c->adj, 256 - p, 0);
     } else {
         slide(c, c->adj, c->dir_sign < 0 ? w : -w, revert_done);
         slide(c, c->cur, 0, NULL);
+        page_fx_to(c->cur, p, 0);  // come back to native
+        page_fx_to(c->adj, 256 - p, 256);
     }
 }
 
@@ -333,9 +414,12 @@ void frij_carousel_goto(frij_carousel_t* c, int index)
     c->adj       = make_page(c);
     build_into(c, c->adj, index);
     lv_obj_set_x(c->adj, sign < 0 ? w : -w);
+    page_fx(c->adj, 256);  // enters from fully-out
     c->busy = true;
     slide(c, c->cur, sign < 0 ? -w : w, NULL);
     slide(c, c->adj, 0, commit_done);  // commit_done updates index/dots/notify
+    page_fx_to(c->cur, 0, 256);
+    page_fx_to(c->adj, 256, 0);
 }
 
 int frij_carousel_index(const frij_carousel_t* c)

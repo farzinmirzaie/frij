@@ -47,12 +47,6 @@ static const char* battery_glyph(uint8_t pct, bool charging)
     return LV_SYMBOL_BATTERY_EMPTY;
 }
 
-// anim exec: drive an arc's value (for the gliding seconds hand).
-static void arc_set_value_cb(void* arc, int32_t v)
-{
-    lv_arc_set_value((lv_obj_t*)arc, (int32_t)v);
-}
-
 static void render(clock_ctx_t* c)
 {
     bool      h24 = frij_clock_is_24h();  // re-read each tick so the setting reflects live
@@ -92,7 +86,7 @@ static void render(clock_ctx_t* c)
             lv_anim_t a;
             lv_anim_init(&a);
             lv_anim_set_var(&a, c->arc);
-            lv_anim_set_exec_cb(&a, arc_set_value_cb);
+            lv_anim_set_exec_cb(&a, frij_anim_exec_arc);
             lv_anim_set_values(&a, cur, target);
             lv_anim_set_duration(&a, 950);  // finishes before the next 1s tick
             lv_anim_set_path_cb(&a, lv_anim_path_linear);
