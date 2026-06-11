@@ -2,6 +2,14 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-11 — Todo glance: random open item + empty-state pattern
+
+- The Todo glance now shows a **random unchecked item** on each rebuild
+  ("On the list" + item + "N left") instead of always the first — other todos
+  get face time without opening the app.
+- Empty Todo glance follows the Events glance pattern: "No todos" title +
+  "Add via Google Keep" subtitle.
+
 ## 2026-06-11 — reusable two-line empty states
 
 - `frij_empty_state` redesigned: text-only (icon dropped) — `title` in primary

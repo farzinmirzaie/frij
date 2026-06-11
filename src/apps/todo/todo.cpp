@@ -155,22 +155,25 @@ static void build_list(lv_obj_t* parent)
 
 // ---- app contract ---------------------------------------------------------
 
-// Glance: "up next" — the next unchecked item, big, plus how many remain.
+// Glance: one RANDOM unchecked item, big, plus how many remain — a different
+// pick each time the glance rebuilds, so other todos get face time without
+// opening the app.
 static void glance(lv_obj_t* parent)
 {
     load_todo();
     lv_obj_t* col = frij_page(parent);
 
-    const char* next = NULL;
+    int open[MAX_ITEMS];
+    int open_n = 0;
     for (int i = 0; i < s_n; i++) {
         if (!s_done[i]) {
-            next = s_text[i];
-            break;
+            open[open_n++] = i;
         }
     }
+    const char* next = open_n > 0 ? s_text[open[lv_rand(0, (uint32_t)open_n - 1)]] : NULL;
 
     if (next) {
-        frij_label(col, "Up next", FRIJ_FONT_BODY, FRIJ_TEXT_2);
+        frij_label(col, "On the list", FRIJ_FONT_BODY, FRIJ_TEXT_2);
         // full text (not the list's trim), wrapped, with extra side padding
         lv_obj_t* item = frij_label(col, next, FRIJ_FONT_TITLE, FRIJ_TEXT);
         lv_obj_set_width(item, LV_PCT(100));
@@ -180,11 +183,12 @@ static void glance(lv_obj_t* parent)
         lv_obj_set_style_text_align(item, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
         lv_obj_t* count = frij_label(col, "", FRIJ_FONT_BODY, FRIJ_TEXT_2);
         lv_label_set_text_fmt(count, "%d left", s_n - done_count());
+    } else if (s_n == 0) {  // title + subtitle, same pattern as the Events glance
+        frij_label(col, "No todos", FRIJ_FONT_TITLE, FRIJ_TEXT);
+        frij_label(col, "Add via Google Keep", FRIJ_FONT_BODY, FRIJ_TEXT_2);
     } else {
-        frij_label(col, s_n == 0 ? "No todos" : "All done", FRIJ_FONT_TITLE, FRIJ_TEXT);
-        if (s_n > 0) {
-            frij_label(col, "Nothing left", FRIJ_FONT_BODY, FRIJ_TEXT_2);
-        }
+        frij_label(col, "All done", FRIJ_FONT_TITLE, FRIJ_TEXT);
+        frij_label(col, "Nothing left", FRIJ_FONT_BODY, FRIJ_TEXT_2);
     }
 }
 
