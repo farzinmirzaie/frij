@@ -1,4 +1,13 @@
-# bridge/ — Google Keep ↔ Frij sync
+# bridge/ — off-device sync (Google Keep ↔ todos, Google Calendar → events)
+
+Two small Python scripts that run on GitHub Actions crons against the same
+Supabase rows the device reads:
+
+- `keep_to_frij.py` — **shared Google Keep checklist ⇄ `store:todo`** (below).
+- `calendar_to_frij.py` — **family Google Calendar → `store:events`** (see
+  [Calendar → events](#calendar--events) at the bottom).
+
+## Keep ↔ todos
 
 Keeps a **shared Google Keep checklist** and Frij's todo list in sync.
 
@@ -84,3 +93,41 @@ python3 test_mapping.py     # verifies the Keep-items → device-JSON mapping
 - **Done-state is two-way; add/remove is not.** The watch can't add or delete
   items yet, so those only happen in Keep. When on-device add lands (voice), the
   bridge would `list.add(...)` + `keep.sync()` to push new items back too.
+
+## Calendar → events
+
+`calendar_to_frij.py` mirrors a Google Calendar into `store:events` for the
+device's **Events** countdown app. One-way and official-API-free: it fetches
+the calendar's **secret iCal URL** (a plain `.ics` feed), expands recurring
+events (`recurring-ical-events`), and upserts the next 10 upcoming events as
+
+```json
+[{"t": "Dentist", "d": "2026-06-14", "tm": "09:30"}, ...]
+```
+
+(`tm` is omitted for all-day events; emoji are stripped like the todos.)
+
+### What you need to provide
+
+1. Google Calendar (web) → ⚙ Settings → your family calendar → **Integrate
+   calendar** → copy **"Secret address in iCal format"**.
+2. Put it where the bridge runs:
+   - **GitHub Actions** (default): repo → Settings → Secrets and variables →
+     Actions → add `FRIJ_ICS_URL` (Supabase secrets are shared with the Keep sync).
+   - **Local run**: append `FRIJ_ICS_URL=https://calendar.google.com/.../basic.ics`
+     to the repo-root `.env`.
+
+The secret URL grants read access to the whole calendar — treat it like a
+password (regenerate it from the same settings page if it ever leaks).
+
+### Run it
+
+```bash
+python3 calendar_to_frij.py --dry-run   # print the JSON, write nothing
+python3 calendar_to_frij.py             # upsert Supabase store:events
+python3 test_calendar.py                # offline test (needs the pip deps only)
+```
+
+The [`calendar-sync.yml`](../.github/workflows/calendar-sync.yml) workflow runs
+it hourly (Google caches the iCal feed for a few hours anyway — countdowns
+don't need minute freshness) and on demand from the Actions tab.

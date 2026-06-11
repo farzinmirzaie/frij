@@ -11,6 +11,8 @@ target whatever board we run on (see [HARDWARE.md](HARDWARE.md)).
 - **Todos** — quick check-off list.
 - **Stopwatch** — count-up timer with laps (shipped; on-brand for the dev kit).
 - **Scoreboard** — two-player, cloud-synced score keeper for game nights (shipped).
+- **Events** — countdowns to the family Google Calendar's events, via the
+  iCal bridge (shipped).
 - **Reminders** — time/day-based nudges.
 - **Grocery list** — add/remove items, clear bought.
 - **Photos** — slideshow of family pics.
@@ -36,6 +38,9 @@ target whatever board we run on (see [HARDWARE.md](HARDWARE.md)).
   (3-way merge + `todo_base`, checked-wins); Keep owns add/remove. Live on the
   GitHub cron. Next: on-device **voice add** → write new items back to Keep.
 - [ ] **P3 — Persistence**: migrate remaining app state onto `frij_store`.
+- [x] **Calendar sync**: `bridge/calendar_to_frij.py` mirrors the family
+  Google Calendar (secret iCal URL) into `store:events`; the Events app
+  renders countdowns. Hourly GitHub cron.
 - [ ] **P4 — More apps**: grocery, reminders, photos.
 - [ ] **P5 — Device bring-up**: code side largely DONE (M5Unified `M5.begin` in
   main.cpp handles the M5IOE1 panel reset; brightness/sleep/raise-to-wake/audio/

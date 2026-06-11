@@ -2,6 +2,22 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-11 — Events app + Google Calendar bridge
+
+- **New mini-app: Events** (pink) — countdowns to the family calendar's
+  upcoming events. List rows carry a day-count badge ("3d", accent "Now"/"1d"
+  when close), title + "Fri 12 Jun, 18:00" line; glance shows the nearest
+  event ("Coming up · Gym class · Tomorrow, 18:00"). Read-only, ↻ pulls the
+  store; clock times honor the 24-hour setting. Stale (past) cached events are
+  hidden client-side.
+- **New bridge: `bridge/calendar_to_frij.py`** — fetches the calendar's secret
+  iCal URL (no OAuth), expands recurring events (`recurring-ical-events`),
+  writes the next 10 to `store:events`. Offline-tested (`test_calendar.py`);
+  hourly GitHub Actions cron (`calendar-sync.yml`, needs the `FRIJ_ICS_URL`
+  secret).
+- Boot + auto-sync now pull `events` too (deduped into `pull_synced_keys()`).
+- Snapshot keys: `events`, `events_glance`.
+
 ## 2026-06-11 — drag-tied nav FX + perf/hygiene pass (10)
 
 - **Navigation zoom/fade FX**: pages (left/right) and layers (up/down) now zoom

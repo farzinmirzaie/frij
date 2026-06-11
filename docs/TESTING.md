@@ -33,8 +33,9 @@ FRIJ_SNAP=todo .pio/build/snapshot/program        # one screen — see set below
 sips -s format png /tmp/frij_snapshot.bmp --out /tmp/frij_snapshot.png
 ```
 
-`FRIJ_SNAP` values: `todo` `todo_progress` `todo_add` `todo_glance` `counter`
-`stopwatch` `stopwatch_glance` `scoreboard` `scoreboard_glance` `settings`
+`FRIJ_SNAP` values: `todo` `todo_progress` `todo_add` `todo_glance` `events`
+`events_glance` `counter` `stopwatch` `stopwatch_glance` `scoreboard`
+`scoreboard_glance` `settings`
 (General) `network` `netoff` `sheet` `confirm` `keyboard` (numpad) `result`
 `about`. (unset = the launcher/home.)
 

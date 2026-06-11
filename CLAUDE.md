@@ -35,7 +35,7 @@ If `pio` is not on PATH, it ships with the VS Code PlatformIO extension at
 | `src/store/` | Shared key→JSON store (file + Supabase, async) — see its README |
 | `src/system/` | Neutral board-service interfaces (e.g. brightness) — see its README |
 | `src/utility/` | The only board-specific code (LVGL↔M5GFX bridge) — see its README |
-| `bridge/` | Off-device Python sync (Google Keep ⇄ `store:todo`) + GitHub Actions cron — see its README |
+| `bridge/` | Off-device Python sync (Google Keep ⇄ `store:todo`, Google Calendar → `store:events`) + GitHub Actions crons — see its README |
 
 Each `src/*` folder has its own `README.md` with the details.
 | `include/lv_conf.h` | LVGL v9 config (LVGL's `lv_conf.h` template, trimmed) |

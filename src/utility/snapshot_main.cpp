@@ -18,6 +18,7 @@
 #include "lvgl.h"
 
 #include "apps/counter/counter.h"
+#include "apps/events/events.h"
 #include "apps/scoreboard/scoreboard.h"
 #include "system/battery.h"
 #include "apps/settings/settings.h"
@@ -166,6 +167,10 @@ int main(int, char**)
         build_app_screen(todo_app(), 2);
     } else if (scr && strcmp(scr, "todo_glance") == 0) {
         build_glance_view(todo_app());
+    } else if (scr && strcmp(scr, "events") == 0) {
+        build_app_screen(events_app(), 0);
+    } else if (scr && strcmp(scr, "events_glance") == 0) {
+        build_glance_view(events_app());
     } else if (scr && strcmp(scr, "counter") == 0) {
         build_app_screen(counter_app(), 0);
     } else if (scr && strcmp(scr, "stopwatch") == 0) {
@@ -206,8 +211,9 @@ int main(int, char**)
     } else {
         if (scr && scr[0]) {  // typo'd key would silently render the launcher
             printf("unknown FRIJ_SNAP '%s' — valid: todo todo_progress todo_add todo_glance "
-                   "counter stopwatch stopwatch_glance scoreboard scoreboard_glance settings "
-                   "network netoff sheet confirm keyboard result about\n",
+                   "events events_glance counter stopwatch stopwatch_glance scoreboard "
+                   "scoreboard_glance settings network netoff sheet confirm keyboard result "
+                   "about\n",
                    scr);
         }
         user_app();  // default: the launcher (home)

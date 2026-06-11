@@ -76,6 +76,10 @@ every app shares the look but has its own scheme.
 - `todo/` — Keep-synced checklist. 3 screens: list (tap to toggle) / progress
   (big ring) / add-by-voice (placeholder UI). Glance shows the next item +
   count. Amber.
+- `events/` — countdowns to the family calendar's upcoming events (read-only;
+  the `bridge/calendar_to_frij.py` cron mirrors the Google Calendar iCal feed
+  into `store:events`). List with day-count badges; glance shows the nearest
+  event + how soon. Pink.
 - `stopwatch/` — MM:SS.cs stopwatch with Start/Stop, laps, and reset; timing
   lives in module state so it keeps running off-screen. Green.
 - `scoreboard/` — two-player score keeper (game-night companion). Full-bleed

@@ -1,5 +1,8 @@
-# Keep -> Frij bridge deps. Supabase upsert uses the stdlib (urllib), no extra dep.
+# Bridge deps. Supabase upsert uses the stdlib (urllib), no extra dep.
 # Unpinned: Python 3.9 resolves to gkeepapi 0.14.x, newer Pythons to >=0.16 —
 # the bridge uses keep.resume() + keep.find(func=...), present in both.
 gkeepapi
 gpsoauth
+# calendar_to_frij.py (Google Calendar iCal feed -> store:events)
+icalendar
+recurring-ical-events

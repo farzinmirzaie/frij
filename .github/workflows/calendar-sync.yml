@@ -1,0 +1,27 @@
+name: Calendar → Frij sync
+
+# Mirrors the family Google Calendar's iCal feed into the Frij store
+# (store:events) for the device's Events countdown app. Read-only: Google →
+# Supabase. Configure FRIJ_ICS_URL (+ the Supabase secrets shared with the Keep
+# sync) in: Settings → Secrets and variables → Actions.
+
+on:
+  schedule:
+    - cron: "23 * * * *"    # hourly — Google caches the iCal feed anyway
+  workflow_dispatch: {}     # also run on demand from the Actions tab
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install -r bridge/requirements.txt
+      - run: python bridge/calendar_to_frij.py
+        env:
+          FRIJ_ICS_URL: ${{ secrets.FRIJ_ICS_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          # SUPABASE_TABLE defaults to "store"; FRIJ_EVENTS_KEY to "events".

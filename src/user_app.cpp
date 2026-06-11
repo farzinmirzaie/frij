@@ -12,6 +12,16 @@
 #include "ui/anim.h"
 #include "utility/lvgl_port_m5stack.hpp"
 
+// The cloud-synced keys: pulled at boot and on the periodic auto-sync tick.
+static void pull_synced_keys(void)
+{
+    frij_store_pull_async("todo");
+    frij_store_pull_async("events");
+    frij_store_pull_async("counter");
+    frij_store_pull_async("sb_a");
+    frij_store_pull_async("sb_b");
+}
+
 // Auto-sync: periodically pull the cloud-synced keys while the setting is on
 // (a boot-only pull made the toggle nearly meaningless).
 static void autosync_tick(lv_timer_t* t)
@@ -20,10 +30,7 @@ static void autosync_tick(lv_timer_t* t)
     if (!frij_store_load_bool("autosync", true)) {
         return;
     }
-    frij_store_pull_async("todo");
-    frij_store_pull_async("counter");
-    frij_store_pull_async("sb_a");
-    frij_store_pull_async("sb_b");
+    pull_synced_keys();
 }
 
 /*
@@ -60,10 +67,7 @@ void user_app(void)
 
     // when auto-sync is on, pull the apps' latest cloud data in the background
     if (frij_store_load_bool("autosync", true)) {
-        frij_store_pull_async("todo");
-        frij_store_pull_async("counter");
-        frij_store_pull_async("sb_a");
-        frij_store_pull_async("sb_b");
+        pull_synced_keys();
     }
 
     // Battery subjects MUST exist before any screen binds to them (the home
