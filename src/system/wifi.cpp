@@ -158,7 +158,12 @@ void frij_wifi_set_enabled(bool on)
         WiFi.mode(WIFI_STA);
         char ss[FRIJ_WIFI_SSID_MAX];
         if (saved_ssid(ss, sizeof(ss))) {
-            frij_wifi_connect(ss, NULL);  // reconnect with stored creds
+            // fire-and-forget reconnect with the stored creds: no wait, so
+            // enabling Wi-Fi (incl. at boot) never stalls the UI
+            s_prefs.begin("wifi", true);
+            String pw = s_prefs.getString("pw", "");
+            s_prefs.end();
+            WiFi.begin(ss, pw.c_str());
         }
     } else {
         WiFi.disconnect(true);

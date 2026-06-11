@@ -835,6 +835,7 @@ void frij_action_sheet(const char* title, const char* const* options, int count,
 typedef struct {
     char       buf[FRIJ_NUMPAD_MAX + 1];
     int        len;
+    int        prev_len;  // to know whether a digit was added (pop the new dot)
     bool       repeated;  // a hold-repeat ran; swallow the release's CLICKED
     lv_obj_t*  dots;      // masked-value display (one dot per entered digit)
     frij_kb_cb cb;
@@ -863,7 +864,21 @@ static void numpad_sync_dots(numpad_ctx_t* c)
         lv_obj_set_style_radius(d, LV_RADIUS_CIRCLE, LV_PART_MAIN);
         lv_obj_set_style_bg_color(d, lv_color_hex(FRIJ_TEXT), LV_PART_MAIN);
         lv_obj_set_style_bg_opa(d, LV_OPA_COVER, LV_PART_MAIN);
+        // the newly-added dot pops in
+        if (i == shown - 1 && c->len > c->prev_len && frij_anim_enabled()) {
+            lv_obj_set_style_transform_pivot_x(d, 6, LV_PART_MAIN);
+            lv_obj_set_style_transform_pivot_y(d, 6, LV_PART_MAIN);
+            lv_anim_t a;
+            lv_anim_init(&a);
+            lv_anim_set_var(&a, d);
+            lv_anim_set_exec_cb(&a, frij_anim_exec_scale);
+            lv_anim_set_values(&a, 120, 256);
+            lv_anim_set_duration(&a, 140);
+            lv_anim_set_path_cb(&a, lv_anim_path_overshoot);
+            lv_anim_start(&a);
+        }
     }
+    c->prev_len = c->len;
 }
 
 static void numpad_key_cb(lv_event_t* e)
@@ -1008,6 +1023,18 @@ void frij_result_screen(bool ok, const char* title, const char* subtitle, const 
     lv_obj_set_style_bg_color(ring, lv_color_hex(color), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(ring, LV_OPA_20, LV_PART_MAIN);
     lv_obj_clear_flag(ring, LV_OBJ_FLAG_SCROLLABLE);
+    if (frij_anim_enabled()) {  // the ring pops in with a small overshoot
+        lv_obj_set_style_transform_pivot_x(ring, lv_pct(50), LV_PART_MAIN);
+        lv_obj_set_style_transform_pivot_y(ring, lv_pct(50), LV_PART_MAIN);
+        lv_anim_t pop;
+        lv_anim_init(&pop);
+        lv_anim_set_var(&pop, ring);
+        lv_anim_set_exec_cb(&pop, frij_anim_exec_scale);
+        lv_anim_set_values(&pop, 190, 256);
+        lv_anim_set_duration(&pop, 320);
+        lv_anim_set_path_cb(&pop, lv_anim_path_overshoot);
+        lv_anim_start(&pop);
+    }
 
     lv_obj_t* glyph = lv_label_create(ring);
     lv_label_set_text(glyph, ok ? LV_SYMBOL_OK : LV_SYMBOL_CLOSE);
@@ -1092,6 +1119,11 @@ static void toast_show(const char* glyph, uint32_t glyph_color, const char* text
     lv_obj_set_style_bg_color(t, lv_color_hex(FRIJ_SURFACE_3), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(t, LV_OPA_COVER, LV_PART_MAIN);
     lv_obj_set_style_radius(t, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+    if (glyph && glyph[0]) {  // status toasts get a hairline tint for a faster read
+        lv_obj_set_style_border_width(t, 1, LV_PART_MAIN);
+        lv_obj_set_style_border_color(t, lv_color_hex(glyph_color), LV_PART_MAIN);
+        lv_obj_set_style_border_opa(t, LV_OPA_50, LV_PART_MAIN);
+    }
     lv_obj_set_style_pad_left(t, FRIJ_SP_L, LV_PART_MAIN);
     lv_obj_set_style_pad_right(t, FRIJ_SP_L, LV_PART_MAIN);
     lv_obj_set_style_pad_top(t, FRIJ_SP_S, LV_PART_MAIN);
@@ -1208,6 +1240,30 @@ lv_obj_t* frij_toggle(lv_obj_t* parent, bool on, uint32_t accent)
     return sw;
 }
 
+// The whole row toggles (not just the switch), so tapping anywhere flips it.
+static void toggle_row_click_cb(lv_event_t* e)
+{
+    lv_obj_t* row = (lv_obj_t*)lv_event_get_current_target(e);
+    lv_obj_t* sw  = lv_obj_get_child(row, lv_obj_get_child_count(row) - 1);
+    if (lv_obj_has_state(sw, LV_STATE_CHECKED)) {
+        lv_obj_remove_state(sw, LV_STATE_CHECKED);
+    } else {
+        lv_obj_add_state(sw, LV_STATE_CHECKED);
+    }
+    lv_obj_send_event(sw, LV_EVENT_VALUE_CHANGED, NULL);  // run the caller's handler
+}
+
+lv_obj_t* frij_toggle_row(lv_obj_t* parent, const char* label, bool on, uint32_t accent)
+{
+    lv_obj_t* row = frij_surface_row(parent);
+    lv_obj_t* l   = frij_label(row, label, FRIJ_FONT_BODY, FRIJ_TEXT);
+    lv_obj_set_flex_grow(l, 1);
+    lv_obj_t* sw = frij_toggle(row, on, accent);
+    lv_obj_remove_flag(sw, LV_OBJ_FLAG_CLICKABLE);  // the row drives it
+    lv_obj_add_event_cb(row, toggle_row_click_cb, LV_EVENT_CLICKED, NULL);
+    return sw;
+}
+
 // loose coupling: the launcher provides this; we don't include launcher.h
 extern void frij_back(void);
 
@@ -1279,6 +1335,8 @@ lv_obj_t* frij_header(lv_obj_t* parent, const char* title, lv_event_cb_t action_
     }
     lv_obj_set_style_opa(action, LV_OPA_TRANSP, LV_PART_MAIN);
     lv_obj_remove_flag(action, LV_OBJ_FLAG_CLICKABLE);
+
+    frij_anim_enter(bar, 60);  // settle in just after the layer slides up
     return bar;
 }
 
@@ -1287,8 +1345,20 @@ void frij_header_set_action(lv_obj_t* header, const char* symbol)
     lv_obj_t* action = lv_obj_get_child(header, lv_obj_get_child_count(header) - 1);
     lv_obj_t* label  = lv_obj_get_child(action, 0);
     if (symbol && symbol[0]) {
+        bool was_hidden = lv_obj_get_style_opa(action, LV_PART_MAIN) == LV_OPA_TRANSP;
         lv_label_set_text(label, symbol);
-        lv_obj_set_style_opa(action, LV_OPA_COVER, LV_PART_MAIN);
+        if (was_hidden && frij_anim_enabled()) {  // fade in rather than pop
+            lv_anim_t a;
+            lv_anim_init(&a);
+            lv_anim_set_var(&a, action);
+            lv_anim_set_exec_cb(&a, frij_anim_exec_opa);
+            lv_anim_set_values(&a, LV_OPA_TRANSP, LV_OPA_COVER);
+            lv_anim_set_duration(&a, FRIJ_ANIM_MS);
+            lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
+            lv_anim_start(&a);
+        } else {
+            lv_obj_set_style_opa(action, LV_OPA_COVER, LV_PART_MAIN);
+        }
         lv_obj_add_flag(action, LV_OBJ_FLAG_CLICKABLE);
     } else {
         lv_obj_set_style_opa(action, LV_OPA_TRANSP, LV_PART_MAIN);

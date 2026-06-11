@@ -33,12 +33,22 @@ static const uint32_t ACCENT = FRIJ_PRIMARY;  // purple
 
 // ---- handlers --------------------------------------------------------------
 
+// Sliders: apply LIVE while dragging (cheap), but persist only on release —
+// frij_store_save also pushes to the cloud, so saving per-tick during a drag
+// would hammer the store. The slider's user_data carries its store key.
+static void on_slider_release(lv_event_t* e)
+{
+    lv_obj_t*   s   = (lv_obj_t*)lv_event_get_current_target(e);
+    const char* key = (const char*)lv_obj_get_user_data(s);
+    if (key) {
+        frij_store_save_int(key, lv_slider_get_value(s));
+    }
+}
+
 static void on_brightness(lv_event_t* e)
 {
     lv_obj_t* slider = (lv_obj_t*)lv_event_get_target(e);
-    int       v      = lv_slider_get_value(slider);
-    frij_store_save_int("brightness", v);
-    frij_set_brightness((uint8_t)v);
+    frij_set_brightness((uint8_t)lv_slider_get_value(slider));  // live preview
 }
 
 static void on_clock24(lv_event_t* e)
@@ -50,9 +60,7 @@ static void on_clock24(lv_event_t* e)
 static void on_volume(lv_event_t* e)
 {
     lv_obj_t* sl = (lv_obj_t*)lv_event_get_target(e);
-    int       v  = lv_slider_get_value(sl);
-    frij_store_save_int("volume", v);
-    frij_set_volume((uint8_t)v);  // ES8311 codec (via M5.Speaker on device)
+    frij_set_volume((uint8_t)lv_slider_get_value(sl));  // live; persisted on release
 }
 
 static void on_vibration(lv_event_t* e)
@@ -63,12 +71,8 @@ static void on_vibration(lv_event_t* e)
     frij_store_save_bool("haptics", on);
 }
 
-static void on_sleep(lv_event_t* e)
-{
-    lv_obj_t* sl = (lv_obj_t*)lv_event_get_target(e);
-    frij_store_save_int("sleep", lv_slider_get_value(sl));  // minutes until display sleeps
-    // The idle sleep manager (system/sleep) reads this each tick — no apply needed.
-}
+// Sleep needs no live apply — the idle sleep manager (system/sleep) reads the
+// stored minutes each tick, and on_slider_release persists them.
 
 static void on_autosync(lv_event_t* e)
 {
@@ -160,36 +164,21 @@ static void on_erase(lv_event_t* e)
 
 // ---- row helpers -----------------------------------------------------------
 
-// The whole row toggles (not just the switch), so tapping anywhere flips it.
-static void on_toggle_row_click(lv_event_t* e)
-{
-    lv_obj_t* row = (lv_obj_t*)lv_event_get_current_target(e);
-    lv_obj_t* tog = lv_obj_get_child(row, lv_obj_get_child_count(row) - 1);
-    bool      on  = !lv_obj_has_state(tog, LV_STATE_CHECKED);
-    if (on) {
-        lv_obj_add_state(tog, LV_STATE_CHECKED);
-    } else {
-        lv_obj_remove_state(tog, LV_STATE_CHECKED);
-    }
-    lv_obj_send_event(tog, LV_EVENT_VALUE_CHANGED, NULL);  // run the persist handler
-}
-
 static void toggle_row(lv_obj_t* col, const char* text, const char* key, bool def, lv_event_cb_t cb)
 {
-    lv_obj_t* row = frij_surface_row(col);
-    lv_obj_t* lbl = frij_label(row, text, FRIJ_FONT_BODY, FRIJ_TEXT);
-    lv_obj_set_flex_grow(lbl, 1);
-    lv_obj_t* tog = frij_toggle(row, frij_store_load_bool(key, def), ACCENT);
-    lv_obj_remove_flag(tog, LV_OBJ_FLAG_CLICKABLE);  // the row drives it
-    lv_obj_add_event_cb(tog, cb, LV_EVENT_VALUE_CHANGED, NULL);
-    lv_obj_add_event_cb(row, on_toggle_row_click, LV_EVENT_CLICKED, NULL);
+    lv_obj_t* sw = frij_toggle_row(col, text, frij_store_load_bool(key, def), ACCENT);
+    lv_obj_add_event_cb(sw, cb, LV_EVENT_VALUE_CHANGED, NULL);
 }
 
 static void slider_row(lv_obj_t* col, const char* text, int min, int max, const char* key,
-                       int def, lv_event_cb_t cb, const char* unit)
+                       int def, lv_event_cb_t apply_cb, const char* unit)
 {
     lv_obj_t* s = frij_slider_row(col, text, min, max, frij_store_load_int(key, def), ACCENT, unit);
-    lv_obj_add_event_cb(s, cb, LV_EVENT_VALUE_CHANGED, NULL);
+    lv_obj_set_user_data(s, (void*)key);  // read back by on_slider_release
+    if (apply_cb) {
+        lv_obj_add_event_cb(s, apply_cb, LV_EVENT_VALUE_CHANGED, NULL);  // live apply
+    }
+    lv_obj_add_event_cb(s, on_slider_release, LV_EVENT_RELEASED, NULL);  // persist once
 }
 
 // ---- Network screen (Wi-Fi) ------------------------------------------------
@@ -284,21 +273,19 @@ static void net_row_cb(lv_event_t* e)
 
 static void wifi_master_cb(lv_event_t* e)
 {
-    (void)e;
-    frij_wifi_set_enabled(!frij_wifi_enabled());
+    lv_obj_t* sw = (lv_obj_t*)lv_event_get_target(e);
+    bool      on = lv_obj_has_state(sw, LV_STATE_CHECKED);
+    frij_wifi_set_enabled(on);
+    frij_store_save_bool("wifi_on", on);  // restored at boot (user_app)
     net_refresh();
 }
 
 static void build_network(lv_obj_t* col)
 {
     // Master Wi-Fi switch (whole row toggles it).
-    bool      on  = frij_wifi_enabled();
-    lv_obj_t* row = frij_surface_row(col);
-    lv_obj_t* lbl = frij_label(row, "Wi-Fi", FRIJ_FONT_BODY, FRIJ_TEXT);
-    lv_obj_set_flex_grow(lbl, 1);
-    lv_obj_t* tog = frij_toggle(row, on, ACCENT);
-    lv_obj_remove_flag(tog, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_event_cb(row, wifi_master_cb, LV_EVENT_CLICKED, NULL);
+    bool      on = frij_wifi_enabled();
+    lv_obj_t* sw = frij_toggle_row(col, "Wi-Fi", on, ACCENT);
+    lv_obj_add_event_cb(sw, wifi_master_cb, LV_EVENT_VALUE_CHANGED, NULL);
     if (!on) {
         // radio off: toggle stays pinned at the top; float the hint at the
         // screen's center (FLOATING so it ignores the top-pinned flex flow).
@@ -415,7 +402,7 @@ static void screen(lv_obj_t* parent, int index)
         case 0:  // General
             frij_section_label(col, "Display");
             slider_row(col, "Brightness", 10, 100, "brightness", 80, on_brightness, "%");
-            slider_row(col, "Sleep", 1, 30, "sleep", 5, on_sleep, " min");
+            slider_row(col, "Sleep", 1, 30, "sleep", 5, NULL, " min");
             toggle_row(col, "Raise to wake", "raisewake", true, on_raise_wake);  // BMI270 IMU
             frij_section_label(col, "Sound");
             slider_row(col, "Volume", 0, 100, "volume", 60, on_volume, "%");

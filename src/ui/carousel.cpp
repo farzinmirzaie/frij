@@ -2,6 +2,7 @@
 
 #include <stdlib.h>  // abs
 
+#include "anim.h"
 #include "theme.h"
 
 static const int SNAP_PERCENT = 35;   // drag past this % of width to commit
@@ -16,6 +17,11 @@ static int wrap(int i, int n)
 
 // ---- page indicator (fades in on swipe, idles out; kept above the pages) ---
 
+static void dot_width_exec(void* obj, int32_t v)
+{
+    lv_obj_set_width((lv_obj_t*)obj, (lv_coord_t)v);
+}
+
 static void refresh_dots(frij_carousel_t* c)
 {
     if (!c->dots) {
@@ -24,7 +30,20 @@ static void refresh_dots(frij_carousel_t* c)
     for (int i = 0; i < c->count; i++) {
         lv_obj_t* d      = lv_obj_get_child(c->dots, i);
         bool      active = (i == c->index);
-        lv_obj_set_width(d, active ? DOT_ACTIVE_W : DOT);
+        int       target = active ? DOT_ACTIVE_W : DOT;
+        int       cur    = lv_obj_get_width(d);
+        if (frij_anim_enabled() && cur != target && cur > 0) {
+            lv_anim_t a;  // morph the dot into/out of the pill instead of snapping
+            lv_anim_init(&a);
+            lv_anim_set_var(&a, d);
+            lv_anim_set_exec_cb(&a, dot_width_exec);
+            lv_anim_set_values(&a, cur, target);
+            lv_anim_set_duration(&a, 160);
+            lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
+            lv_anim_start(&a);
+        } else {
+            lv_obj_set_width(d, target);
+        }
         lv_obj_set_style_bg_color(d, lv_color_hex(active ? c->accent : FRIJ_TEXT_2), LV_PART_MAIN);
         lv_obj_set_style_bg_opa(d, active ? LV_OPA_COVER : LV_OPA_40, LV_PART_MAIN);
     }

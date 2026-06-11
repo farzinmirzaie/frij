@@ -104,6 +104,10 @@ lv_obj_t* frij_slider_row(lv_obj_t* parent, const char* label, int min, int max,
 // A themed on/off switch. Attach your own LV_EVENT_VALUE_CHANGED handler.
 lv_obj_t* frij_toggle(lv_obj_t* parent, bool on, uint32_t accent);
 
+// A full row with a label + switch where tapping ANYWHERE on the row flips it.
+// Returns the switch — attach your LV_EVENT_VALUE_CHANGED handler to that.
+lv_obj_t* frij_toggle_row(lv_obj_t* parent, const char* label, bool on, uint32_t accent);
+
 // A tappable card row: label + right chevron. Attach via the returned row's
 // LV_EVENT_CLICKED. Use for actions like "Sync now" / "Reset".
 lv_obj_t* frij_action_row(lv_obj_t* parent, const char* label, lv_event_cb_t on_click);

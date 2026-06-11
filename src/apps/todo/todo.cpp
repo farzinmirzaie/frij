@@ -305,17 +305,31 @@ static const char* td_action(int index)
     return index == 0 ? LV_SYMBOL_REFRESH : NULL;
 }
 
+// One-shot timer: rebuild the list after the background pull has had time to
+// land in the cache (the store has no completion callback yet).
+static void td_refresh_cb(lv_timer_t* t)
+{
+    (void)t;
+    if (!s_list_col) {
+        return;  // the page was closed in the meantime
+    }
+    load_todo();
+    lv_obj_clean(s_list_col);  // keeps the page's styles/padding, drops the rows
+    populate_list(s_list_col);
+    frij_page_settle(s_list_col);
+}
+
 static void td_on_action(int index)
 {
     if (index != 0 || !s_list_col) {
         return;
     }
-    bool ok = frij_store_pull(STORE_KEY);  // blocking fetch from the cloud
-    load_todo();
-    lv_obj_clean(s_list_col);  // keeps the page's styles/padding, drops the rows
-    populate_list(s_list_col);
-    frij_page_settle(s_list_col);
-    frij_toast(ok ? "Synced" : "Sync failed");
+    // Non-blocking: pull in the background (a blocking pull froze gestures and
+    // animations for the whole fetch), then rebuild once it has likely landed.
+    frij_store_pull_async(STORE_KEY);
+    frij_toast("Syncing...");
+    lv_timer_t* t = lv_timer_create(td_refresh_cb, 1500, NULL);
+    lv_timer_set_repeat_count(t, 1);  // auto-deletes after firing
 }
 
 const frij_app_t* todo_app(void)

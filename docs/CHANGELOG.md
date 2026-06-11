@@ -2,6 +2,27 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-11 — improvement pass (10: UX, micro-anim, hygiene)
+
+- **Sliders persist on release only**: dragging Brightness/Volume/Sleep applied
+  AND saved (cloud-push included) on every tick — now they apply live and save
+  once on release (key carried in the slider's user_data).
+- **Wi-Fi is wired at boot**: `frij_wifi_init()` was never called and the master
+  switch wasn't persisted. Boot now restores the saved `wifi_on` state; on device
+  the auto-reconnect is **fire-and-forget** (no 8s boot stall).
+- **New `frij_toggle_row`** ui component (whole-row tap flips the switch) —
+  replaces three hand-rolled copies (Settings toggles + the Wi-Fi master row).
+- **Todo refresh is non-blocking**: the header refresh did a blocking cloud pull
+  on the UI thread (froze gestures); now async pull + "Syncing..." + a one-shot
+  timer rebuild.
+- **Header entrance**: the back/title/action bar fades + rises in on layer open.
+- **Header action icon fades in** when it appears on a screen change.
+- **Result-screen ring pops in** (overshoot scale).
+- **Numpad dots pop** as digits are entered.
+- **Carousel page dot morphs** into the active pill (width animates, no snap).
+- **Status toasts get a hairline green/red border** for a faster read.
+- All motion respects the reduce-motion ("Animations") setting.
+
 ## 2026-06-11 — settings polish: logo, storage, Wi-Fi flow (inspiration pass)
 
 - **`frij_logo`** — reusable three-circle clover (pink/purple/violet, new

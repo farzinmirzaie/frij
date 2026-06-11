@@ -8,6 +8,7 @@
 #include "system/haptics.h"
 #include "system/motion.h"
 #include "system/sleep.h"
+#include "system/wifi.h"
 #include "ui/anim.h"
 #include "utility/lvgl_port_m5stack.hpp"
 
@@ -37,6 +38,11 @@ void user_app(void)
     // apply the saved volume + touch-sound preferences
     frij_set_volume((uint8_t)frij_store_load_int("volume", 60));
     frij_audio_set_click_enabled(frij_store_load_bool("touchsfx", false));
+
+    // bring up Wi-Fi with the saved master-switch state (the device kicks off a
+    // background reconnect to the saved network — no boot stall)
+    frij_wifi_init();
+    frij_wifi_set_enabled(frij_store_load_bool("wifi_on", true));
 
     // when auto-sync is on, pull the apps' latest cloud data in the background
     if (frij_store_load_bool("autosync", true)) {
