@@ -307,16 +307,35 @@ void frij_carousel_goto(frij_carousel_t* c, int index)
     if (c->busy) {
         return;
     }
+    index = wrap(index, c->count);
+    if (index == c->index) {
+        dots_show(c);
+        return;
+    }
     if (c->adj) {
         lv_obj_delete(c->adj);
         c->adj = NULL;
     }
-    c->index = wrap(index, c->count);
-    lv_obj_set_x(c->cur, 0);
-    build_into(c, c->cur, c->index);
-    refresh_dots(c);
-    dots_show(c);
-    notify(c);
+    if (!frij_anim_enabled()) {  // reduce-motion: jump in place
+        c->index = index;
+        lv_obj_set_x(c->cur, 0);
+        build_into(c, c->cur, c->index);
+        refresh_dots(c);
+        dots_show(c);
+        notify(c);
+        return;
+    }
+    // slide toward the target like a swipe would (forward = new page from the right)
+    int w        = lv_obj_get_width(c->viewport);
+    int sign     = index > c->index ? -1 : +1;
+    c->dir_sign  = sign;
+    c->adj_index = index;
+    c->adj       = make_page(c);
+    build_into(c, c->adj, index);
+    lv_obj_set_x(c->adj, sign < 0 ? w : -w);
+    c->busy = true;
+    slide(c, c->cur, sign < 0 ? -w : w, NULL);
+    slide(c, c->adj, 0, commit_done);  // commit_done updates index/dots/notify
 }
 
 int frij_carousel_index(const frij_carousel_t* c)

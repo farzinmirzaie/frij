@@ -46,6 +46,7 @@ static void fmt_time(char* b, size_t n, uint32_t ms)
 
 typedef struct {
     lv_obj_t*   time;
+    lv_obj_t*   status;     // "Ready / Running / Paused" (screen only)
     lv_obj_t*   primary;    // Start / Stop
     lv_obj_t*   secondary;  // Lap / Reset
     lv_obj_t*   laps;       // lap list column (screen only; NULL on the glance)
@@ -109,6 +110,9 @@ static void refresh_ui(sw_ctx_t* c)
         char b[16];
         fmt_time(b, sizeof(b), elapsed_ms());
         lv_label_set_text(c->time, b);
+    }
+    if (c->status) {
+        lv_label_set_text(c->status, s_running ? "Running" : (s_acc_ms ? "Paused" : "Ready"));
     }
     // Start (green play) <-> Stop (red pause)
     if (s_running) {
@@ -247,7 +251,8 @@ static void screen(lv_obj_t* parent, int index)
     }
     lv_memzero(c, sizeof(*c));
 
-    c->time = frij_label(col, "00:00.00", FRIJ_FONT_DISPLAY, FRIJ_TEXT);
+    c->time   = frij_label(col, "00:00.00", FRIJ_FONT_DISPLAY, FRIJ_TEXT);
+    c->status = frij_label(col, "", FRIJ_FONT_SMALL, FRIJ_TEXT_2);
     build_buttons(c, col);
 
     c->laps = frij_col(col, FRIJ_SP_S);  // lap list under the buttons

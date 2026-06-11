@@ -279,7 +279,20 @@ static void build_add(lv_obj_t* parent)
     lv_obj_t* col = frij_page(parent);
 
     // big accent circle with a dark "+" (amber accent reads better with dark text)
-    frij_circle_button(col, 104, ACCENT, "+", FRIJ_FONT_DISPLAY, 0x101216, on_add_voice);
+    lv_obj_t* mic = frij_circle_button(col, 104, ACCENT, "+", FRIJ_FONT_DISPLAY, 0x101216,
+                                       on_add_voice);
+    if (frij_anim_enabled()) {  // gentle breathing — invites the tap
+        lv_anim_t breathe;
+        lv_anim_init(&breathe);
+        lv_anim_set_var(&breathe, mic);
+        lv_anim_set_exec_cb(&breathe, frij_anim_exec_scale);
+        lv_anim_set_values(&breathe, 250, 262);
+        lv_anim_set_duration(&breathe, 900);
+        lv_anim_set_playback_duration(&breathe, 900);
+        lv_anim_set_repeat_count(&breathe, LV_ANIM_REPEAT_INFINITE);
+        lv_anim_set_path_cb(&breathe, lv_anim_path_ease_in_out);
+        lv_anim_start(&breathe);
+    }
 
     frij_label(col, "Add by voice", FRIJ_FONT_TITLE, FRIJ_TEXT);
     frij_label(col, "Tap to speak", FRIJ_FONT_BODY, FRIJ_TEXT_2);

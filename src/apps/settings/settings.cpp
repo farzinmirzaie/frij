@@ -42,6 +42,7 @@ static void on_slider_release(lv_event_t* e)
     const char* key = (const char*)lv_obj_get_user_data(s);
     if (key) {
         frij_store_save_int(key, lv_slider_get_value(s));
+        frij_haptic(FRIJ_HAPTIC_SELECT);  // value committed
     }
 }
 

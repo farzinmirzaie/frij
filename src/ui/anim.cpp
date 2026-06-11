@@ -68,6 +68,9 @@ void frij_stagger_in(lv_obj_t* container, int step_ms)
 {
     uint32_t n = lv_obj_get_child_count(container);
     for (uint32_t i = 0; i < n; i++) {
-        frij_anim_enter(lv_obj_get_child(container, i), i * step_ms);
+        // cap the delay: past ~8 rows the stagger reads as lag, and items below
+        // the fold would animate unseen anyway
+        uint32_t step = i < 8 ? i : 8;
+        frij_anim_enter(lv_obj_get_child(container, i), step * step_ms);
     }
 }

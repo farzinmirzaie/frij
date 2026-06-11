@@ -30,7 +30,8 @@ int main(int, char**)
     SDL_SetMainReady();
     lv_init();
     lv_tick_set_cb(SDL_GetTicks);  // give LVGL a millisecond clock (else nothing renders)
-    lv_sdl_window_create(FRIJ_RES, FRIJ_RES);
+    lv_display_t* disp = lv_sdl_window_create(FRIJ_RES, FRIJ_RES);
+    lv_sdl_window_set_title(disp, "Frij");  // default says "LVGL Simulator"
     lv_sdl_mouse_create();  // drag = touch
 
     // The launcher clips its UI to a circle and fills the corners with the

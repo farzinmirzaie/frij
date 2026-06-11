@@ -5,6 +5,7 @@
 #include "lvgl.h"
 #include "lvgl_port_m5stack.hpp"
 #include "store/store.h"
+#include "ui/anim.h"
 #include "ui/carousel.h"
 #include "ui/components.h"
 #include "ui/theme.h"
@@ -52,6 +53,7 @@ static bool       s_anim    = false; // a vertical transition is animating
 static bool       s_outside = false; // press began outside the round area
 static bool       s_v_decided    = false;  // this vertical gesture's mode is set
 static bool       s_v_transition = false;  // true = layer transition; false = content scroll
+static uint32_t   s_press_tick   = 0;      // for fling detection (fast short swipes)
 
 static int height(void)
 {
@@ -111,11 +113,33 @@ static lv_obj_t* make_layer(void)
     return o;
 }
 
+static void anim_rotation(void* o, int32_t v)
+{
+    lv_obj_set_style_transform_rotation((lv_obj_t*)o, v, LV_PART_MAIN);
+}
+
 // The persistent header (above the content carousel) calls this on tap; it
 // dispatches to the app's action handler for the current screen.
 static void header_action_clicked(lv_event_t* e)
 {
     (void)e;
+    // spin the icon once — every current action is a refresh-style verb
+    if (s_layer_header && frij_anim_enabled()) {
+        lv_obj_t* action = lv_obj_get_child(s_layer_header, lv_obj_get_child_count(s_layer_header) - 1);
+        lv_obj_t* icon   = lv_obj_get_child(action, 0);
+        if (icon) {
+            lv_obj_set_style_transform_pivot_x(icon, lv_pct(50), LV_PART_MAIN);
+            lv_obj_set_style_transform_pivot_y(icon, lv_pct(50), LV_PART_MAIN);
+            lv_anim_t a;
+            lv_anim_init(&a);
+            lv_anim_set_var(&a, icon);
+            lv_anim_set_exec_cb(&a, anim_rotation);
+            lv_anim_set_values(&a, 0, 3600);  // 0.1° units = one full turn
+            lv_anim_set_duration(&a, 450);
+            lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
+            lv_anim_start(&a);
+        }
+    }
     if (s_layer_app && s_layer_app->on_action && s_active) {
         s_layer_app->on_action(frij_carousel_index(s_active));
     }
@@ -218,25 +242,11 @@ static void slide_y(lv_obj_t* o, int to, lv_anim_completed_cb_t done)
 static void done_enter_app(lv_anim_t* a)      { (void)a; s_cur = APP;      s_active = &s_capp; s_anim = false; }
 static void done_enter_settings(lv_anim_t* a) { (void)a; s_cur = SETTINGS; s_active = &s_cset; s_anim = false; }
 
-static void done_home_from_app(lv_anim_t* a)
+// We're back on home (a close finished, or a partial open was cancelled): drop
+// whichever transient layer exists — only one can at a time.
+static void done_back_home(lv_anim_t* a)
 {
     (void)a;
-    if (s_app) { lv_obj_delete(s_app); s_app = NULL; }
-    s_layer_app = NULL; s_layer_header = NULL;
-    s_cur = HOME; s_active = &s_chome; s_anim = false;
-}
-
-static void done_home_from_settings(lv_anim_t* a)
-{
-    (void)a;
-    if (s_settings) { lv_obj_delete(s_settings); s_settings = NULL; }
-    s_layer_app = NULL; s_layer_header = NULL;
-    s_cur = HOME; s_active = &s_chome; s_anim = false;
-}
-
-static void done_revert_to_home(lv_anim_t* a)
-{
-    (void)a;  // a partial open from home was cancelled: drop the transient layer
     if (s_app)      { lv_obj_delete(s_app);      s_app = NULL; }
     if (s_settings) { lv_obj_delete(s_settings); s_settings = NULL; }
     s_layer_app = NULL; s_layer_header = NULL;
@@ -283,19 +293,25 @@ static void nav_vend(int dy)
 {
     int h   = height();
     int thr = h * VSNAP_PERCENT / 100;
-    s_anim  = true;
+    // A fast, short flick should commit too — waiting for the 30% threshold
+    // makes quick swipes feel ignored. Direction safety comes from the per-
+    // branch dy sign checks below.
+    if (abs(dy) > 40 && lv_tick_elaps(s_press_tick) < 260) {
+        thr = 40;
+    }
+    s_anim = true;
 
     if (s_cur == HOME && dy < 0 && s_app) {
         if (-dy > thr) { slide_y(s_home, -h, NULL); slide_y(s_app, 0, done_enter_app); }
-        else           { slide_y(s_app, h, NULL);   slide_y(s_home, 0, done_revert_to_home); }
+        else           { slide_y(s_app, h, NULL);   slide_y(s_home, 0, done_back_home); }
     } else if (s_cur == HOME && dy > 0 && s_settings) {
         if (dy > thr)  { slide_y(s_home, h, NULL);  slide_y(s_settings, 0, done_enter_settings); }
-        else           { slide_y(s_settings, -h, NULL); slide_y(s_home, 0, done_revert_to_home); }
+        else           { slide_y(s_settings, -h, NULL); slide_y(s_home, 0, done_back_home); }
     } else if (s_cur == APP && dy > 0) {
-        if (dy > thr)  { slide_y(s_app, h, NULL);   slide_y(s_home, 0, done_home_from_app); }
+        if (dy > thr)  { slide_y(s_app, h, NULL);   slide_y(s_home, 0, done_back_home); }
         else           { slide_y(s_app, 0, NULL);   slide_y(s_home, -h, done_revert_simple); }
     } else if (s_cur == SETTINGS && dy < 0) {
-        if (-dy > thr) { slide_y(s_settings, -h, NULL); slide_y(s_home, 0, done_home_from_settings); }
+        if (-dy > thr) { slide_y(s_settings, -h, NULL); slide_y(s_home, 0, done_back_home); }
         else           { slide_y(s_settings, 0, NULL);  slide_y(s_home, h, done_revert_simple); }
     } else {
         s_anim = false;  // no valid vertical move
@@ -334,8 +350,9 @@ static void on_input(lv_event_t* e)
 
     if (code == LV_EVENT_PRESSED) {
         lv_indev_get_point(indev, &s_start);
-        s_axis      = 0;
-        s_v_decided = false;
+        s_axis       = 0;
+        s_v_decided  = false;
+        s_press_tick = lv_tick_get();  // for fling detection
         // ignore touches outside the round panel
         int w  = lv_obj_get_width(s_root);
         int h  = lv_obj_get_height(s_root);
@@ -404,10 +421,10 @@ void frij_back(void)
     s_anim = true;
     if (s_cur == APP) {
         slide_y(s_app, h, NULL);
-        slide_y(s_home, 0, done_home_from_app);
+        slide_y(s_home, 0, done_back_home);
     } else {
         slide_y(s_settings, -h, NULL);
-        slide_y(s_home, 0, done_home_from_settings);
+        slide_y(s_home, 0, done_back_home);
     }
 }
 

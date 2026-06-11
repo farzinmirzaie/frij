@@ -2,6 +2,25 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-11 — improvement pass 3 (10: nav feel + fixes)
+
+- **Sleep shield fixes a device bug**: the touch controller stays live while the
+  panel sleeps, so the waking tap used to click whatever was under the finger.
+  The sleep manager now owns a full-screen clickable shade (both targets); the
+  emulator's display stub simplified away.
+- **Fling to navigate**: a fast short flick up/down commits the layer transition
+  — no more dragging 30% of the screen for a quick open/close.
+- **Animated jumps**: tapping a page dot (or Back-to-clock on home) slides
+  direction-aware like a swipe instead of teleporting.
+- **Action icon spins** once when tapped (all current actions are refresh-style).
+- **Stopwatch screen shows Ready / Running / Paused** under the time.
+- **Add-by-voice button breathes** (gentle infinite pulse) to invite the tap.
+- **Slider release buzz** — committing a value gives a SELECT haptic.
+- **Stagger delay caps at ~8 rows** (long lists stopped reading as lag).
+- **Launcher hygiene**: three duplicate transition-done handlers merged into one
+  `done_back_home`.
+- **Emulator window is titled "Frij"** (was "LVGL Simulator").
+
 ## 2026-06-11 — improvement pass 2 (10: details + hygiene)
 
 - **Stopwatch timers pause when stopped** — the 33ms refresh only runs while the
