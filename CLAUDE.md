@@ -75,6 +75,18 @@ Changes are reviewed before they are committed:
    Conventional Commit — before writing new code.
 3. One reviewed round = one commit. Never bundle two rounds together.
 
+## End-of-round report (required)
+
+Every round, end the reply with a **"What changed & how to test"** section: for
+each change, a one-line summary + concrete **manual steps the user can do on the
+running emulator** to see it, including the expected result. Be specific, e.g.:
+
+> **Sleep timeout** — Settings → General → set Sleep to 1 min, don't touch for
+> 1 min → screen goes black; tap → it comes back.
+
+Cover device-only changes too, but label them "(on device)" since they can't be
+seen in the emulator. Keep it short and checkable — not a changelog dump.
+
 ## Gotchas
 
 - The `device` env is a placeholder — no verified board panel yet. Emulator is the daily driver.

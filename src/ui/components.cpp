@@ -728,6 +728,70 @@ void frij_action_sheet(const char* title, const char* const* options, int count,
     lv_obj_set_width(cancel, LV_PCT(100));
 }
 
+// ---- keyboard prompt (full-screen text entry) ------------------------------
+
+typedef struct {
+    frij_kb_cb cb;
+    void*      user;
+    lv_obj_t*  ta;
+} kb_ctx_t;
+
+static void kb_free_cb(lv_event_t* e)
+{
+    lv_free(lv_event_get_user_data(e));  // ctx outlives the build call
+}
+
+static void kb_event_cb(lv_event_t* e)
+{
+    lv_event_code_t code    = lv_event_get_code(e);
+    lv_obj_t*       overlay = (lv_obj_t*)lv_event_get_user_data(e);
+    kb_ctx_t*       c       = (kb_ctx_t*)lv_obj_get_user_data(overlay);
+    if (code == LV_EVENT_READY && c->cb) {
+        c->cb(lv_textarea_get_text(c->ta), c->user);
+    }
+    lv_obj_delete(overlay);  // READY or CANCEL both dismiss
+}
+
+void frij_keyboard_prompt(const char* title, bool password, frij_kb_cb cb, void* user)
+{
+    kb_ctx_t* c = (kb_ctx_t*)lv_malloc(sizeof(kb_ctx_t));
+    if (c == NULL) {
+        return;
+    }
+    c->cb   = cb;
+    c->user = user;
+
+    // full-screen overlay on the active screen (above the launcher + header,
+    // like the modals) — drawn last, so it covers everything beneath it
+    lv_obj_t* overlay = lv_obj_create(lv_screen_active());
+    lv_obj_remove_style_all(overlay);
+    lv_obj_set_size(overlay, LV_PCT(100), LV_PCT(100));
+    lv_obj_set_style_bg_color(overlay, lv_color_hex(FRIJ_SURFACE_1), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(overlay, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_clear_flag(overlay, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_user_data(overlay, c);
+    lv_obj_add_event_cb(overlay, kb_free_cb, LV_EVENT_DELETE, c);
+
+    lv_obj_t* t = frij_label(overlay, title, FRIJ_FONT_BODY, FRIJ_TEXT);
+    lv_obj_set_width(t, LV_PCT(72));
+    lv_label_set_long_mode(t, LV_LABEL_LONG_DOT);
+    lv_obj_set_style_text_align(t, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    lv_obj_align(t, LV_ALIGN_TOP_MID, 0, frij_screen_min() * 14 / 100);
+
+    lv_obj_t* ta = lv_textarea_create(overlay);
+    lv_textarea_set_one_line(ta, true);
+    lv_textarea_set_password_mode(ta, password);
+    lv_textarea_set_placeholder_text(ta, password ? "Password" : "Text");
+    lv_obj_set_width(ta, LV_PCT(74));
+    lv_obj_align(ta, LV_ALIGN_TOP_MID, 0, frij_screen_min() * 23 / 100);
+    c->ta = ta;
+
+    lv_obj_t* kb = lv_keyboard_create(overlay);  // sits at the bottom, full width
+    lv_keyboard_set_textarea(kb, ta);
+    lv_obj_add_event_cb(kb, kb_event_cb, LV_EVENT_READY, overlay);
+    lv_obj_add_event_cb(kb, kb_event_cb, LV_EVENT_CANCEL, overlay);
+}
+
 // ---- toast (auto-dismissing snackbar) --------------------------------------
 
 static lv_obj_t* s_toast = NULL;  // at most one on screen at a time

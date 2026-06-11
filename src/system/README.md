@@ -27,7 +27,7 @@ Apps call these instead of touching `utility/`, keeping app isolation.
 - `battery.*` — `frij_battery_pct()` + `frij_battery_charging()`. A steady mock
   on the emulator (for the watch-face indicator + About); the device reads the
   M5PM1 PMIC (TODO).
-- `wifi.*` — scan / connect / disconnect / forget + a master enable, behind a
-  neutral interface. The emulator ships a working **in-memory mock** so Settings →
-  Network is fully interactive; the device backend is a stub (TODO: `esp_wifi` +
-  NVS creds — needs on-screen text entry, deferred).
+- `wifi.*` — scan / connect / disconnect / forget + a master enable. Emulator =
+  in-memory mock; device = Arduino `WiFi` scan/connect with one saved network's
+  creds in NVS (`Preferences`), auto-reconnected on enable. New secured networks
+  prompt for a password via `frij_keyboard_prompt` (Settings → Network).

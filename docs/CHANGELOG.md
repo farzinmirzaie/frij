@@ -2,6 +2,22 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-10 — Wi-Fi fully wired + on-screen keyboard
+
+- **`frij_keyboard_prompt`** — a reusable full-screen text-entry overlay (title +
+  one-line textarea + LVGL `lv_keyboard`), password-mask option; ✓ confirms, ⌨
+  cancels. Built on the active screen so it sits above the launcher/header.
+- **Wi-Fi is real**: tapping a new secured network opens the keyboard for the
+  password → `frij_wifi_connect(ssid, pw)`; saved networks reconnect without
+  asking; open networks join directly. Connect result drives the toast (✓/✗).
+- **Device backend** (`wifi.cpp`): Arduino `WiFi` scan/connect + credentials in
+  NVS via `Preferences` (one saved "home" network — NVS keys cap at 15 chars, so
+  not keyed by SSID). Auto-reconnects the saved network when Wi-Fi is switched
+  on. Emulator keeps its in-memory mock. (scan/connect block briefly — fine for
+  user-initiated actions; could be made async later.)
+- Process: the agent now ends each round with a **"What changed & how to test"**
+  section (manual emulator steps) — see CLAUDE.md.
+
 ## 2026-06-10 — hardware wiring (device features made real)
 
 - **Device bring-up via M5Unified**: `src/main.cpp` now calls `M5.begin()` (panel

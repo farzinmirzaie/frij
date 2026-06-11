@@ -190,6 +190,9 @@ int main(int, char**)
         build_app_screen(settings_app(), 1);
         static const char* opts[] = {"Connect", "Forget"};
         frij_action_sheet("Linksys-5G", opts, 2, FRIJ_PRIMARY, NULL, NULL);
+    } else if (scr && strcmp(scr, "keyboard") == 0) {
+        build_app_screen(settings_app(), 1);
+        frij_keyboard_prompt("StashAway-5G", true, NULL, NULL);
     } else if (scr && strcmp(scr, "about") == 0) {
         build_app_screen(settings_app(), 2);
     } else if (scr && strcmp(scr, "toast") == 0) {

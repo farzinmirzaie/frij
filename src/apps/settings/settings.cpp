@@ -221,6 +221,7 @@ static void net_action_cb(int opt, void* user)
 {
     (void)user;
     char msg[64];
+    bool ok     = true;
     bool forget = (s_sel_kind != 0 && opt == 1);  // option 1 is Forget when present
     if (forget) {
         frij_wifi_forget(s_sel);
@@ -228,13 +229,25 @@ static void net_action_cb(int opt, void* user)
     } else if (s_sel_kind == 2) {  // connected, Disconnect
         frij_wifi_disconnect();
         lv_snprintf(msg, sizeof(msg), "Disconnected");
-    } else {  // Connect (new or saved)
-        frij_wifi_connect(s_sel, NULL);
-        lv_snprintf(msg, sizeof(msg), "Connected to %s", s_sel);
+    } else {  // Connect with saved/no credentials
+        ok = frij_wifi_connect(s_sel, NULL);
+        lv_snprintf(msg, sizeof(msg), ok ? "Connected to %s" : "Couldn't connect", s_sel);
     }
     frij_haptic(FRIJ_HAPTIC_SELECT);
     net_refresh();
-    frij_toast_status(msg, true);  // mock Wi-Fi always succeeds
+    frij_toast_status(msg, ok);
+}
+
+// Keyboard prompt callback: join the selected network with the typed password.
+static void wifi_pw_done(const char* pw, void* user)
+{
+    (void)user;
+    bool ok = frij_wifi_connect(s_sel, pw);
+    frij_haptic(FRIJ_HAPTIC_SELECT);
+    net_refresh();
+    char msg[64];
+    lv_snprintf(msg, sizeof(msg), ok ? "Connected to %s" : "Wrong password?", s_sel);
+    frij_toast_status(msg, ok);
 }
 
 static void net_row_cb(lv_event_t* e)
@@ -250,16 +263,18 @@ static void net_row_cb(lv_event_t* e)
 
     static const char* opt_connected[] = {"Disconnect", "Forget"};
     static const char* opt_saved[]     = {"Connect", "Forget"};
-    static const char* opt_new[]       = {"Connect"};
     if (nw->connected) {
         s_sel_kind = 2;
         frij_action_sheet(nw->ssid, opt_connected, 2, ACCENT, net_action_cb, NULL);
-    } else if (nw->known) {
+    } else if (nw->known) {  // saved creds — connect without re-asking
         s_sel_kind = 1;
         frij_action_sheet(nw->ssid, opt_saved, 2, ACCENT, net_action_cb, NULL);
-    } else {
+    } else if (nw->secured) {  // new + secured — ask for the password
         s_sel_kind = 0;
-        frij_action_sheet(nw->ssid, opt_new, 1, ACCENT, net_action_cb, NULL);
+        frij_keyboard_prompt(nw->ssid, /*password=*/true, wifi_pw_done, NULL);
+    } else {  // new + open — just join
+        s_sel_kind = 0;
+        wifi_pw_done(NULL, NULL);
     }
 }
 

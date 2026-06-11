@@ -114,15 +114,143 @@ void frij_wifi_forget(const char* ssid)
 
 #else
 
-// ---- device: TODO (esp_wifi: scan, connect with NVS-stored creds) ----------
+// ---- device: real radio (Arduino WiFi) + one saved network in NVS ----------
+//
+// Credentials live in NVS via Preferences (namespace "wifi": ssid + pw). We keep
+// ONE saved network (the home AP) — NVS keys cap at 15 chars so we can't key by
+// SSID, and a watch realistically pairs to one network. `known` = "this is the
+// saved SSID". scan()/connect() block briefly (the radio is synchronous); fine
+// for user-initiated actions — could be made async later.
 
-void        frij_wifi_init(void) {}
-bool        frij_wifi_enabled(void) { return false; }
-void        frij_wifi_set_enabled(bool on) { (void)on; }
-int         frij_wifi_scan(frij_wifi_net_t* out, int max) { (void)out; (void)max; return 0; }
-const char* frij_wifi_connected(void) { return NULL; }
-bool        frij_wifi_connect(const char* ssid, const char* password) { (void)ssid; (void)password; return false; }
-void        frij_wifi_disconnect(void) {}
-void        frij_wifi_forget(const char* ssid) { (void)ssid; }
+#include <Preferences.h>
+#include <WiFi.h>
+
+static bool        s_enabled = false;
+static Preferences s_prefs;
+
+static bool saved_ssid(char* out, size_t n)
+{
+    s_prefs.begin("wifi", /*readOnly=*/true);
+    String s = s_prefs.getString("ssid", "");
+    s_prefs.end();
+    if (s.length() == 0) {
+        return false;
+    }
+    strncpy(out, s.c_str(), n - 1);
+    out[n - 1] = '\0';
+    return true;
+}
+
+void frij_wifi_init(void)
+{
+    WiFi.mode(WIFI_OFF);
+}
+
+bool frij_wifi_enabled(void)
+{
+    return s_enabled;
+}
+
+void frij_wifi_set_enabled(bool on)
+{
+    s_enabled = on;
+    if (on) {
+        WiFi.mode(WIFI_STA);
+        char ss[FRIJ_WIFI_SSID_MAX];
+        if (saved_ssid(ss, sizeof(ss))) {
+            frij_wifi_connect(ss, NULL);  // reconnect with stored creds
+        }
+    } else {
+        WiFi.disconnect(true);
+        WiFi.mode(WIFI_OFF);
+    }
+}
+
+const char* frij_wifi_connected(void)
+{
+    static char buf[FRIJ_WIFI_SSID_MAX];
+    if (WiFi.status() != WL_CONNECTED) {
+        return NULL;
+    }
+    strncpy(buf, WiFi.SSID().c_str(), sizeof(buf) - 1);
+    buf[sizeof(buf) - 1] = '\0';
+    return buf;
+}
+
+int frij_wifi_scan(frij_wifi_net_t* out, int max)
+{
+    if (!s_enabled) {
+        return 0;
+    }
+    int found = WiFi.scanNetworks();  // blocking (~1-2s)
+    if (found <= 0) {
+        return 0;
+    }
+    char        ss[FRIJ_WIFI_SSID_MAX];
+    bool        has_saved = saved_ssid(ss, sizeof(ss));
+    const char* cur       = frij_wifi_connected();
+
+    int n = 0;
+    for (int i = 0; i < found && n < max; i++) {
+        frij_wifi_net_t* o = &out[n];
+        strncpy(o->ssid, WiFi.SSID(i).c_str(), FRIJ_WIFI_SSID_MAX - 1);
+        o->ssid[FRIJ_WIFI_SSID_MAX - 1] = '\0';
+        if (o->ssid[0] == '\0') {
+            continue;  // skip hidden/empty SSIDs
+        }
+        o->rssi      = (int8_t)WiFi.RSSI(i);
+        o->secured   = WiFi.encryptionType(i) != WIFI_AUTH_OPEN;
+        o->known     = has_saved && strcmp(o->ssid, ss) == 0;
+        o->connected = cur && strcmp(o->ssid, cur) == 0;
+        n++;
+    }
+    WiFi.scanDelete();
+    return n;
+}
+
+bool frij_wifi_connect(const char* ssid, const char* password)
+{
+    String pw;
+    if (password && password[0]) {
+        pw = password;
+    } else {  // no password given → use the saved one (if this is the saved SSID)
+        s_prefs.begin("wifi", true);
+        if (s_prefs.getString("ssid", "") == ssid) {
+            pw = s_prefs.getString("pw", "");
+        }
+        s_prefs.end();
+    }
+
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(ssid, pw.c_str());
+    uint32_t t0 = millis();
+    while (WiFi.status() != WL_CONNECTED && millis() - t0 < 8000) {
+        delay(100);
+    }
+    bool ok = WiFi.status() == WL_CONNECTED;
+    if (ok) {  // remember it as the saved network
+        s_prefs.begin("wifi", false);
+        s_prefs.putString("ssid", ssid);
+        s_prefs.putString("pw", pw);
+        s_prefs.end();
+    }
+    return ok;
+}
+
+void frij_wifi_disconnect(void)
+{
+    WiFi.disconnect();
+}
+
+void frij_wifi_forget(const char* ssid)
+{
+    s_prefs.begin("wifi", false);
+    if (s_prefs.getString("ssid", "") == ssid) {
+        s_prefs.remove("ssid");
+        s_prefs.remove("pw");
+    }
+    s_prefs.end();
+    WiFi.disconnect();
+}
 
 #endif
