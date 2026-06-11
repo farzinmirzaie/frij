@@ -2,6 +2,15 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-11 — reusable two-line empty states
+
+- `frij_empty_state` redesigned: text-only (icon dropped) — `title` in primary
+  white over a fainter `subtitle` hint (new `FRIJ_TEXT_3` token) saying how the
+  screen gets filled. Used everywhere something can be empty: Todo ("Nothing
+  yet / Add items in Google Keep"), Events ("No upcoming events / Add events in
+  the family Google Calendar"), Wi-Fi off ("Wi-Fi is off / Turn on to see
+  nearby networks") and the no-networks scan result.
+
 ## 2026-06-11 — pure-black backgrounds + always-on-top round bezel
 
 - **Pure-black backgrounds**: `FRIJ_SURFACE_1` is now `0x000000` and

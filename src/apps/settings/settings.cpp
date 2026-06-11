@@ -342,10 +342,8 @@ static void build_network(lv_obj_t* col, bool rescan)
     if (!on) {
         // radio off: toggle stays pinned at the top; float the hint at the
         // screen's center (FLOATING so it ignores the top-pinned flex flow).
-        lv_obj_t* hint = frij_label(col, "Turn on Wi-Fi to see\nnearby networks",
-                                    FRIJ_FONT_BODY, FRIJ_TEXT_2);
-        lv_obj_set_width(hint, LV_PCT(100));
-        lv_obj_set_style_text_align(hint, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+        lv_obj_t* hint = frij_empty_state(col, "Wi-Fi is off",
+                                          "Turn on to see\nnearby networks");
         lv_obj_add_flag(hint, LV_OBJ_FLAG_FLOATING);
         lv_obj_align(hint, LV_ALIGN_CENTER, 0, 60);  // centered in the page area
         frij_stagger_in(col, 40);
@@ -360,7 +358,7 @@ static void build_network(lv_obj_t* col, bool rescan)
         s_scan_n = frij_wifi_scan(s_scan, (int)(sizeof(s_scan) / sizeof(s_scan[0])));
     }
     if (s_scan_n == 0) {
-        frij_empty_state(col, "No networks");
+        frij_empty_state(col, "No networks", "Tap the refresh icon\nto scan again");
         frij_stagger_in(col, 40);
         return;
     }

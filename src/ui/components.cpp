@@ -365,25 +365,19 @@ lv_obj_t* frij_progress_ring(lv_obj_t* parent, int size, int pct, uint32_t accen
     return a;
 }
 
-lv_obj_t* frij_empty_state(lv_obj_t* parent, const char* text)
+lv_obj_t* frij_empty_state(lv_obj_t* parent, const char* title, const char* subtitle)
 {
-    lv_obj_t* box = frij_col(parent, FRIJ_SP_M);
+    // Text-only (no icon): a clear title and a fainter hint on what fills the
+    // screen ("Add events in Google Calendar"). Centered, multi-line-safe.
+    lv_obj_t* box = frij_col(parent, FRIJ_SP_S);
 
-    lv_obj_t* circle = lv_obj_create(box);
-    lv_obj_set_size(circle, 72, 72);
-    lv_obj_set_style_radius(circle, LV_RADIUS_CIRCLE, LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(circle, LV_OPA_TRANSP, LV_PART_MAIN);
-    lv_obj_set_style_border_width(circle, 2, LV_PART_MAIN);
-    lv_obj_set_style_border_color(circle, lv_color_hex(FRIJ_BORDER), LV_PART_MAIN);
-    lv_obj_clear_flag(circle, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_t* t = frij_label(box, title, FRIJ_FONT_BODY, FRIJ_TEXT);
+    lv_obj_set_style_text_align(t, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
 
-    lv_obj_t* icon = lv_label_create(circle);
-    lv_label_set_text(icon, LV_SYMBOL_LIST);  // neutral — not "+" (which implies add)
-    lv_obj_set_style_text_font(icon, FRIJ_FONT_SYMBOL, LV_PART_MAIN);
-    lv_obj_set_style_text_color(icon, lv_color_hex(FRIJ_TEXT_2), LV_PART_MAIN);
-    lv_obj_center(icon);
-
-    frij_label(box, text, FRIJ_FONT_BODY, FRIJ_TEXT_2);
+    if (subtitle && subtitle[0]) {
+        lv_obj_t* s = frij_label(box, subtitle, FRIJ_FONT_SMALL, FRIJ_TEXT_3);
+        lv_obj_set_style_text_align(s, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    }
     return box;
 }
 

@@ -33,6 +33,7 @@
 #define FRIJ_BORDER     0x2A2A33
 #define FRIJ_TEXT       0xF2F2F7  // primary text
 #define FRIJ_TEXT_2     0xA1A1AA  // secondary / muted
+#define FRIJ_TEXT_3     0x6B6B74  // faint — empty-state subtitles, fine print
 #define FRIJ_OUTSIDE    0xCED0D5  // outside the round panel (emulator bezel area)
 
 // ---- Type (SF Rounded, converted via lv_font_conv) ------------------------

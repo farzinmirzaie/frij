@@ -53,7 +53,7 @@ theme, list rows, …) as patterns repeat.
   - `frij_header_fade` — a base-color→transparent strip just below the header,
     so scrolling rows dissolve into the dark zone instead of hard-clipping.
   - `frij_progress_ring` — thin arc gauge.
-  - `frij_empty_state` — round "nothing here" placeholder.
+  - `frij_empty_state` — text-only "nothing here" placeholder: white title + faint subtitle hint.
   - `frij_header` — shared app top bar: back button (returns to the launcher) +
     centered title + optional right action button. Round-safe placement.
   - (entrance/stagger animations live in `anim.*`.)

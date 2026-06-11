@@ -122,7 +122,7 @@ static void on_list_deleted(lv_event_t* e)
 static void populate_list(lv_obj_t* col)
 {
     if (s_n == 0) {
-        frij_empty_state(col, "Nothing yet");
+        frij_empty_state(col, "Nothing yet", "Add items in Google Keep");
         return;
     }
     for (int i = 0; i < s_n; i++) {

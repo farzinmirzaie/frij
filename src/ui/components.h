@@ -84,8 +84,9 @@ void      frij_check_set(lv_obj_t* check, bool checked, bool animate);
 // A thin progress ring (lv_arc) at `pct` (0–100), `size` px, `accent` color.
 lv_obj_t* frij_progress_ring(lv_obj_t* parent, int size, int pct, uint32_t accent);
 
-// A round "nothing here" placeholder with an icon + text.
-lv_obj_t* frij_empty_state(lv_obj_t* parent, const char* text);
+// A text-only "nothing here" placeholder: `title` in primary white over a
+// fainter `subtitle` hint (NULL to omit) saying how the screen gets filled.
+lv_obj_t* frij_empty_state(lv_obj_t* parent, const char* title, const char* subtitle);
 
 // A faint, gently-bobbing up-chevron near the bottom of a glance — hints that
 // the card can be opened by swiping up. FLOATING (doesn't affect layout).

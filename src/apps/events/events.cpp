@@ -256,12 +256,7 @@ static void populate_list(lv_obj_t* col)
         }
     }
     if (shown == 0) {
-        // text-only (Wi-Fi-off style), with a hint where events come from
-        lv_obj_t* hint = frij_label(col, "No upcoming events", FRIJ_FONT_BODY, FRIJ_TEXT_2);
-        lv_obj_set_style_text_align(hint, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
-        lv_obj_t* sub = frij_label(col, "Add events in the family\nGoogle Calendar",
-                                   FRIJ_FONT_SMALL, FRIJ_TEXT_2);
-        lv_obj_set_style_text_align(sub, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+        frij_empty_state(col, "No upcoming events", "Add events in the family\nGoogle Calendar");
         return;
     }
     frij_stagger_in(col, 45);
