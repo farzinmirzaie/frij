@@ -1,19 +1,23 @@
 #!/usr/bin/env python3
-"""One-way sync: a Google Calendar (family calendar) -> the Frij store.
+"""One-way sync: Google Calendars (family + optional holidays) -> the Frij store.
 
-Reads the calendar's **secret iCal URL** (Google Calendar ▸ Settings ▸
+Reads the family calendar's **secret iCal URL** (Google Calendar ▸ Settings ▸
 "Integrate calendar" ▸ Secret address in iCal format) — a plain .ics feed, so
 no OAuth/API project is needed. Recurring events (RRULEs like "every 6
 months") are expanded to concrete occurrences with `recurring-ical-events`.
+A second, optional feed (FRIJ_HOLIDAYS_ICS_URL — e.g. Google's public Malaysia
+holidays calendar) merges in with `"h": true` so the device can render
+holidays differently. Missing/failed holidays feed never blocks the family sync.
 
-The next N upcoming events land in Supabase `store:events` as
-    [{"t": "Dentist", "d": "2026-06-14", "tm": "09:30", "te": "10:30",
-      "l": "Qualiteeth"}, ...]
+The payload lands in Supabase `store:events` as
+    {"at": 1765400000,            # unix epoch of this sync ("Updated Xm ago")
+     "ev": [{"t": "Dentist", "d": "2026-06-14", "tm": "09:30", "te": "10:30",
+             "l": "Qualiteeth"}, {"t": "Hari Raya", "d": "...", "h": true}, ...]}
 ("tm"/"te" = start/end clock, omitted for all-day events; "de" = inclusive end
-date for multi-day all-day events; "l" = location). Times are rendered in the
-calendar's own timezone (X-WR-TIMEZONE, or the FRIJ_TZ env override) — Google's
-feed stores them as UTC instants, which would otherwise be hours off. The
-device's Events app renders them as countdowns; it never talks to Google.
+date for multi-day all-day events; "l" = location; "h" = holiday). Times are
+rendered in FRIJ_TZ (or the calendar's own X-WR-TIMEZONE) — Google's feed
+stores them as UTC instants, which would otherwise be hours off. The device's
+Events app renders countdowns; it never talks to Google.
 
 Like the Keep bridge, this runs off-device on the GitHub Actions cron — the
 secret URL lives in a GitHub secret / the local .env, never in the repo.
@@ -25,6 +29,7 @@ Usage:
 import datetime
 import json
 import sys
+import time
 import urllib.request
 
 # Shared helpers (dotenv, env, Supabase upsert, emoji strip) live in the Keep
@@ -54,9 +59,9 @@ def calendar_tz(cal):
         return None
 
 
-def to_events_json(ics_bytes, today):
-    """Expand the calendar into the device's JSON: the next MAX_EVENTS
-    occurrences on/after `today` (a date), soonest first."""
+def to_events_json(ics_bytes, today, holiday=False):
+    """Expand one calendar feed into device items: every occurrence inside the
+    window, soonest first (uncapped — merge_events applies the device cap)."""
     import icalendar
     import recurring_ical_events
 
@@ -99,32 +104,59 @@ def to_events_json(ics_bytes, today):
         location = clean_text(str(ev.get("LOCATION", "")))
         if location:
             item["l"] = location[:TEXT_MAX]
+        if holiday:
+            item["h"] = True
         out.append(item)
     # soonest first; all-day events sort before timed ones on the same day
     out.sort(key=lambda e: (e["d"], e.get("tm", "")))
+    return out
+
+
+def merge_events(*lists):
+    """Merge per-feed lists, soonest first, capped to the device limit."""
+    out = sorted((e for lst in lists for e in lst),
+                 key=lambda e: (e["d"], e.get("tm", "")))
     if len(out) > MAX_EVENTS:
         print(f"note: {len(out)} upcoming events, capping to {MAX_EVENTS} (device limit)",
               file=sys.stderr)
     return out[:MAX_EVENTS]
 
 
+def payload(events, at):
+    """The store value: the events plus the sync time ("Updated Xm ago")."""
+    return {"at": int(at), "ev": events}
+
+
 def main():
     load_dotenv()
     write = "--dry-run" not in sys.argv
+    today = datetime.date.today()
 
-    ics = fetch_ics(env("FRIJ_ICS_URL", required=True))
-    events = to_events_json(ics, datetime.date.today())
-    print(json.dumps(events, ensure_ascii=False))
+    family = to_events_json(fetch_ics(env("FRIJ_ICS_URL", required=True)), today)
+
+    # Optional second feed (public holidays). Absent or broken never blocks
+    # the family sync — holidays just drop out until the next run.
+    holidays = []
+    holidays_url = env("FRIJ_HOLIDAYS_ICS_URL")
+    if holidays_url:
+        try:
+            holidays = to_events_json(fetch_ics(holidays_url), today, holiday=True)
+        except Exception as e:  # noqa: BLE001 — any feed failure is non-fatal
+            print(f"warning: holidays feed failed ({e}); syncing family only", file=sys.stderr)
+
+    value = payload(merge_events(family, holidays), time.time())
+    print(json.dumps(value, ensure_ascii=False))
 
     url = env("SUPABASE_URL", required=True)
     anon = env("SUPABASE_ANON_KEY", required=True)
     table = env("SUPABASE_TABLE") or "store"
     key = env("FRIJ_EVENTS_KEY") or "events"
     if write:
-        upsert_supabase(url, anon, table, key, events)
-        print(f"synced {len(events)} event(s) -> {table}:{key}", file=sys.stderr)
+        upsert_supabase(url, anon, table, key, value)
+        print(f"synced {len(value['ev'])} event(s) -> {table}:{key}", file=sys.stderr)
     else:
-        print(f"dry-run: would write {len(events)} event(s) to {table}:{key}", file=sys.stderr)
+        print(f"dry-run: would write {len(value['ev'])} event(s) to {table}:{key}",
+              file=sys.stderr)
 
 
 if __name__ == "__main__":

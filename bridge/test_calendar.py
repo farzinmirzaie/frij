@@ -6,7 +6,7 @@ Run:  python3 bridge/test_calendar.py
 """
 import datetime
 
-from calendar_to_frij import MAX_EVENTS, to_events_json
+from calendar_to_frij import MAX_EVENTS, merge_events, payload, to_events_json
 
 TODAY = datetime.date(2026, 6, 11)
 
@@ -45,6 +45,20 @@ END:VEVENT
 END:VCALENDAR
 """
 
+# A public-holidays style feed: all-day events only.
+HOLIDAYS_ICS = """BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Test//Holidays//EN
+X-WR-TIMEZONE:UTC
+BEGIN:VEVENT
+UID:raya@test
+SUMMARY:Hari Raya Haji
+DTSTART;VALUE=DATE:20260616
+DTEND;VALUE=DATE:20260617
+END:VEVENT
+END:VCALENDAR
+"""
+
 
 def test_mapping():
     out = to_events_json(ICS.encode(), TODAY)
@@ -62,15 +76,33 @@ def test_mapping():
     ], out
 
 
+def test_holidays_merge():
+    family = to_events_json(ICS.encode(), TODAY)
+    holidays = to_events_json(HOLIDAYS_ICS.encode(), TODAY, holiday=True)
+    # holiday flagged with "h" and slots into date order between family events
+    assert holidays == [{"t": "Hari Raya Haji", "d": "2026-06-16", "h": True}], holidays
+    merged = merge_events(family, holidays)
+    titles = [e["t"] for e in merged]
+    assert titles == ["Gym class", "Dentist", "Hari Raya Haji", "Gym class",
+                      "Gym class", "Trip to Iran"], titles
+
+
+def test_payload_shape():
+    value = payload([{"t": "X", "d": "2026-06-12"}], at=1765400000.7)
+    assert value == {"at": 1765400000, "ev": [{"t": "X", "d": "2026-06-12"}]}, value
+
+
 def test_caps_to_device_limit():
     many = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//T//T//EN\n" + "".join(
         f"BEGIN:VEVENT\nUID:e{i}@test\nSUMMARY:Event {i}\n"
         f"DTSTART;VALUE=DATE:202607{i + 1:02d}\nEND:VEVENT\n" for i in range(MAX_EVENTS + 4)
     ) + "END:VCALENDAR\n"
-    assert len(to_events_json(many.encode(), TODAY)) == MAX_EVENTS
+    assert len(merge_events(to_events_json(many.encode(), TODAY))) == MAX_EVENTS
 
 
 if __name__ == "__main__":
     test_mapping()
+    test_holidays_merge()
+    test_payload_shape()
     test_caps_to_device_limit()
     print("all calendar tests passed")

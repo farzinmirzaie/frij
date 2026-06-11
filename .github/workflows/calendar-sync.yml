@@ -22,6 +22,9 @@ jobs:
       - run: python bridge/calendar_to_frij.py
         env:
           FRIJ_ICS_URL: ${{ secrets.FRIJ_ICS_URL }}
+          # Optional public-holidays feed (e.g. Google's Malaysia holidays
+          # calendar) — leave the secret unset to sync family events only.
+          FRIJ_HOLIDAYS_ICS_URL: ${{ secrets.FRIJ_HOLIDAYS_ICS_URL }}
           # Home timezone for clock times. The calendar's own X-WR-TIMEZONE is
           # UTC, so the feed can't tell us; without this, 12:00 shows as 04:00.
           FRIJ_TZ: Asia/Kuala_Lumpur

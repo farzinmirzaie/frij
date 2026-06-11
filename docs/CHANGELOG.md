@@ -2,6 +2,23 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-11 — Events: sections, holidays feed, countdown screen, freshness
+
+- **Sections**: the list groups into Today / This week / Later with the shared
+  section labels.
+- **End-time grace**: a today event disappears from list/glance/countdown once
+  its end time has passed (events without an end stay all day).
+- **Holidays feed (optional)**: second iCal feed via `FRIJ_HOLIDAYS_ICS_URL`
+  (e.g. Google's public Malaysia holidays calendar) merges into the same list
+  with `"h":true`. Family events wear the pink accent on their day badge;
+  holidays stay neutral gray. Missing/broken feed never blocks the family sync.
+- **Countdown screen**: swipe to Events' second screen for a big-number
+  countdown ("23 / days / Trip to Iran") to the next family event (holidays
+  excluded).
+- **Freshness**: the bridge stamps the payload (`{"at": epoch, "ev": [...]}`)
+  and the list shows a tiny "Updated Xm ago" footer. The old bare-array shape
+  still loads.
+
 ## 2026-06-11 — Todo glance: random open item + empty-state pattern
 
 - The Todo glance now shows a **random unchecked item** on each rebuild

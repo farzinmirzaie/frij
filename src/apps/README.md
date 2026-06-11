@@ -77,9 +77,11 @@ every app shares the look but has its own scheme.
   (big ring) / add-by-voice (placeholder UI). Glance shows the next item +
   count. Amber.
 - `events/` — countdowns to the family calendar's upcoming events (read-only;
-  the `bridge/calendar_to_frij.py` cron mirrors the Google Calendar iCal feed
-  into `store:events`). List with day-count badges; glance shows the nearest
-  event + how soon. Pink.
+  the `bridge/calendar_to_frij.py` cron mirrors the Google Calendar iCal feeds
+  into `store:events`; an optional holidays feed merges in gray). 2 screens:
+  list (Today/This week/Later sections, day-count badges — accent = family,
+  gray = holiday, "Updated Xm ago" footer) / big-number countdown to the next
+  family event. Glance shows the nearest event + how soon. Pink.
 - `stopwatch/` — MM:SS.cs stopwatch with Start/Stop, laps, and reset; timing
   lives in module state so it keeps running off-screen. Green.
 - `scoreboard/` — two-player score keeper (game-night companion). Full-bleed

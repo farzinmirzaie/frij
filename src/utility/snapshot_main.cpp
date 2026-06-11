@@ -171,6 +171,8 @@ int main(int, char**)
         build_app_screen(events_app(), 0);
     } else if (scr && strcmp(scr, "events_glance") == 0) {
         build_glance_view(events_app());
+    } else if (scr && strcmp(scr, "events_countdown") == 0) {
+        build_app_screen(events_app(), 1);
     } else if (scr && strcmp(scr, "counter") == 0) {
         build_app_screen(counter_app(), 0);
     } else if (scr && strcmp(scr, "stopwatch") == 0) {
@@ -211,7 +213,7 @@ int main(int, char**)
     } else {
         if (scr && scr[0]) {  // typo'd key would silently render the launcher
             printf("unknown FRIJ_SNAP '%s' — valid: todo todo_progress todo_add todo_glance "
-                   "events events_glance counter stopwatch stopwatch_glance scoreboard "
+                   "events events_glance events_countdown counter stopwatch stopwatch_glance scoreboard "
                    "scoreboard_glance settings network netoff sheet confirm keyboard result "
                    "about\n",
                    scr);
