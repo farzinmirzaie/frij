@@ -133,6 +133,11 @@ static void do_reset(lv_event_t* e)
     frij_set_brightness(80);
     frij_haptics_set_enabled(true);
     frij_anim_set_enabled(true);
+    if (s_about_col) {  // refresh the visible rows (Last sync etc.)
+        lv_obj_clean(s_about_col);
+        build_about(s_about_col);
+        frij_page_settle(s_about_col);
+    }
     frij_haptic(FRIJ_HAPTIC_SUCCESS);
     frij_toast_status("Settings reset", true);
 }
@@ -150,6 +155,11 @@ static void do_erase(lv_event_t* e)
     frij_set_brightness(80);
     frij_haptics_set_enabled(true);
     frij_anim_set_enabled(true);
+    if (s_about_col) {  // refresh the visible rows (Last sync -> Never, etc.)
+        lv_obj_clean(s_about_col);
+        build_about(s_about_col);
+        frij_page_settle(s_about_col);
+    }
     frij_haptic(FRIJ_HAPTIC_SUCCESS);
     frij_toast_status("All data erased", true);
 }
@@ -186,8 +196,10 @@ static void slider_row(lv_obj_t* col, const char* text, int min, int max, const 
 static lv_obj_t*      s_net_col = NULL;            // the Network page, for in-place refresh
 static frij_wifi_net_t s_scan[12];                 // last scan (rows index into this)
 static int            s_scan_n   = 0;
-static char           s_sel[FRIJ_WIFI_SSID_MAX];   // the network the action sheet acts on
-static int            s_sel_kind = 0;              // 0 new, 1 saved, 2 connected
+typedef enum { NET_NEW, NET_SAVED, NET_CONNECTED } net_kind_t;
+
+static char       s_sel[FRIJ_WIFI_SSID_MAX];  // the network the action sheet acts on
+static net_kind_t s_sel_kind = NET_NEW;
 
 static void build_network(lv_obj_t* col);
 
@@ -214,11 +226,11 @@ static void net_action_cb(int opt, void* user)
     (void)user;
     char msg[64];
     bool ok     = true;
-    bool forget = (s_sel_kind != 0 && opt == 1);  // option 1 is Forget when present
+    bool forget = (s_sel_kind != NET_NEW && opt == 1);  // option 1 is Forget when present
     if (forget) {
         frij_wifi_forget(s_sel);
         lv_snprintf(msg, sizeof(msg), "Forgot %s", s_sel);
-    } else if (s_sel_kind == 2) {  // connected, Disconnect
+    } else if (s_sel_kind == NET_CONNECTED) {  // Disconnect
         frij_wifi_disconnect();
         lv_snprintf(msg, sizeof(msg), "Disconnected");
     } else {  // Connect with saved/no credentials
@@ -255,18 +267,18 @@ static void net_row_cb(lv_event_t* e)
     static const char* opt_connected[] = {"Disconnect", "Forget"};
     static const char* opt_saved[]     = {"Connect", "Forget"};
     if (nw->connected) {
-        s_sel_kind = 2;
+        s_sel_kind = NET_CONNECTED;
         frij_action_sheet(nw->ssid, opt_connected, 2, ACCENT, net_action_cb, NULL);
     } else if (nw->known) {  // saved creds — connect without re-asking
-        s_sel_kind = 1;
+        s_sel_kind = NET_SAVED;
         frij_action_sheet(nw->ssid, opt_saved, 2, ACCENT, net_action_cb, NULL);
     } else if (nw->secured) {  // new + secured — ask for the password (numeric keypad)
-        s_sel_kind = 0;
+        s_sel_kind = NET_NEW;
         char prompt[64];
         lv_snprintf(prompt, sizeof(prompt), "Enter password for\n%s", nw->ssid);
         frij_numpad_prompt(prompt, wifi_pw_done, NULL);
     } else {  // new + open — just join
-        s_sel_kind = 0;
+        s_sel_kind = NET_NEW;
         wifi_pw_done(NULL, NULL);
     }
 }
@@ -363,7 +375,7 @@ static void build_about(lv_obj_t* col)
     // hero: the logo clover + wordmark, with generous breathing room around it
     lv_obj_t* hero = frij_logo(col, 44, true);
     lv_obj_set_style_margin_top(hero, FRIJ_SP_XXL * 4, LV_PART_MAIN);  // 36
-    lv_obj_t* ver = frij_label(col, "on-device UI  -  v0.1", FRIJ_FONT_BODY, FRIJ_TEXT_2);
+    lv_obj_t* ver = frij_label(col, "on-device UI  -  " FRIJ_VERSION, FRIJ_FONT_BODY, FRIJ_TEXT_2);
     lv_obj_set_style_margin_bottom(ver, FRIJ_SP_XXL * 4, LV_PART_MAIN);  // 36
 
     // Battery row — bound to the battery subjects so it tracks live (observer),

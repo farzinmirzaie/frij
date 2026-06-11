@@ -3,6 +3,9 @@
 
 #include "lvgl.h"
 
+// The firmware version, shown in Settings ▸ About. Bump on releases.
+#define FRIJ_VERSION "v0.1"
+
 /*
  * The contract between a mini-app and Frij.
  *

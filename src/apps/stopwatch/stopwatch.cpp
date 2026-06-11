@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "system/haptics.h"
+#include "ui/anim.h"
 #include "ui/components.h"
 #include "ui/theme.h"
 
@@ -129,6 +130,20 @@ static void tick(lv_timer_t* t)
     }
 }
 
+// The 33ms refresh only needs to run while the watch is running — pause it when
+// stopped so an idle stopwatch page costs (nearly) nothing.
+static void sync_timer(sw_ctx_t* c)
+{
+    if (!c->timer) {
+        return;
+    }
+    if (s_running) {
+        lv_timer_resume(c->timer);
+    } else {
+        lv_timer_pause(c->timer);
+    }
+}
+
 static void on_delete(lv_event_t* e)
 {
     sw_ctx_t* c = (sw_ctx_t*)lv_event_get_user_data(e);
@@ -152,6 +167,7 @@ static void on_start_stop(lv_event_t* e)
     }
     frij_haptic(FRIJ_HAPTIC_SELECT);
     refresh_ui(c);
+    sync_timer(c);
 }
 
 static void on_lap_reset(lv_event_t* e)
@@ -163,6 +179,9 @@ static void on_lap_reset(lv_event_t* e)
             frij_haptic(FRIJ_HAPTIC_TAP);
             if (c->laps) {
                 populate_laps(c->laps);
+                if (lv_obj_get_child_count(c->laps) > 0) {
+                    frij_anim_enter(lv_obj_get_child(c->laps, 0), 0);  // newest lap pops in
+                }
             }
         }
     } else {
@@ -194,6 +213,7 @@ static void glance(lv_obj_t* parent)
 
     refresh_ui(c);  // sets the time text (buttons are NULL here — safely skipped)
     c->timer = lv_timer_create(tick, 33, c);
+    sync_timer(c);  // paused while the watch isn't running
     lv_obj_add_event_cb(col, on_delete, LV_EVENT_DELETE, c);
 }
 
@@ -239,6 +259,7 @@ static void screen(lv_obj_t* parent, int index)
 
     refresh_ui(c);
     c->timer = lv_timer_create(tick, 33, c);
+    sync_timer(c);  // paused while the watch isn't running
     lv_obj_add_event_cb(col, on_delete, LV_EVENT_DELETE, c);
 }
 

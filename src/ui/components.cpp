@@ -890,6 +890,10 @@ static void numpad_key_cb(lv_event_t* e)
     bool          repeat  = lv_event_get_code(e) == LV_EVENT_LONG_PRESSED_REPEAT;
 
     if (code == NUMPAD_OK) {
+        if (c->len == 0) {
+            frij_haptic(FRIJ_HAPTIC_TAP);  // nothing typed — nudge, don't submit ""
+            return;
+        }
         char out[FRIJ_NUMPAD_MAX + 1];  // copy out before the close frees ctx
         c->buf[c->len] = '\0';
         lv_memcpy(out, c->buf, (size_t)c->len + 1);
@@ -1186,6 +1190,9 @@ void frij_toast_status(const char* text, bool ok)
 lv_obj_t* frij_value_row(lv_obj_t* parent, const char* label, const char* value)
 {
     lv_obj_t* r = frij_surface_row(parent);
+    // read-only: no press darken / haptic — tapping it does nothing, so it
+    // shouldn't feel tappable like an action row
+    lv_obj_clear_flag(r, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_t* l = frij_label(r, label, FRIJ_FONT_BODY, FRIJ_TEXT);
     lv_obj_set_flex_grow(l, 1);
     frij_label(r, value, FRIJ_FONT_BODY, FRIJ_TEXT_2);
@@ -1230,6 +1237,7 @@ lv_obj_t* frij_circle_button(lv_obj_t* parent, int diameter, uint32_t bg, const 
 lv_obj_t* frij_toggle(lv_obj_t* parent, bool on, uint32_t accent)
 {
     lv_obj_t* sw = lv_switch_create(parent);
+    lv_obj_set_style_anim_duration(sw, FRIJ_ANIM_MS, LV_PART_MAIN);  // knob slide = house motion
     lv_obj_set_style_bg_color(sw, lv_color_hex(FRIJ_SURFACE_3), LV_PART_MAIN);
     lv_obj_set_style_bg_color(sw, lv_color_hex(accent), LV_PART_INDICATOR | LV_STATE_CHECKED);
     lv_obj_set_style_bg_color(sw, lv_color_hex(0xFFFFFF), LV_PART_KNOB);

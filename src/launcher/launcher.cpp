@@ -4,6 +4,7 @@
 
 #include "lvgl.h"
 #include "lvgl_port_m5stack.hpp"
+#include "store/store.h"
 #include "ui/carousel.h"
 #include "ui/components.h"
 #include "ui/theme.h"
@@ -29,6 +30,8 @@ typedef enum { HOME, APP, SETTINGS } layer_t;
 
 static const uint32_t COLOR_BG      = FRIJ_SURFACE_1;
 static const int      VSNAP_PERCENT = 30;
+
+static bool s_show_hint = true;  // swipe-up affordance; stops nagging after a few boots
 
 static lv_obj_t*       s_root     = NULL;
 static lv_obj_t*       s_home     = NULL;  // persistent
@@ -71,8 +74,8 @@ static void glance_builder(lv_obj_t* page, int index, void* user)
     if (app->build_glance) {
         app->build_glance(page);
     }
-    // openable apps get a faint "swipe up to open" affordance
-    if (app->build_screen && app->screen_count >= 1) {
+    // openable apps get a faint "swipe up to open" affordance (first boots only)
+    if (s_show_hint && app->build_screen && app->screen_count >= 1) {
         frij_swipe_hint(page);
     }
     frij_page_settle(page);  // center if it fits, else top-align
@@ -410,6 +413,14 @@ void frij_back(void)
 
 void frij_launcher_start(void)
 {
+    // Show the swipe-up hint for the first few boots, then retire it — by then
+    // the gesture is learned and the bobbing chevron is just noise.
+    int seen    = frij_store_load_int("hint_seen", 0);
+    s_show_hint = seen < 5;
+    if (s_show_hint) {
+        frij_store_save_int("hint_seen", seen + 1);
+    }
+
     if (!lvgl_port_lock()) {
         return;
     }

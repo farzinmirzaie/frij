@@ -2,6 +2,22 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-11 — improvement pass 2 (10: details + hygiene)
+
+- **Stopwatch timers pause when stopped** — the 33ms refresh only runs while the
+  watch runs (idle page costs ~nothing now).
+- **Newest lap row pops in** after tapping Lap.
+- **Reset / Erase refresh About in place** (Last sync / rows no longer stale).
+- **Swipe-up hint retires after ~5 boots** (`hint_seen`) — learned gestures don't
+  need a permanent bobbing chevron.
+- **Read-only value rows are inert** — no press-darken/haptic on rows that do
+  nothing (Battery/Storage/Last sync).
+- **Numpad ✓ ignores empty input** (tap haptic instead of submitting "").
+- **Toggle knob slide uses the house FRIJ_ANIM_MS** like all other motion.
+- **`FRIJ_VERSION`** defined once (app.h), About uses it.
+- Hygiene: Wi-Fi selection kinds are a named enum (was magic 0/1/2); the
+  snapshot tool now warns on an unknown `FRIJ_SNAP` key and lists valid ones.
+
 ## 2026-06-11 — improvement pass (10: UX, micro-anim, hygiene)
 
 - **Sliders persist on release only**: dragging Brightness/Volume/Sleep applied

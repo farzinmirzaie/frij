@@ -206,6 +206,12 @@ int main(int, char**)
         frij_confirm("Reset settings?", "Restore everything to defaults.", "Reset",
                      FRIJ_DANGER, NULL);
     } else {
+        if (scr && scr[0]) {  // typo'd key would silently render the launcher
+            printf("unknown FRIJ_SNAP '%s' — valid: todo todo_progress todo_add todo_glance "
+                   "counter stopwatch stopwatch_glance scoreboard scoreboard_glance settings "
+                   "network netoff sheet confirm keyboard result about\n",
+                   scr);
+        }
         user_app();  // default: the launcher (home)
     }
 
