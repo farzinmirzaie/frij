@@ -50,6 +50,8 @@ Each `src/*` folder has its own `README.md` with the details.
 - Round screen: keep key content centered.
 - **Adding an app:** see [src/apps/README.md](src/apps/README.md). Apps include
   only `app.h`, never launcher code. Shared widgets go in `src/ui/`.
+- **Any new UI pattern must be a reusable `src/ui/` component** (keypad, result
+  screen, icons, logo…), never app-local widget code — other apps will need it.
 
 ## Docs (read + UPDATE these every session)
 

@@ -192,7 +192,10 @@ int main(int, char**)
         frij_action_sheet("Linksys-5G", opts, 2, FRIJ_PRIMARY, NULL, NULL);
     } else if (scr && strcmp(scr, "keyboard") == 0) {
         build_app_screen(settings_app(), 1);
-        frij_numpad_prompt("StashAway-5G", NULL, NULL);
+        frij_numpad_prompt("Enter password for\nStashAway-5G", NULL, NULL);
+    } else if (scr && strcmp(scr, "result") == 0) {
+        build_app_screen(settings_app(), 1);
+        frij_result_screen(true, "Connected", "Home Network", "Done");
     } else if (scr && strcmp(scr, "about") == 0) {
         build_app_screen(settings_app(), 2);
     } else if (scr && strcmp(scr, "toast") == 0) {

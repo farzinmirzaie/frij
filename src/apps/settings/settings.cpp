@@ -8,6 +8,7 @@
 #include "system/battery.h"
 #include "system/brightness.h"
 #include "system/haptics.h"
+#include "system/storage.h"
 #include "system/wifi.h"
 #include "core/datetime.h"
 #include "ui/anim.h"
@@ -152,7 +153,9 @@ static void do_erase(lv_event_t* e)
 static void on_erase(lv_event_t* e)
 {
     (void)e;  // destructive: confirm with a danger-colored button
-    frij_confirm("Erase all data?", "Removes todos, counter and settings.", "Erase", FRIJ_DANGER, do_erase);
+    // honest scope: this clears the device; cloud-synced rows re-download later
+    frij_confirm("Erase all data?", "Clears this device. Synced data re-downloads.", "Erase",
+                 FRIJ_DANGER, do_erase);
 }
 
 // ---- row helpers -----------------------------------------------------------
@@ -238,16 +241,15 @@ static void net_action_cb(int opt, void* user)
     frij_toast_status(msg, ok);
 }
 
-// Keyboard prompt callback: join the selected network with the typed password.
+// Keypad callback: join the selected network with the typed password, then
+// conclude the flow with a full-screen result (big check / cross).
 static void wifi_pw_done(const char* pw, void* user)
 {
     (void)user;
     bool ok = frij_wifi_connect(s_sel, pw);
-    frij_haptic(FRIJ_HAPTIC_SELECT);
+    frij_haptic(ok ? FRIJ_HAPTIC_SUCCESS : FRIJ_HAPTIC_TAP);
     net_refresh();
-    char msg[64];
-    lv_snprintf(msg, sizeof(msg), ok ? "Connected to %s" : "Wrong password?", s_sel);
-    frij_toast_status(msg, ok);
+    frij_result_screen(ok, ok ? "Connected" : "Couldn't connect", s_sel, ok ? "Done" : "Close");
 }
 
 static void net_row_cb(lv_event_t* e)
@@ -271,7 +273,9 @@ static void net_row_cb(lv_event_t* e)
         frij_action_sheet(nw->ssid, opt_saved, 2, ACCENT, net_action_cb, NULL);
     } else if (nw->secured) {  // new + secured — ask for the password (numeric keypad)
         s_sel_kind = 0;
-        frij_numpad_prompt(nw->ssid, wifi_pw_done, NULL);
+        char prompt[64];
+        lv_snprintf(prompt, sizeof(prompt), "Enter password for\n%s", nw->ssid);
+        frij_numpad_prompt(prompt, wifi_pw_done, NULL);
     } else {  // new + open — just join
         s_sel_kind = 0;
         wifi_pw_done(NULL, NULL);
@@ -308,6 +312,8 @@ static void build_network(lv_obj_t* col)
         return;
     }
 
+    frij_section_label(col, "Networks");  // grouped-list heading, like Display/Sound
+
     // Visible networks; tap one for Connect / Disconnect / Forget.
     s_scan_n = frij_wifi_scan(s_scan, (int)(sizeof(s_scan) / sizeof(s_scan[0])));
     if (s_scan_n == 0) {
@@ -321,19 +327,24 @@ static void build_network(lv_obj_t* col)
         lv_obj_set_user_data(r, (void*)(intptr_t)i);
         lv_obj_add_event_cb(r, net_row_cb, LV_EVENT_CLICKED, NULL);
 
-        // signal glyph, brighter the stronger the network
-        lv_obj_t* sig = frij_label(r, LV_SYMBOL_WIFI, FRIJ_FONT_SYMBOL,
-                                   nw->rssi > -60 ? FRIJ_TEXT : FRIJ_TEXT_2);
-        (void)sig;
+        // left: an accent check marks the active connection
+        if (nw->connected) {
+            frij_label(r, LV_SYMBOL_OK, FRIJ_FONT_SYMBOL, ACCENT);
+        }
         lv_obj_t* name = frij_label(r, nw->ssid, FRIJ_FONT_BODY,
                                     nw->connected ? ACCENT : FRIJ_TEXT);
         lv_obj_set_flex_grow(name, 1);
         lv_label_set_long_mode(name, LV_LABEL_LONG_DOT);
 
-        const char* status = nw->connected ? "Connected" : (nw->known ? "Saved" : "");
-        if (status[0]) {
-            frij_label(r, status, FRIJ_FONT_BODY, nw->connected ? ACCENT : FRIJ_TEXT_2);
+        // right: "Saved" hint, a lock when secured, and the signal glyph
+        if (nw->known && !nw->connected) {
+            frij_label(r, "Saved", FRIJ_FONT_SMALL, FRIJ_TEXT_2);
         }
+        if (nw->secured) {
+            frij_lock_icon(r);
+        }
+        frij_label(r, LV_SYMBOL_WIFI, FRIJ_FONT_SYMBOL,
+                   nw->rssi > -60 ? FRIJ_TEXT : FRIJ_TEXT_2);
     }
     frij_stagger_in(col, 35);  // staggered list entrance
 }
@@ -362,8 +373,8 @@ static void about_battery_cb(lv_observer_t* obs, lv_subject_t* subject)
 
 static void build_about(lv_obj_t* col)
 {
-    // hero: name + version, with generous breathing room around it
-    lv_obj_t* hero = frij_label(col, "Frij", FRIJ_FONT_TITLE, FRIJ_TEXT);
+    // hero: the logo clover + wordmark, with generous breathing room around it
+    lv_obj_t* hero = frij_logo(col, 44, true);
     lv_obj_set_style_margin_top(hero, FRIJ_SP_XXL * 4, LV_PART_MAIN);  // 36
     lv_obj_t* ver = frij_label(col, "on-device UI  -  v0.1", FRIJ_FONT_BODY, FRIJ_TEXT_2);
     lv_obj_set_style_margin_bottom(ver, FRIJ_SP_XXL * 4, LV_PART_MAIN);  // 36
@@ -374,6 +385,10 @@ static void build_about(lv_obj_t* col)
     lv_obj_t* bval = lv_obj_get_child(brow, 1);
     lv_subject_add_observer_obj(frij_battery_level_subject(), about_battery_cb, bval, NULL);
     lv_subject_add_observer_obj(frij_battery_charging_subject(), about_battery_cb, bval, NULL);
+
+    char stbuf[24];
+    frij_storage_free_str(stbuf, sizeof(stbuf));  // "12.3 MB free" (flash on device)
+    frij_value_row(col, "Storage", stbuf);
 
     char sbuf[24];
     int  ls = frij_store_load_int("last_sync", 0);
@@ -428,8 +443,23 @@ static void screen(lv_obj_t* parent, int index)
     }
 }
 
+// Header action: a rescan button on the Network screen.
+static const char* st_action(int index)
+{
+    return index == 1 ? LV_SYMBOL_REFRESH : NULL;
+}
+
+static void st_on_action(int index)
+{
+    if (index != 1 || !s_net_col) {
+        return;
+    }
+    net_refresh();  // build_network() rescans
+    frij_toast("Scanning...");
+}
+
 const frij_app_t* settings_app(void)
 {
-    static const frij_app_t app = {"Settings", ACCENT, NULL, 3, screen};
+    static const frij_app_t app = {"Settings", ACCENT, NULL, 3, screen, st_action, st_on_action};
     return &app;
 }

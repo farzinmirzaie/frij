@@ -26,7 +26,9 @@ Apps call these instead of touching `utility/`, keeping app isolation.
   on device.
 - `battery.*` — `frij_battery_pct()` + `frij_battery_charging()`. A steady mock
   on the emulator (for the watch-face indicator + About); the device reads the
-  M5PM1 PMIC (TODO).
+  PMIC via `M5.Power`. Also publishes LVGL subjects for live-bound widgets.
+- `storage.*` — `frij_storage_free_str()` ("12.3 MB free"): flash chip size vs
+  installed firmware on device; a believable mock on the emulator.
 - `wifi.*` — scan / connect / disconnect / forget + a master enable. Emulator =
   in-memory mock; device = Arduino `WiFi` scan/connect with one saved network's
   creds in NVS (`Preferences`), auto-reconnected on enable. New secured networks

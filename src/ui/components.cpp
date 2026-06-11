@@ -391,6 +391,106 @@ lv_obj_t* frij_swipe_hint(lv_obj_t* parent)
     return hint;
 }
 
+lv_obj_t* frij_logo(lv_obj_t* parent, int size, bool with_name)
+{
+    // row: [clover] [Frij]
+    lv_obj_t* row = lv_obj_create(parent);
+    lv_obj_remove_style_all(row);
+    lv_obj_set_size(row, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(row, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(row, FRIJ_SP_M, LV_PART_MAIN);
+    lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(row, LV_OBJ_FLAG_CLICKABLE);
+
+    // the clover: three overlapping circles (pink / purple / violet) over a soft glow
+    lv_obj_t* clover = lv_obj_create(row);
+    lv_obj_remove_style_all(clover);
+    lv_obj_set_size(clover, size, size);
+    lv_obj_clear_flag(clover, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(clover, LV_OBJ_FLAG_OVERFLOW_VISIBLE);  // the glow spills past the box
+    lv_obj_add_flag(row, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
+
+    // soft radial halo behind the circles (purple, fading to nothing)
+    lv_grad_dsc_t* gd = (lv_grad_dsc_t*)lv_malloc(sizeof(lv_grad_dsc_t));
+    if (gd != NULL) {
+        lv_obj_t* glow = lv_obj_create(clover);
+        lv_obj_remove_style_all(glow);
+        lv_obj_set_size(glow, size * 2, size * 2);
+        lv_obj_set_pos(glow, -size / 2, -size / 2);  // centered on the clover
+        lv_obj_clear_flag(glow, LV_OBJ_FLAG_CLICKABLE);
+        lv_memzero(gd, sizeof(*gd));
+        lv_grad_radial_init(gd, LV_GRAD_CENTER, LV_GRAD_CENTER, LV_GRAD_RIGHT, LV_GRAD_CENTER,
+                            LV_GRAD_EXTEND_PAD);
+        // fade to fully transparent well inside the box, so its square edge
+        // can never show against the page wash
+        gd->stops_count    = 3;
+        gd->stops[0].color = lv_color_hex(FRIJ_PRIMARY);
+        gd->stops[0].opa   = 80;
+        gd->stops[0].frac  = 0;
+        gd->stops[1].color = lv_color_hex(FRIJ_PRIMARY);
+        gd->stops[1].opa   = 0;
+        gd->stops[1].frac  = 165;
+        gd->stops[2].color = lv_color_hex(FRIJ_PRIMARY);
+        gd->stops[2].opa   = 0;
+        gd->stops[2].frac  = 255;
+        lv_obj_set_style_bg_grad(glow, gd, LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(glow, LV_OPA_COVER, LV_PART_MAIN);
+        lv_obj_add_event_cb(glow, glow_free_cb, LV_EVENT_DELETE, gd);
+    }
+
+    static const uint32_t colors[] = {FRIJ_PINK, FRIJ_PRIMARY, FRIJ_INFO};
+    int d = size * 65 / 100;  // circle diameter; ~35% overlap toward the center
+    const int px[] = {(size - d) / 2, 0, size - d};  // top-mid, bottom-left, bottom-right
+    const int py[] = {0, size - d, size - d};
+    for (int i = 0; i < 3; i++) {
+        lv_obj_t* c = lv_obj_create(clover);
+        lv_obj_remove_style_all(c);
+        lv_obj_set_size(c, d, d);
+        lv_obj_set_pos(c, px[i], py[i]);
+        lv_obj_set_style_radius(c, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+        // vertical gradient (lighter top → deeper bottom) gives the orbs depth
+        lv_obj_set_style_bg_color(c, lv_color_lighten(lv_color_hex(colors[i]), 40), LV_PART_MAIN);
+        lv_obj_set_style_bg_grad_color(c, lv_color_darken(lv_color_hex(colors[i]), 60),
+                                       LV_PART_MAIN);
+        lv_obj_set_style_bg_grad_dir(c, LV_GRAD_DIR_VER, LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(c, 215, LV_PART_MAIN);  // slight blend where they overlap
+    }
+
+    if (with_name) {
+        frij_label(row, "Frij", FRIJ_FONT_TITLE, FRIJ_TEXT);
+    }
+    return row;
+}
+
+lv_obj_t* frij_lock_icon(lv_obj_t* parent)
+{
+    // No padlock in the symbol font, so draw a tiny one: a ring shackle on top
+    // of a filled rounded body.
+    lv_obj_t* lock = lv_obj_create(parent);
+    lv_obj_remove_style_all(lock);
+    lv_obj_set_size(lock, 14, 16);
+    lv_obj_clear_flag(lock, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(lock, LV_OBJ_FLAG_CLICKABLE);
+
+    lv_obj_t* shackle = lv_obj_create(lock);
+    lv_obj_remove_style_all(shackle);
+    lv_obj_set_size(shackle, 10, 10);
+    lv_obj_align(shackle, LV_ALIGN_TOP_MID, 0, 0);
+    lv_obj_set_style_radius(shackle, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+    lv_obj_set_style_border_width(shackle, 2, LV_PART_MAIN);
+    lv_obj_set_style_border_color(shackle, lv_color_hex(FRIJ_TEXT_2), LV_PART_MAIN);
+
+    lv_obj_t* body = lv_obj_create(lock);
+    lv_obj_remove_style_all(body);
+    lv_obj_set_size(body, 14, 9);
+    lv_obj_align(body, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_set_style_radius(body, 3, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(body, lv_color_hex(FRIJ_TEXT_2), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(body, LV_OPA_COVER, LV_PART_MAIN);
+    return lock;
+}
+
 // Keep the slider-card's right-hand value readout in sync as it's dragged.
 static void slider_value_cb(lv_event_t* e)
 {
@@ -735,7 +835,8 @@ void frij_action_sheet(const char* title, const char* const* options, int count,
 typedef struct {
     char       buf[FRIJ_NUMPAD_MAX + 1];
     int        len;
-    lv_obj_t*  dots;  // masked-value display (one dot per entered digit)
+    bool       repeated;  // a hold-repeat ran; swallow the release's CLICKED
+    lv_obj_t*  dots;      // masked-value display (one dot per entered digit)
     frij_kb_cb cb;
     void*      user;
 } numpad_ctx_t;
@@ -743,18 +844,19 @@ typedef struct {
 // Special key codes stored in a button's user_data (digits store their char).
 #define NUMPAD_BACKSPACE (-1)
 #define NUMPAD_OK        (-2)
-#define NUMPAD_CANCEL    (-3)
 
 static void numpad_free_cb(lv_event_t* e)
 {
     lv_free(lv_event_get_user_data(e));
 }
 
-// Rebuild the row of dots to match the current length.
+// Rebuild the row of dots to match the current length (capped so a long code
+// can't overflow the row — entry keeps counting past the visual cap).
 static void numpad_sync_dots(numpad_ctx_t* c)
 {
+    int shown = c->len > 14 ? 14 : c->len;
     lv_obj_clean(c->dots);
-    for (int i = 0; i < c->len; i++) {
+    for (int i = 0; i < shown; i++) {
         lv_obj_t* d = lv_obj_create(c->dots);
         lv_obj_remove_style_all(d);
         lv_obj_set_size(d, 12, 12);
@@ -770,24 +872,27 @@ static void numpad_key_cb(lv_event_t* e)
     lv_obj_t*     overlay = (lv_obj_t*)lv_event_get_user_data(e);
     numpad_ctx_t* c       = (numpad_ctx_t*)lv_obj_get_user_data(overlay);
     int           code    = (int)(intptr_t)lv_obj_get_user_data(btn);
+    bool          repeat  = lv_event_get_code(e) == LV_EVENT_LONG_PRESSED_REPEAT;
 
-    if (code == NUMPAD_CANCEL) {
-        lv_obj_delete(overlay);
-        return;
-    }
     if (code == NUMPAD_OK) {
-        char out[FRIJ_NUMPAD_MAX + 1];  // copy out before delete frees ctx
+        char out[FRIJ_NUMPAD_MAX + 1];  // copy out before the close frees ctx
         c->buf[c->len] = '\0';
         lv_memcpy(out, c->buf, (size_t)c->len + 1);
         frij_kb_cb cb = c->cb;
         void*      u  = c->user;
-        lv_obj_delete(overlay);  // frees ctx (numpad_free_cb)
+        modal_close(overlay);  // fade out; ctx freed on delete (numpad_free_cb)
         if (cb) {
             cb(out, u);
         }
         return;
     }
     if (code == NUMPAD_BACKSPACE) {
+        if (repeat) {
+            c->repeated = true;  // swallow the CLICKED that fires on release
+        } else if (c->repeated) {
+            c->repeated = false;
+            return;
+        }
         if (c->len > 0) {
             c->buf[--c->len] = '\0';
             numpad_sync_dots(c);
@@ -803,12 +908,13 @@ static void numpad_key_cb(lv_event_t* e)
 
 // One round key built on frij_circle_button; `code` is the digit char or a
 // NUMPAD_* sentinel, stashed in user_data for numpad_key_cb.
-static void numpad_key(lv_obj_t* grid, lv_obj_t* overlay, const char* label, int code, uint32_t bg,
-                       uint32_t fg, const lv_font_t* font)
+static lv_obj_t* numpad_key(lv_obj_t* grid, lv_obj_t* overlay, const char* label, int code,
+                            uint32_t bg, uint32_t fg, const lv_font_t* font)
 {
     lv_obj_t* b = frij_circle_button(grid, 66, bg, label, font, fg, NULL);
     lv_obj_set_user_data(b, (void*)(intptr_t)code);
     lv_obj_add_event_cb(b, numpad_key_cb, LV_EVENT_CLICKED, overlay);
+    return b;
 }
 
 void frij_numpad_prompt(const char* title, frij_kb_cb cb, void* user)
@@ -829,6 +935,9 @@ void frij_numpad_prompt(const char* title, frij_kb_cb cb, void* user)
     lv_obj_clear_flag(overlay, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_user_data(overlay, c);
     lv_obj_add_event_cb(overlay, numpad_free_cb, LV_EVENT_DELETE, c);
+    // Register with the modal stack so the Back action cancels the keypad.
+    s_modal_top = overlay;
+    lv_obj_add_event_cb(overlay, modal_clear_top_cb, LV_EVENT_DELETE, NULL);
 
     // vertical stack: title · dots · keypad — centered, so it stays in the circle
     lv_obj_t* col = frij_col(overlay, FRIJ_SP_M);
@@ -838,7 +947,7 @@ void frij_numpad_prompt(const char* title, frij_kb_cb cb, void* user)
     lv_obj_t* t = frij_label(col, title && title[0] ? title : "Enter code", FRIJ_FONT_BODY,
                              FRIJ_TEXT_2);
     lv_obj_set_width(t, LV_PCT(80));
-    lv_label_set_long_mode(t, LV_LABEL_LONG_DOT);
+    lv_label_set_long_mode(t, LV_LABEL_LONG_WRAP);  // e.g. "Enter password for\n<ssid>"
     lv_obj_set_style_text_align(t, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
 
     // masked value (dots). Keep a fixed min height so the layout doesn't jump.
@@ -864,10 +973,67 @@ void frij_numpad_prompt(const char* title, frij_kb_cb cb, void* user)
         char lbl[2] = {(char)('0' + d), '\0'};
         numpad_key(grid, overlay, lbl, '0' + d, FRIJ_SURFACE_2, FRIJ_TEXT, FRIJ_FONT_TITLE);
     }
-    numpad_key(grid, overlay, LV_SYMBOL_CLOSE, NUMPAD_CANCEL, FRIJ_SURFACE_2, FRIJ_TEXT_2,
-               FRIJ_FONT_SYMBOL);
+    lv_obj_t* bs = numpad_key(grid, overlay, LV_SYMBOL_BACKSPACE, NUMPAD_BACKSPACE, FRIJ_SURFACE_2,
+                              FRIJ_TEXT_2, FRIJ_FONT_SYMBOL);
+    lv_obj_add_event_cb(bs, numpad_key_cb, LV_EVENT_LONG_PRESSED_REPEAT, overlay);  // hold to clear
     numpad_key(grid, overlay, "0", '0', FRIJ_SURFACE_2, FRIJ_TEXT, FRIJ_FONT_TITLE);
     numpad_key(grid, overlay, LV_SYMBOL_OK, NUMPAD_OK, FRIJ_SECONDARY, 0xFFFFFF, FRIJ_FONT_SYMBOL);
+}
+
+// ---- result screen (flow conclusion: big check/cross + message) -------------
+
+void frij_result_screen(bool ok, const char* title, const char* subtitle, const char* button_text)
+{
+    // full-screen overlay; Back also dismisses it (registered as the top modal)
+    lv_obj_t* overlay = lv_obj_create(lv_screen_active());
+    lv_obj_remove_style_all(overlay);
+    lv_obj_set_size(overlay, LV_PCT(100), LV_PCT(100));
+    frij_apply_bg(overlay);
+    lv_obj_clear_flag(overlay, LV_OBJ_FLAG_SCROLLABLE);
+    s_modal_top = overlay;
+    lv_obj_add_event_cb(overlay, modal_clear_top_cb, LV_EVENT_DELETE, NULL);
+
+    lv_obj_t* col = frij_col(overlay, FRIJ_SP_M);
+    lv_obj_center(col);
+    lv_obj_set_height(col, LV_SIZE_CONTENT);
+
+    // big status ring with a 2x-scaled glyph (the symbol font is 20px)
+    uint32_t  color = ok ? FRIJ_SECONDARY : FRIJ_DANGER;
+    lv_obj_t* ring  = lv_obj_create(col);
+    lv_obj_remove_style_all(ring);
+    lv_obj_set_size(ring, 88, 88);
+    lv_obj_set_style_radius(ring, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+    lv_obj_set_style_border_width(ring, 3, LV_PART_MAIN);
+    lv_obj_set_style_border_color(ring, lv_color_hex(color), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(ring, lv_color_hex(color), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(ring, LV_OPA_20, LV_PART_MAIN);
+    lv_obj_clear_flag(ring, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t* glyph = lv_label_create(ring);
+    lv_label_set_text(glyph, ok ? LV_SYMBOL_OK : LV_SYMBOL_CLOSE);
+    lv_obj_set_style_text_font(glyph, FRIJ_FONT_SYMBOL, LV_PART_MAIN);
+    lv_obj_set_style_text_color(glyph, lv_color_hex(color), LV_PART_MAIN);
+    lv_obj_set_style_transform_pivot_x(glyph, lv_pct(50), LV_PART_MAIN);
+    lv_obj_set_style_transform_pivot_y(glyph, lv_pct(50), LV_PART_MAIN);
+    lv_obj_set_style_transform_scale(glyph, 512, LV_PART_MAIN);
+    lv_obj_center(glyph);
+
+    lv_obj_t* t = frij_label(col, title, FRIJ_FONT_TITLE, color);
+    lv_obj_set_style_text_align(t, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    if (subtitle && subtitle[0]) {
+        lv_obj_t* s = frij_label(col, subtitle, FRIJ_FONT_BODY, FRIJ_TEXT_2);
+        lv_obj_set_width(s, LV_PCT(70));
+        lv_label_set_long_mode(s, LV_LABEL_LONG_DOT);
+        lv_obj_set_style_text_align(s, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    }
+
+    lv_obj_t* btn = pill_button(col, button_text ? button_text : "Done", FRIJ_SURFACE_3, FRIJ_TEXT,
+                                confirm_cancel_cb, overlay);  // closes via modal_close
+    lv_obj_set_flex_grow(btn, 0);
+    lv_obj_set_width(btn, 150);
+    lv_obj_set_style_margin_top(btn, FRIJ_SP_M, LV_PART_MAIN);
+
+    frij_anim_enter(col, 0);  // fade + rise in (no-op under reduce-motion)
 }
 
 // ---- toast (auto-dismissing snackbar) --------------------------------------

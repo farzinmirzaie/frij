@@ -74,6 +74,19 @@ lv_obj_t* frij_empty_state(lv_obj_t* parent, const char* text);
 // the card can be opened by swiping up. FLOATING (doesn't affect layout).
 lv_obj_t* frij_swipe_hint(lv_obj_t* parent);
 
+// The Frij logo: a three-circle clover (pink/purple/violet), `size` px tall,
+// plus the "Frij" wordmark when `with_name`. Use anywhere branding is wanted.
+lv_obj_t* frij_logo(lv_obj_t* parent, int size, bool with_name);
+
+// A small padlock glyph (drawn, not a font symbol — the symbol font has none).
+// Muted color; for "secured" markers like Wi-Fi rows.
+lv_obj_t* frij_lock_icon(lv_obj_t* parent);
+
+// A full-screen result overlay: a big ring with a check (ok) or cross, a title,
+// an optional subtitle, and a button that dismisses it. The Back action also
+// closes it. Use to conclude a flow (e.g. Wi-Fi joined: "Connected · Done").
+void frij_result_screen(bool ok, const char* title, const char* subtitle, const char* button_text);
+
 // A shared app header near the top: a back button (left, returns to the
 // launcher), a centered `title`, and a right action button (hidden until set).
 // `action_cb` fires when the action is tapped. Round-screen-safe placement.
@@ -127,9 +140,10 @@ void frij_confirm(const char* title, const char* message, const char* confirm_te
 bool frij_modal_close_top(void);
 
 // A full-screen numeric keypad (our own — themed + round-screen friendly): a
-// title, a masked dots display, and a 3×4 ring of round keys (1–9, ✕ cancel, 0,
-// ✓ confirm). `cb` fires with the entered digits on ✓; ✕ closes without calling
-// `cb`. Closes itself either way. Used for the Wi-Fi (numeric) password.
+// title (wraps to two lines), a masked dots display, and a 3×4 grid of round
+// keys (1–9, ⌫ backspace with hold-to-repeat, 0, ✓ confirm). `cb` fires with
+// the entered digits on ✓; the Back action cancels without calling `cb`.
+// Closes itself either way. Used for the Wi-Fi (numeric) password.
 typedef void (*frij_kb_cb)(const char* text, void* user);
 void frij_numpad_prompt(const char* title, frij_kb_cb cb, void* user);
 

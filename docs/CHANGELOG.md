@@ -2,6 +2,31 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-11 — settings polish: logo, storage, Wi-Fi flow (inspiration pass)
+
+- **`frij_logo`** — reusable three-circle clover (pink/purple/violet, new
+  `FRIJ_PINK` token) + "Frij" wordmark; About's hero now shows it. Each orb has a
+  vertical light→deep gradient and the clover sits on a soft radial glow.
+- **"Networks" section heading** on the Wi-Fi screen (same grouped-list style as
+  Display/Sound).
+- **Erase-all copy is honest**: "Clears this device. Synced data re-downloads."
+  (cloud rows — and Keep-owned todos — come back by design).
+- **Storage readout**: new `system/storage` service ("12.3 MB free" — flash chip
+  vs firmware size on device, believable mock on the emulator) + a Storage row
+  in About.
+- **Wi-Fi rows restyled** (per the inspiration shots): accent ✓ + accent name on
+  the connected network; right side shows a small "Saved" hint, a **lock** for
+  secured networks (`frij_lock_icon` — drawn, the symbol font has no padlock) and
+  the signal glyph. Header gains a **rescan** action on the Network screen.
+- **Numpad v2**: bottom row is now ⌫ / 0 / ✓ — backspace with **hold-to-repeat**;
+  cancel moved to the **Back** action (keypad registers with the modal stack);
+  two-line title ("Enter password for\n<ssid>"); dot display capped at 14.
+- **`frij_result_screen`** — reusable flow-conclusion overlay: big green-check
+  (or red-cross) ring + title + subtitle + Done pill, Back-dismissable. The Wi-Fi
+  password flow now ends with "Connected · <ssid> · Done" instead of a toast.
+- CLAUDE.md: new rule — every new UI pattern lands in `src/ui/` as a reusable
+  component.
+
 ## 2026-06-11 — custom round numeric keypad
 
 - Dropped LVGL's `lv_keyboard` (light-themed + rectangular → ran off the round

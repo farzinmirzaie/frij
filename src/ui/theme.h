@@ -19,6 +19,7 @@
 #define FRIJ_WARNING    0xFB8C00  // orange (low battery, caution)
 #define FRIJ_INFO       0x7C3AED  // violet
 #define FRIJ_YELLOW     0xFACC15  // amber
+#define FRIJ_PINK       0xF472B6  // pink — logo clover
 #define FRIJ_DANGER     0xEF4444  // red — destructive actions (erase/reset)
 
 // Per-app accent palette. Each app picks ONE of these as its `color` and uses

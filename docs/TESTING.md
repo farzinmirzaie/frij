@@ -35,8 +35,8 @@ sips -s format png /tmp/frij_snapshot.bmp --out /tmp/frij_snapshot.png
 
 `FRIJ_SNAP` values: `todo` `todo_progress` `todo_add` `todo_glance` `counter`
 `stopwatch` `stopwatch_glance` `scoreboard` `scoreboard_glance` `settings`
-(General) `network` `netoff` `sheet` `confirm` `about`. (unset = the
-launcher/home.)
+(General) `network` `netoff` `sheet` `confirm` `keyboard` (numpad) `result`
+`about`. (unset = the launcher/home.)
 
 Then open/Read `/tmp/frij_snapshot.png`. It renders the real UI offscreen at
 466×466 with the round clip, so it's faithful to the device.

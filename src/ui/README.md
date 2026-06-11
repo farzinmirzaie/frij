@@ -41,6 +41,12 @@ theme, list rows, …) as patterns repeat.
   - `frij_section_label` — a small muted heading to group rows on a page.
   - `frij_toast` — a brief auto-dismissing snackbar near the bottom (fades in,
     holds, fades out, self-removes). For transient confirmations.
+  - `frij_numpad_prompt` — full-screen numeric keypad (title, masked dots, round
+    keys 1–9 / ⌫ hold-to-repeat / 0 / ✓); Back cancels. Wi-Fi password entry.
+  - `frij_result_screen` — flow-conclusion overlay: big check/cross ring + title
+    + subtitle + a Done pill; Back-dismissable. E.g. "Connected" after Wi-Fi.
+  - `frij_logo` — the three-circle clover + optional "Frij" wordmark.
+  - `frij_lock_icon` — a tiny drawn padlock (the symbol font has none).
   - `frij_glow` — soft radial accent halo; **FLOATING** (doesn't scroll or grow
     the scroll area). Returns the object so it can be repositioned.
   - `frij_top_tint` — a restrained accent wash along the top edge that fades to
