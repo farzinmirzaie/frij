@@ -30,4 +30,4 @@ Apps call these instead of touching `utility/`, keeping app isolation.
 - `wifi.*` — scan / connect / disconnect / forget + a master enable. Emulator =
   in-memory mock; device = Arduino `WiFi` scan/connect with one saved network's
   creds in NVS (`Preferences`), auto-reconnected on enable. New secured networks
-  prompt for a password via `frij_keyboard_prompt` (Settings → Network).
+  prompt for a password via `frij_numpad_prompt` (Settings → Network).

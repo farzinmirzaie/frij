@@ -2,13 +2,18 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-11 — custom round numeric keypad
+
+- Dropped LVGL's `lv_keyboard` (light-themed + rectangular → ran off the round
+  screen). Built our own **`frij_numpad_prompt`**: a full-screen, on-brand keypad
+  — title + masked dots display + a 3×4 ring of round keys (1–9, ✕ cancel, 0, ✓
+  confirm) made from `frij_circle_button`, centered so every key stays inside the
+  circle. ✓ returns the digits; ✕ cancels. Wi-Fi password now uses it.
+
 ## 2026-06-10 — Wi-Fi fully wired + on-screen keyboard
 
-- **`frij_keyboard_prompt`** — a reusable full-screen text-entry overlay (title +
-  one-line textarea + LVGL `lv_keyboard`), password-mask + `numeric` options; ✓
-  confirms, ⌨ cancels. Built on the active screen so it sits above the
-  launcher/header. The Wi-Fi password prompt uses **numeric** mode (number pad,
-  bigger keys — fits the round screen).
+- **Wi-Fi password entry** (originally LVGL `lv_keyboard`; replaced 06-11 by the
+  custom `frij_numpad_prompt` above).
 - **Wi-Fi is real**: tapping a new secured network opens the keyboard for the
   password → `frij_wifi_connect(ssid, pw)`; saved networks reconnect without
   asking; open networks join directly. Connect result drives the toast (✓/✗).

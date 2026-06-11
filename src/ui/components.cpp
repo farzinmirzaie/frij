@@ -728,71 +728,146 @@ void frij_action_sheet(const char* title, const char* const* options, int count,
     lv_obj_set_width(cancel, LV_PCT(100));
 }
 
-// ---- keyboard prompt (full-screen text entry) ------------------------------
+// ---- numeric keypad (our own, round-screen friendly) -----------------------
+
+#define FRIJ_NUMPAD_MAX 32
 
 typedef struct {
+    char       buf[FRIJ_NUMPAD_MAX + 1];
+    int        len;
+    lv_obj_t*  dots;  // masked-value display (one dot per entered digit)
     frij_kb_cb cb;
     void*      user;
-    lv_obj_t*  ta;
-} kb_ctx_t;
+} numpad_ctx_t;
 
-static void kb_free_cb(lv_event_t* e)
+// Special key codes stored in a button's user_data (digits store their char).
+#define NUMPAD_BACKSPACE (-1)
+#define NUMPAD_OK        (-2)
+#define NUMPAD_CANCEL    (-3)
+
+static void numpad_free_cb(lv_event_t* e)
 {
-    lv_free(lv_event_get_user_data(e));  // ctx outlives the build call
+    lv_free(lv_event_get_user_data(e));
 }
 
-static void kb_event_cb(lv_event_t* e)
+// Rebuild the row of dots to match the current length.
+static void numpad_sync_dots(numpad_ctx_t* c)
 {
-    lv_event_code_t code    = lv_event_get_code(e);
-    lv_obj_t*       overlay = (lv_obj_t*)lv_event_get_user_data(e);
-    kb_ctx_t*       c       = (kb_ctx_t*)lv_obj_get_user_data(overlay);
-    if (code == LV_EVENT_READY && c->cb) {
-        c->cb(lv_textarea_get_text(c->ta), c->user);
+    lv_obj_clean(c->dots);
+    for (int i = 0; i < c->len; i++) {
+        lv_obj_t* d = lv_obj_create(c->dots);
+        lv_obj_remove_style_all(d);
+        lv_obj_set_size(d, 12, 12);
+        lv_obj_set_style_radius(d, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+        lv_obj_set_style_bg_color(d, lv_color_hex(FRIJ_TEXT), LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(d, LV_OPA_COVER, LV_PART_MAIN);
     }
-    lv_obj_delete(overlay);  // READY or CANCEL both dismiss
 }
 
-void frij_keyboard_prompt(const char* title, bool password, bool numeric, frij_kb_cb cb, void* user)
+static void numpad_key_cb(lv_event_t* e)
 {
-    kb_ctx_t* c = (kb_ctx_t*)lv_malloc(sizeof(kb_ctx_t));
+    lv_obj_t*     btn     = (lv_obj_t*)lv_event_get_current_target(e);
+    lv_obj_t*     overlay = (lv_obj_t*)lv_event_get_user_data(e);
+    numpad_ctx_t* c       = (numpad_ctx_t*)lv_obj_get_user_data(overlay);
+    int           code    = (int)(intptr_t)lv_obj_get_user_data(btn);
+
+    if (code == NUMPAD_CANCEL) {
+        lv_obj_delete(overlay);
+        return;
+    }
+    if (code == NUMPAD_OK) {
+        char out[FRIJ_NUMPAD_MAX + 1];  // copy out before delete frees ctx
+        c->buf[c->len] = '\0';
+        lv_memcpy(out, c->buf, (size_t)c->len + 1);
+        frij_kb_cb cb = c->cb;
+        void*      u  = c->user;
+        lv_obj_delete(overlay);  // frees ctx (numpad_free_cb)
+        if (cb) {
+            cb(out, u);
+        }
+        return;
+    }
+    if (code == NUMPAD_BACKSPACE) {
+        if (c->len > 0) {
+            c->buf[--c->len] = '\0';
+            numpad_sync_dots(c);
+        }
+        return;
+    }
+    // a digit
+    if (c->len < FRIJ_NUMPAD_MAX) {
+        c->buf[c->len++] = (char)code;
+        numpad_sync_dots(c);
+    }
+}
+
+// One round key built on frij_circle_button; `code` is the digit char or a
+// NUMPAD_* sentinel, stashed in user_data for numpad_key_cb.
+static void numpad_key(lv_obj_t* grid, lv_obj_t* overlay, const char* label, int code, uint32_t bg,
+                       uint32_t fg, const lv_font_t* font)
+{
+    lv_obj_t* b = frij_circle_button(grid, 66, bg, label, font, fg, NULL);
+    lv_obj_set_user_data(b, (void*)(intptr_t)code);
+    lv_obj_add_event_cb(b, numpad_key_cb, LV_EVENT_CLICKED, overlay);
+}
+
+void frij_numpad_prompt(const char* title, frij_kb_cb cb, void* user)
+{
+    numpad_ctx_t* c = (numpad_ctx_t*)lv_malloc(sizeof(numpad_ctx_t));
     if (c == NULL) {
         return;
     }
+    lv_memzero(c, sizeof(*c));
     c->cb   = cb;
     c->user = user;
 
-    // full-screen overlay on the active screen (above the launcher + header,
-    // like the modals) — drawn last, so it covers everything beneath it
+    // full-screen overlay (above launcher + header), themed like the rest
     lv_obj_t* overlay = lv_obj_create(lv_screen_active());
     lv_obj_remove_style_all(overlay);
     lv_obj_set_size(overlay, LV_PCT(100), LV_PCT(100));
-    lv_obj_set_style_bg_color(overlay, lv_color_hex(FRIJ_SURFACE_1), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(overlay, LV_OPA_COVER, LV_PART_MAIN);
+    frij_apply_bg(overlay);  // the standard page wash
     lv_obj_clear_flag(overlay, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_user_data(overlay, c);
-    lv_obj_add_event_cb(overlay, kb_free_cb, LV_EVENT_DELETE, c);
+    lv_obj_add_event_cb(overlay, numpad_free_cb, LV_EVENT_DELETE, c);
 
-    lv_obj_t* t = frij_label(overlay, title, FRIJ_FONT_BODY, FRIJ_TEXT);
-    lv_obj_set_width(t, LV_PCT(72));
+    // vertical stack: title · dots · keypad — centered, so it stays in the circle
+    lv_obj_t* col = frij_col(overlay, FRIJ_SP_M);
+    lv_obj_center(col);
+    lv_obj_set_height(col, LV_SIZE_CONTENT);
+
+    lv_obj_t* t = frij_label(col, title && title[0] ? title : "Enter code", FRIJ_FONT_BODY,
+                             FRIJ_TEXT_2);
+    lv_obj_set_width(t, LV_PCT(80));
     lv_label_set_long_mode(t, LV_LABEL_LONG_DOT);
     lv_obj_set_style_text_align(t, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
-    lv_obj_align(t, LV_ALIGN_TOP_MID, 0, frij_screen_min() * 14 / 100);
 
-    lv_obj_t* ta = lv_textarea_create(overlay);
-    lv_textarea_set_one_line(ta, true);
-    lv_textarea_set_password_mode(ta, password);
-    lv_textarea_set_placeholder_text(ta, password ? "Password" : "Text");
-    lv_obj_set_width(ta, LV_PCT(74));
-    lv_obj_align(ta, LV_ALIGN_TOP_MID, 0, frij_screen_min() * 23 / 100);
-    c->ta = ta;
+    // masked value (dots). Keep a fixed min height so the layout doesn't jump.
+    c->dots = lv_obj_create(col);
+    lv_obj_remove_style_all(c->dots);
+    lv_obj_set_size(c->dots, LV_PCT(80), 16);
+    lv_obj_set_flex_flow(c->dots, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(c->dots, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(c->dots, FRIJ_SP_S, LV_PART_MAIN);
+    lv_obj_clear_flag(c->dots, LV_OBJ_FLAG_SCROLLABLE);
 
-    lv_obj_t* kb = lv_keyboard_create(overlay);  // sits at the bottom, full width
-    if (numeric) {
-        lv_keyboard_set_mode(kb, LV_KEYBOARD_MODE_NUMBER);  // number pad (bigger keys)
+    // 3×4 grid of round keys (flex-wrap at 3 across)
+    lv_obj_t* grid = lv_obj_create(col);
+    lv_obj_remove_style_all(grid);
+    lv_obj_set_size(grid, 66 * 3 + FRIJ_SP_S * 2, LV_SIZE_CONTENT);
+    lv_obj_set_flex_flow(grid, LV_FLEX_FLOW_ROW_WRAP);
+    lv_obj_set_flex_align(grid, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_row(grid, FRIJ_SP_S, LV_PART_MAIN);
+    lv_obj_set_style_pad_column(grid, FRIJ_SP_S, LV_PART_MAIN);
+    lv_obj_clear_flag(grid, LV_OBJ_FLAG_SCROLLABLE);
+
+    for (int d = 1; d <= 9; d++) {
+        char lbl[2] = {(char)('0' + d), '\0'};
+        numpad_key(grid, overlay, lbl, '0' + d, FRIJ_SURFACE_2, FRIJ_TEXT, FRIJ_FONT_TITLE);
     }
-    lv_keyboard_set_textarea(kb, ta);
-    lv_obj_add_event_cb(kb, kb_event_cb, LV_EVENT_READY, overlay);
-    lv_obj_add_event_cb(kb, kb_event_cb, LV_EVENT_CANCEL, overlay);
+    numpad_key(grid, overlay, LV_SYMBOL_CLOSE, NUMPAD_CANCEL, FRIJ_SURFACE_2, FRIJ_TEXT_2,
+               FRIJ_FONT_SYMBOL);
+    numpad_key(grid, overlay, "0", '0', FRIJ_SURFACE_2, FRIJ_TEXT, FRIJ_FONT_TITLE);
+    numpad_key(grid, overlay, LV_SYMBOL_OK, NUMPAD_OK, FRIJ_SECONDARY, 0xFFFFFF, FRIJ_FONT_SYMBOL);
 }
 
 // ---- toast (auto-dismissing snackbar) --------------------------------------
