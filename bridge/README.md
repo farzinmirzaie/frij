@@ -102,10 +102,15 @@ the calendar's **secret iCal URL** (a plain `.ics` feed), expands recurring
 events (`recurring-ical-events`), and upserts the next 10 upcoming events as
 
 ```json
-[{"t": "Dentist", "d": "2026-06-14", "tm": "09:30"}, ...]
+[{"t": "Dentist", "d": "2026-06-14", "tm": "09:30", "te": "10:30", "l": "Qualiteeth"}, ...]
 ```
 
-(`tm` is omitted for all-day events; emoji are stripped like the todos.)
+(`tm`/`te` = start/end clock, omitted for all-day events; `de` = inclusive end
+date for multi-day all-day events; `l` = location; emoji are stripped like the
+todos.) Clock times are rendered in **`FRIJ_TZ`** (IANA name, e.g.
+`Asia/Kuala_Lumpur`) — set it next to `FRIJ_ICS_URL` (it's hardcoded in the
+workflow). Without it the calendar's own timezone is used, and Google calendars
+set to UTC would show 12:00 as 04:00.
 
 ### What you need to provide
 

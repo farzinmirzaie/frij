@@ -22,6 +22,9 @@ jobs:
       - run: python bridge/calendar_to_frij.py
         env:
           FRIJ_ICS_URL: ${{ secrets.FRIJ_ICS_URL }}
+          # Home timezone for clock times. The calendar's own X-WR-TIMEZONE is
+          # UTC, so the feed can't tell us; without this, 12:00 shows as 04:00.
+          FRIJ_TZ: Asia/Kuala_Lumpur
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           # SUPABASE_TABLE defaults to "store"; FRIJ_EVENTS_KEY to "events".

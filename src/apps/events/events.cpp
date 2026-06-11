@@ -19,8 +19,9 @@
  * Calendar iCal feed into the store; the device just renders it.
  *
  * Data: a JSON array under the key "events", soonest first:
- *   [{"t":"Dentist","d":"2026-06-14","tm":"09:30"}, ...]
- * ("tm" is absent for all-day events.)
+ *   [{"t":"Dentist","d":"2026-06-14","tm":"09:30","te":"10:30","l":"Qualiteeth"}, ...]
+ * ("tm"/"te" = start/end clock, absent for all-day events; "de" = inclusive
+ * end date for multi-day all-day events; "l" = location — all optional.)
  *   glance   : the nearest upcoming event + how soon
  *   screen 0 : the list — a day-count badge per event
  */
@@ -35,7 +36,10 @@ static const uint32_t ACCENT = FRIJ_PINK;  // Events' color scheme
 
 static char s_title[MAX_EVENTS][TEXT_LEN];
 static char s_date[MAX_EVENTS][DATE_LEN];
-static char s_time[MAX_EVENTS][TIME_LEN];  // "" = all-day
+static char s_date_end[MAX_EVENTS][DATE_LEN];  // "" = single day
+static char s_time[MAX_EVENTS][TIME_LEN];      // "" = all-day
+static char s_time_end[MAX_EVENTS][TIME_LEN];  // "" = no end / all-day
+static char s_loc[MAX_EVENTS][TEXT_LEN];       // "" = no location
 static int  s_n = 0;
 
 // ---- data -------------------------------------------------------------------
@@ -64,8 +68,14 @@ static void load_events(void)
         s_title[s_n][TEXT_LEN - 1] = '\0';
         strncpy(s_date[s_n], d, DATE_LEN - 1);
         s_date[s_n][DATE_LEN - 1] = '\0';
+        strncpy(s_date_end[s_n], o["de"] | "", DATE_LEN - 1);
+        s_date_end[s_n][DATE_LEN - 1] = '\0';
         strncpy(s_time[s_n], o["tm"] | "", TIME_LEN - 1);
         s_time[s_n][TIME_LEN - 1] = '\0';
+        strncpy(s_time_end[s_n], o["te"] | "", TIME_LEN - 1);
+        s_time_end[s_n][TIME_LEN - 1] = '\0';
+        strncpy(s_loc[s_n], o["l"] | "", TEXT_LEN - 1);
+        s_loc[s_n][TEXT_LEN - 1] = '\0';
         s_n++;
     }
 }
@@ -94,9 +104,38 @@ static int days_until(const char* date)
     return (int)((diff + (diff < 0 ? -43200.0 : 43200.0)) / 86400.0);
 }
 
-// "Today" / "Tomorrow" / "In 12 days", with the clock time appended for timed
-// events ("Today, 9:30 AM") — rendered per the 24-hour setting. Plain ASCII
-// separators only: neither font subset carries U+00B7.
+// Format a stored "HH:MM" per the 24-hour setting; false if absent/invalid.
+static bool clock_phrase(char* buf, size_t n, const char* hhmm)
+{
+    int hh, mm;
+    if (sscanf(hhmm, "%d:%d", &hh, &mm) != 2) {
+        return false;
+    }
+    struct tm tmv = {};
+    tmv.tm_hour   = hh;
+    tmv.tm_min    = mm;
+    frij_format_time(buf, n, &tmv);
+    return true;
+}
+
+// The clock part of an event: "12:00 - 13:00", "12:00", or "all day". Plain
+// ASCII separators only: neither font subset carries U+00B7 or en dashes.
+static void time_phrase(char* buf, size_t n, int idx)
+{
+    char from[16], to[16];
+    if (!clock_phrase(from, sizeof(from), s_time[idx])) {
+        lv_snprintf(buf, n, "all day");
+        return;
+    }
+    if (clock_phrase(to, sizeof(to), s_time_end[idx])) {
+        lv_snprintf(buf, n, "%s - %s", from, to);
+    } else {
+        lv_snprintf(buf, n, "%s", from);
+    }
+}
+
+// "Today" / "Tomorrow" / "In 12 days", with the clock appended for timed
+// events ("Today, 12:00 - 13:00").
 static void when_phrase(char* buf, size_t n, int idx)
 {
     int  days = days_until(s_date[idx]);
@@ -108,13 +147,9 @@ static void when_phrase(char* buf, size_t n, int idx)
     } else {
         lv_snprintf(when, sizeof(when), "In %d days", days);
     }
-    int hh, mm;
-    if (sscanf(s_time[idx], "%d:%d", &hh, &mm) == 2) {
-        struct tm tmv = {};
-        tmv.tm_hour   = hh;
-        tmv.tm_min    = mm;
-        char clock[16];
-        frij_format_time(clock, sizeof(clock), &tmv);
+    if (s_time[idx][0]) {
+        char clock[36];
+        time_phrase(clock, sizeof(clock), idx);
         lv_snprintf(buf, n, "%s, %s", when, clock);
     } else {
         lv_snprintf(buf, n, "%s", when);
@@ -133,8 +168,8 @@ static void badge_text(char* buf, size_t n, int days)
     }
 }
 
-// "Sun 14 Jun" for a stored date.
-static void date_phrase(char* buf, size_t n, const char* date)
+// A stored date through strftime ("%a %d %b" -> "Sun 14 Jun").
+static void date_fmt(char* buf, size_t n, const char* date, const char* fmt)
 {
     int y, m, d;
     if (sscanf(date, "%d-%d-%d", &y, &m, &d) != 3) {
@@ -147,7 +182,24 @@ static void date_phrase(char* buf, size_t n, const char* date)
     tmv.tm_mday   = d;
     tmv.tm_hour   = 12;
     mktime(&tmv);  // derive the weekday
-    strftime(buf, n, "%a %d %b", &tmv);
+    strftime(buf, n, fmt, &tmv);
+}
+
+// The full date/time line of a list row: "Sun 14 Jun, 12:00 - 13:00",
+// "Wed 23 Sep, all day", or "Sat 04 Jul - 17 Jul" for multi-day events.
+static void row_when(char* buf, size_t n, int idx)
+{
+    char date[20];
+    date_fmt(date, sizeof(date), s_date[idx], "%a %d %b");
+    if (s_date_end[idx][0]) {
+        char last[12];
+        date_fmt(last, sizeof(last), s_date_end[idx], "%d %b");
+        lv_snprintf(buf, n, "%s - %s", date, last);
+        return;
+    }
+    char clock[36];
+    time_phrase(clock, sizeof(clock), idx);
+    lv_snprintf(buf, n, "%s, %s", date, clock);
 }
 
 // ---- the list screen ----------------------------------------------------------
@@ -170,8 +222,11 @@ static void populate_list(lv_obj_t* col)
         }
         shown++;
 
+        bool has_loc = s_loc[i][0] != '\0';
+
         lv_obj_t* row = frij_surface_row(col);
-        lv_obj_set_height(row, 72);  // two text lines + the badge need more than ROW_H
+        // two text lines + the badge need more than ROW_H; three with a location
+        lv_obj_set_height(row, has_loc ? 88 : 72);
 
         int  days = days_until(s_date[i]);
         char badge[8];
@@ -189,23 +244,24 @@ static void populate_list(lv_obj_t* col)
         lv_obj_set_height(title, lv_font_get_line_height(FRIJ_FONT_BODY));
         lv_label_set_long_mode(title, LV_LABEL_LONG_DOT);
 
-        char when[48], date[20];
-        date_phrase(date, sizeof(date), s_date[i]);
-        int hh, mm;
-        if (sscanf(s_time[i], "%d:%d", &hh, &mm) == 2) {
-            struct tm tmv = {};
-            tmv.tm_hour   = hh;
-            tmv.tm_min    = mm;
-            char clock[16];
-            frij_format_time(clock, sizeof(clock), &tmv);
-            lv_snprintf(when, sizeof(when), "%s, %s", date, clock);
-        } else {
-            lv_snprintf(when, sizeof(when), "%s", date);
-        }
+        char when[56];
+        row_when(when, sizeof(when), i);
         frij_label(texts, when, FRIJ_FONT_SMALL, FRIJ_TEXT_2);
+
+        if (has_loc) {
+            lv_obj_t* loc = frij_label(texts, s_loc[i], FRIJ_FONT_SMALL, FRIJ_TEXT_2);
+            lv_obj_set_width(loc, LV_PCT(100));
+            lv_obj_set_height(loc, lv_font_get_line_height(FRIJ_FONT_SMALL));
+            lv_label_set_long_mode(loc, LV_LABEL_LONG_DOT);
+        }
     }
     if (shown == 0) {
-        frij_empty_state(col, "No upcoming events");
+        // text-only (Wi-Fi-off style), with a hint where events come from
+        lv_obj_t* hint = frij_label(col, "No upcoming events", FRIJ_FONT_BODY, FRIJ_TEXT_2);
+        lv_obj_set_style_text_align(hint, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+        lv_obj_t* sub = frij_label(col, "Add events in the family\nGoogle Calendar",
+                                   FRIJ_FONT_SMALL, FRIJ_TEXT_2);
+        lv_obj_set_style_text_align(sub, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
         return;
     }
     frij_stagger_in(col, 45);
@@ -236,7 +292,7 @@ static void glance(lv_obj_t* parent)
 
     if (next < 0) {
         frij_label(col, "No events", FRIJ_FONT_TITLE, FRIJ_TEXT);
-        frij_label(col, "Nothing coming up", FRIJ_FONT_BODY, FRIJ_TEXT_2);
+        frij_label(col, "Add via Google Calendar", FRIJ_FONT_BODY, FRIJ_TEXT_2);
         return;
     }
 
@@ -248,9 +304,17 @@ static void glance(lv_obj_t* parent)
     lv_label_set_long_mode(title, LV_LABEL_LONG_WRAP);
     lv_obj_set_style_text_align(title, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
 
-    char when[48];
+    char when[56];
     when_phrase(when, sizeof(when), next);
     frij_label(col, when, FRIJ_FONT_BODY, ACCENT);
+
+    if (s_loc[next][0]) {
+        lv_obj_t* loc = frij_label(col, s_loc[next], FRIJ_FONT_SMALL, FRIJ_TEXT_2);
+        lv_obj_set_width(loc, LV_PCT(80));
+        lv_obj_set_height(loc, lv_font_get_line_height(FRIJ_FONT_SMALL));
+        lv_label_set_long_mode(loc, LV_LABEL_LONG_DOT);
+        lv_obj_set_style_text_align(loc, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    }
 }
 
 static void screen(lv_obj_t* parent, int index)

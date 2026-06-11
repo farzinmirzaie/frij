@@ -2,6 +2,20 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-11 — Events fixes: timezone, time ranges, all-day, location
+
+- **Timezone fix**: the family calendar's own timezone is UTC, so Google's
+  feed exports bare UTC instants — 12:00 showed as 04:00. The bridge now
+  renders clock times in `FRIJ_TZ` (falls back to the calendar's
+  X-WR-TIMEZONE); set in the workflow + .env(.example).
+- **Time ranges**: same-day ends sync as "te" and render as "12:00 - 13:00"
+  (list + glance, 24h-setting aware). All-day events say "all day"; multi-day
+  all-day events show the span ("Sat 04 Jul - 17 Jul", via inclusive "de").
+- **Location**: event locations sync as "l" and show as a muted third row
+  line (row grows 72→88) and under the glance.
+- **Empty state**: text-only (Wi-Fi-off style, no icon) + "Add events in the
+  family Google Calendar" hint; glance hint matches.
+
 ## 2026-06-11 — Events app + Google Calendar bridge
 
 - **New mini-app: Events** (pink) — countdowns to the family calendar's

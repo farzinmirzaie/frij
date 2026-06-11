@@ -10,20 +10,24 @@ from calendar_to_frij import MAX_EVENTS, to_events_json
 
 TODAY = datetime.date(2026, 6, 11)
 
+# Mirrors a real Google feed: X-WR-TIMEZONE on the calendar, timed events as
+# UTC instants ("Z" — 2026-06-14T01:30Z is 09:30 in Singapore).
 ICS = """BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//Test//Test//EN
+X-WR-TIMEZONE:Asia/Singapore
 BEGIN:VEVENT
 UID:past@test
 SUMMARY:Old appointment
-DTSTART;TZID=Asia/Singapore:20260601T100000
-DTEND;TZID=Asia/Singapore:20260601T110000
+DTSTART:20260601T020000Z
+DTEND:20260601T030000Z
 END:VEVENT
 BEGIN:VEVENT
 UID:dentist@test
 SUMMARY:Dentist 🦷
-DTSTART;TZID=Asia/Singapore:20260614T093000
-DTEND;TZID=Asia/Singapore:20260614T103000
+DTSTART:20260614T013000Z
+DTEND:20260614T023000Z
+LOCATION:Qualiteeth Dental, Serangoon
 END:VEVENT
 BEGIN:VEVENT
 UID:trip@test
@@ -45,13 +49,16 @@ END:VCALENDAR
 def test_mapping():
     out = to_events_json(ICS.encode(), TODAY)
     # past event dropped; soonest first; recurrence expanded to 3 occurrences;
-    # emoji stripped; all-day event has no "tm"
+    # emoji stripped; UTC instants rendered as Singapore wall-clock; same-day
+    # ends become "te"; locations carried; multi-day all-day events get an
+    # inclusive "de" (DTEND Jul 18 exclusive -> Jul 17)
     assert out == [
-        {"t": "Gym class", "d": "2026-06-12", "tm": "18:00"},
-        {"t": "Dentist", "d": "2026-06-14", "tm": "09:30"},
-        {"t": "Gym class", "d": "2026-06-19", "tm": "18:00"},
-        {"t": "Gym class", "d": "2026-06-26", "tm": "18:00"},
-        {"t": "Trip to Iran", "d": "2026-07-04"},
+        {"t": "Gym class", "d": "2026-06-12", "tm": "18:00", "te": "19:00"},
+        {"t": "Dentist", "d": "2026-06-14", "tm": "09:30", "te": "10:30",
+         "l": "Qualiteeth Dental, Serangoon"},
+        {"t": "Gym class", "d": "2026-06-19", "tm": "18:00", "te": "19:00"},
+        {"t": "Gym class", "d": "2026-06-26", "tm": "18:00", "te": "19:00"},
+        {"t": "Trip to Iran", "d": "2026-07-04", "de": "2026-07-17"},
     ], out
 
 
