@@ -17,4 +17,8 @@ void frij_set_volume(uint8_t pct);
 void frij_audio_set_click_enabled(bool on);
 void frij_audio_click(void);
 
+// Outcome chirp for status toasts: rising two-tone on success, low buzz on
+// failure. Gated by the same touch-sounds switch as the click.
+void frij_audio_status(bool ok);
+
 #endif  // FRIJ_AUDIO_H

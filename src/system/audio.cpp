@@ -22,6 +22,11 @@ void frij_audio_set_click_enabled(bool on)
 
 void frij_audio_click(void) {}
 
+void frij_audio_status(bool ok)
+{
+    (void)ok;
+}
+
 #else
 
 #include <M5Unified.h>
@@ -43,6 +48,19 @@ void frij_audio_click(void)
 {
     if (s_click_enabled) {
         M5.Speaker.tone(2500.0f, 6);  // short, quiet UI tick
+    }
+}
+
+void frij_audio_status(bool ok)
+{
+    if (!s_click_enabled) {  // same master switch as the touch click
+        return;
+    }
+    if (ok) {  // quick rising two-tone = done
+        M5.Speaker.tone(1800.0f, 40);
+        M5.Speaker.tone(2400.0f, 60);
+    } else {  // single low buzz = failed
+        M5.Speaker.tone(600.0f, 120);
     }
 }
 

@@ -72,7 +72,7 @@ static void glance_builder(lv_obj_t* page, int index, void* user)
     if (!app) {
         return;
     }
-    frij_apply_bg(page);  // subtle dark gradient
+    frij_apply_bg(page);  // pure-black page base
     frij_glow(page, app->color);  // soft per-app accent halo behind the content
     if (app->build_glance) {
         app->build_glance(page);

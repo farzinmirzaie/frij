@@ -125,9 +125,10 @@ static int days_until(const char* date)
 
 // True once a today event's end time has passed ("Done" — no point counting
 // down to it anymore). Events with no end time stay visible all day.
-static bool ended_today(int idx)
+// `days` = the precomputed days_until for this event.
+static bool ended_today(int idx, int days)
 {
-    if (days_until(s_date[idx]) != 0 || !s_time_end[idx][0]) {
+    if (days != 0 || !s_time_end[idx][0]) {
         return false;
     }
     int eh, em;
@@ -141,9 +142,14 @@ static bool ended_today(int idx)
 }
 
 // Hidden from every screen: already past, or over for today.
+static bool ev_hidden_at(int idx, int days)
+{
+    return days < 0 || ended_today(idx, days);
+}
+
 static bool ev_hidden(int idx)
 {
-    return days_until(s_date[idx]) < 0 || ended_today(idx);
+    return ev_hidden_at(idx, days_until(s_date[idx]));
 }
 
 // Format a stored "HH:MM" per the 24-hour setting; false if absent/invalid.
@@ -262,13 +268,13 @@ static void populate_list(lv_obj_t* col)
     int shown    = 0;
     int last_sec = -1;
     for (int i = 0; i < s_n; i++) {
-        if (ev_hidden(i)) {
+        int days = days_until(s_date[i]);  // computed once per row
+        if (ev_hidden_at(i, days)) {
             continue;  // past (stale cache) or already over for today
         }
         shown++;
 
-        int days = days_until(s_date[i]);
-        int sec  = days == 0 ? 0 : (days <= 7 ? 1 : 2);
+        int sec = days == 0 ? 0 : (days <= 7 ? 1 : 2);
         if (sec != last_sec) {  // events arrive sorted, so sections are runs
             frij_section_label(col, SECTIONS[sec]);
             last_sec = sec;

@@ -55,6 +55,9 @@ static void on_slider_release(lv_event_t* e)
     if (key) {
         frij_store_save_int(key, lv_slider_get_value(s));
         frij_haptic(FRIJ_HAPTIC_SELECT);  // value committed
+        if (strcmp(key, "volume") == 0) {
+            frij_audio_click();  // preview the level you just set (device speaker)
+        }
     }
 }
 
@@ -158,6 +161,12 @@ static void do_erase(lv_event_t* e)
 {
     (void)e;
     frij_store_clear();  // wipe todos / counter / settings; defaults return on next read
+    // Wi-Fi credentials live in NVS, not the store — drop them too so "all
+    // data" means all data.
+    const char* cur = frij_wifi_connected();
+    if (cur) {
+        frij_wifi_forget(cur);
+    }
     frij_set_brightness(80);
     frij_haptics_set_enabled(true);
     frij_anim_set_enabled(true);
@@ -423,6 +432,16 @@ static void build_about(lv_obj_t* col)
 
     // Battery row — bound to the battery subjects so it tracks live (observer),
     // instead of sampling once when About is built.
+    // uptime since boot — a quick "has it been rebooting?" health check
+    uint32_t  up = lv_tick_get() / 60000u;  // minutes
+    char      upbuf[20];
+    if (up >= 60) {
+        lv_snprintf(upbuf, sizeof(upbuf), "%uh %um", (unsigned)(up / 60), (unsigned)(up % 60));
+    } else {
+        lv_snprintf(upbuf, sizeof(upbuf), "%um", (unsigned)up);
+    }
+    frij_value_row(col, "Uptime", upbuf);
+
     lv_obj_t* brow = frij_value_row(col, "Battery", "");
     lv_obj_t* bval = lv_obj_get_child(brow, 1);
     lv_subject_add_observer_obj(frij_battery_level_subject(), about_battery_cb, bval, NULL);

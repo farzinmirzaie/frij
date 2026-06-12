@@ -1,3 +1,7 @@
+#include <time.h>
+
+#include "lvgl.h"
+
 #include "apps/apps.h"
 #include "launcher/input.h"
 #include "launcher/launcher.h"
@@ -45,6 +49,10 @@ static void autosync_tick(lv_timer_t* t)
  */
 void user_app(void)
 {
+    // Seed LVGL's PRNG — it boots with a fixed seed, so anything "random"
+    // (e.g. the Todo glance's pick) would repeat the same sequence every boot.
+    lv_rand_set_seed((uint32_t)time(NULL));
+
     frij_store_init();
 
     // apply the saved brightness (default 80%)

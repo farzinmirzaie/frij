@@ -24,6 +24,13 @@ The launcher draws the shared header (back + app name + the per-screen action);
 `build_screen` builds only the content below it. Leave `action_symbol`/`on_action`
 NULL for no action.
 
+## Page lifecycle (cleanup)
+
+Attach teardown (timers, heap ctx) to the page via `LV_EVENT_DELETE` — the
+launcher's carousel fires it both when a page is really deleted *and* before a
+rebuild reuses the page (it also drops your old handlers so they can't stack or
+double-free). Never assume a page object dies between visits.
+
 ## Add an app
 
 1. Create `apps/<name>/<name>.cpp` (+ `.h`) that includes only `app.h` and

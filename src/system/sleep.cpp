@@ -39,6 +39,12 @@ void frij_sleep_inhibit(bool on)
     s_inhibit = on;
 }
 
+static void wake_ramp_exec(void* o, int32_t v)
+{
+    (void)o;
+    frij_set_brightness((uint8_t)v);
+}
+
 static void shade_opa_exec(void* o, int32_t v)
 {
     lv_obj_set_style_bg_opa((lv_obj_t*)o, (lv_opa_t)v, LV_PART_MAIN);
@@ -123,9 +129,21 @@ static void sleep_tick(lv_timer_t* t)
     } else if (s_asleep && idle < threshold) {
         shade_set(false);  // input (or a raise) woke us — instant
         s_asleep = false;
-        if (s_dimmed) {  // wake also undoes the pre-sleep dim
-            s_dimmed = false;
-            frij_set_brightness((uint8_t)frij_store_load_int("brightness", 80));
+        s_dimmed = false;  // sleeping always followed the dim window
+        // soft wake: ramp the backlight up from the dim level instead of
+        // slamming straight to full (the shade itself clears instantly)
+        uint8_t saved = (uint8_t)frij_store_load_int("brightness", 80);
+        if (frij_anim_enabled()) {
+            lv_anim_t a;
+            lv_anim_init(&a);
+            lv_anim_set_var(&a, &s_asleep);  // any stable address; exec ignores it
+            lv_anim_set_exec_cb(&a, wake_ramp_exec);
+            lv_anim_set_values(&a, DIM_PCT, saved);
+            lv_anim_set_duration(&a, 250);
+            lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
+            lv_anim_start(&a);
+        } else {
+            frij_set_brightness(saved);
         }
     }
 }

@@ -208,6 +208,17 @@ static void page_fx_to(lv_obj_t* page, int32_t from, int32_t to)
 
 static void build_into(frij_carousel_t* c, lv_obj_t* page, int index)
 {
+    // A page is REUSED on rebuilds (cleaned, not deleted), but apps attach
+    // their teardown — timers, heap ctx — to the page via LV_EVENT_DELETE
+    // (frij_page hands them the page itself). Without firing it, a rebuild
+    // leaked the old timer, which kept writing through dangling pointers into
+    // whatever reused the freed memory (the home battery label showed the
+    // date). So: deliver DELETE for the old build, then drop its handlers so
+    // the real delete later can't double-free.
+    lv_obj_send_event(page, LV_EVENT_DELETE, NULL);
+    while (lv_obj_get_event_count(page) > 0) {
+        lv_obj_remove_event(page, 0);
+    }
     lv_obj_clean(page);
     c->builder(page, index, c->user);
 }
@@ -335,6 +346,7 @@ void frij_carousel_init(frij_carousel_t* c, lv_obj_t* parent, int count,
         c->hide_timer = lv_timer_create(dots_hide_cb, 1400, c);
         lv_timer_pause(c->hide_timer);
         lv_obj_add_event_cb(c->viewport, on_viewport_delete, LV_EVENT_DELETE, c);
+        dots_show(c);  // flash on open: "this layer has more screens", then idle out
     }
 }
 

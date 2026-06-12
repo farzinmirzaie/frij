@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "anim.h"
+#include "system/audio.h"
 #include "system/haptics.h"
 #include "theme.h"
 
@@ -650,4 +651,5 @@ void frij_toast_status(const char* text, bool ok)
 {
     toast_show(ok ? LV_SYMBOL_OK : LV_SYMBOL_CLOSE,
                ok ? FRIJ_SECONDARY : FRIJ_DANGER, text, !ok);
+    frij_audio_status(ok);  // chirp when touch sounds are on (device speaker)
 }

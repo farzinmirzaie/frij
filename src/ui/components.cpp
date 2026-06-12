@@ -378,6 +378,7 @@ lv_obj_t* frij_empty_state(lv_obj_t* parent, const char* title, const char* subt
         lv_obj_t* s = frij_label(box, subtitle, FRIJ_FONT_SMALL, FRIJ_TEXT_3);
         lv_obj_set_style_text_align(s, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     }
+    frij_anim_enter(box, 0);  // ease in instead of popping into place
     return box;
 }
 

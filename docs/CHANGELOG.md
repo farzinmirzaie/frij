@@ -2,6 +2,38 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-12 — fix: home battery showed the date after leaving an app
+
+- Use-after-free: carousel pages are REUSED on rebuilds (`lv_obj_clean`, not a
+  delete), but apps attach their teardown to the page via `LV_EVENT_DELETE` —
+  so a rebuild (the new refresh-on-return, or reduce-motion page jumps) leaked
+  the old build's timer + ctx. The home clock's orphaned 1s timer kept writing
+  through dangling label pointers into recycled memory — the new battery label
+  inherited "Fri 12 Jun". Same latent leak in Stopwatch and Scoreboard.
+- Fix (systemic, in the carousel): `build_into` now delivers `LV_EVENT_DELETE`
+  to the old build and removes its handlers before cleaning, so every app's
+  page-attached cleanup runs on rebuild and can't double-free on real deletes.
+
+## 2026-06-12 — 10 more (randomness, sound, sleep, hygiene)
+
+- **PRNG seeded at boot**: LVGL's lv_rand boots with a fixed seed, so the
+  "random" todo glance pick repeated the same sequence every boot — now seeded
+  from the clock.
+- **Erase all data also forgets the saved Wi-Fi** (credentials live in NVS,
+  not the store — "all data" now means it).
+- **Empty states ease in** instead of popping into place.
+- **Volume slider previews on release** — a click at the level you just set.
+  (on device)
+- **Status toasts chirp**: rising two-tone on success, low buzz on failure,
+  gated by the touch-sounds switch. (on device)
+- **About gains an Uptime row** ("3h 24m" since boot) and keeps the build date.
+- **Page dots flash when a layer opens** — you can see an app has more screens
+  without guess-swiping; they still idle out.
+- **Soft wake**: brightness ramps up from the dim level over 250ms instead of
+  slamming to full.
+- Perf/hygiene: Events computes each row's day-count once (was 3-4 times per
+  row); stale "subtle dark gradient" comment fixed.
+
 ## 2026-06-12 — 10-improvement round (UX / micro-interactions / hygiene)
 
 - **Glances refresh on return home**: closing an app rebuilds the visible
