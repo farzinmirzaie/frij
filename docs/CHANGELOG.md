@@ -16,6 +16,15 @@ Newest first. One short entry per change.
   (platformio device build_flags); GEMINI_API_KEY stays server-side. The
   device path is compile-only — verify on flash. See docs/AI.md.
 
+## 2026-06-12 — docs/comment audit: drop stale "mock"/"TODO" claims
+
+- Cross-checked the tree after the AI work: no dead code found. Fixed stale
+  comments/docs that still called the assistant a mock or the device buttons a
+  TODO — assistant.h, ai.h, src/apps + ui + launcher READMEs, launcher/input.h.
+- ROADMAP: Launcher C marked done (glance refresh), P2/Todo wording corrected,
+  "Next step" repointed at P5 device bring-up. frij_apply_bg README line
+  (gradient -> pure black) corrected.
+
 ## 2026-06-12 — consistent round ✓ on prompts + non-clipping loading dots
 
 - Single-action prompts/result screens now use the round ✓ icon button (same

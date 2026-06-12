@@ -23,8 +23,9 @@ All four directions **follow the finger and snap** on release.
   whole layers (home center, app below, settings above). Owns `frij_back()`.
 - `registry.*` — the app list + the settings slot. The launcher hardcodes no app
   names; it reads what `apps.cpp` registered.
-- `input.*` — the Back source: Backspace in the emulator; a button GPIO on the
-  device (TODO).
+- `input.*` — the hardware-button source in the emulator (SDL keys: Backspace/
+  Esc = Back tap, hold = home; Space = Frij AI push-to-talk). On the device the
+  same actions come from `M5.BtnA`/`M5.BtnB` in `src/main.cpp`.
 
 The carousel itself is a shared widget in [`../ui/`](../ui/README.md). Apps and
 settings come from the registry (see [`../apps/`](../apps/README.md)).

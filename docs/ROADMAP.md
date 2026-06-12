@@ -32,8 +32,9 @@ target whatever board we run on (see [HARDWARE.md](HARDWARE.md)).
 - [x] **Launcher B**: Settings (brightness slider + 24h toggle + about, persisted).
 - [x] **Home app**: watch-face tile (time + date) registered first as the landing glance.
 - [x] **Design system**: `ui/theme.h` tokens + components; per-app accent colors.
-- [ ] **Launcher C**: glance data refresh / live tiles (`on_show` hook).
-- [ ] **P2 — Flesh out Todos**: real add/toggle/delete (currently a fixed checklist).
+- [x] **Launcher C**: glances refresh when you return home (`frij_carousel_refresh`).
+- [ ] **P2 — Flesh out Todos**: on-device add/delete (today: toggle on device,
+  add/remove via Keep through the bridge; AI voice-add queues to `todo_inbox`).
 - [x] **Storage 1**: shared `frij_store` (key→JSON) + emulator file backend;
   Counter persists. See [STORAGE.md](STORAGE.md).
 - [ ] **Storage 2**: Supabase backend on device (wifi, scoped key, offline queue).
@@ -104,4 +105,6 @@ Ideas surfaced while polishing; not yet committed to a phase.
 
 ## Next step
 
-**Launcher B** (Settings + brightness) or **P2** (real Todo editing) — owner's pick.
+**P5 device bring-up** — flash + verify on hardware (panel, touch, raise-to-wake,
+Wi-Fi, the Frij AI mic path), then the device `frij_store` backend (Storage 2)
+and bridge pickup of `todo_inbox` (AI voice-adds → Keep). Owner's pick.

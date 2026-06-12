@@ -7,8 +7,9 @@
 /*
  * Frij AI — board service for the cloud assistant (the Supabase "ask" edge
  * function, which holds the Gemini key and the store tools). Asks run on a
- * worker thread; the UI polls. Emulator: libcurl + the store's .env config.
- * Device: TODO (WiFiClientSecure) — unavailable means the UI mocks locally.
+ * worker thread; the UI polls. Emulator: libcurl text ask + the store's .env
+ * config. Device: M5.Mic capture -> WiFiClientSecure audio POST. When the
+ * cloud is unconfigured, frij_ai_available() is false and the UI mocks locally.
  */
 
 typedef enum {
@@ -22,7 +23,7 @@ typedef enum {
 bool frij_ai_available(void);
 
 // Start a text ask on a worker thread. False if unavailable or one is already
-// in flight. (Emulator path — the question is typed/mocked.)
+// in flight. (Emulator path — the question is text; the device uses audio.)
 bool frij_ai_ask(const char* question);
 
 // ---- voice (device mic) ----------------------------------------------------

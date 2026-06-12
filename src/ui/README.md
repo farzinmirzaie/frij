@@ -20,8 +20,8 @@ theme, list rows, …) as patterns repeat.
     visible). The launcher turns a swipe past the scroll edge into Back.
   - `frij_page_under_header` — reusable "safe area": insets a page beneath a top
     bar so its centered content still lands at the screen's true center.
-  - `frij_apply_bg` — the subtle page-background gradient; `frij_screen_min` —
-    shorter screen side, for responsive sizing.
+  - `frij_apply_bg` — the page background (pure black, AMOLED-friendly);
+    `frij_screen_min` — shorter screen side, for responsive sizing.
   - `frij_surface_row` — rounded row with a subtle gradient + press feedback.
   - `frij_check` / `frij_check_set` — circular check with a pop animation.
   - `frij_slider_row` — a full-width card that IS the slider: drag anywhere to

@@ -96,10 +96,13 @@ every app shares the look but has its own scheme.
   divider + "VS", no chrome: tap a half +1 / hold -1; header reset (confirm);
   scores persist + sync via the store (`sb_a`/`sb_b`). Uses `frij_page_full_bleed`.
   Glance shows the line + who leads. Blue.
-- `assistant/` — Frij AI's UI shell (the cloud pipeline is still a mock):
-  push-to-talk overlay driven by the input layer (`frij_assistant_ptt`) with
-  listening (voice bars + pulse rings + breathing edge glow) / thinking /
-  answer states; screen 0 lists the last 5 questions + answers. Violet.
+- `assistant/` — Frij AI: push-to-talk to a real cloud backend (the Supabase
+  `ask` edge function + Gemini — see [../../docs/AI.md](../../docs/AI.md); the
+  device records the mic, the emulator sends a sample question, falling back to
+  canned answers only when the cloud is unconfigured). Overlay driven by the
+  input layer (`frij_assistant_ptt`): listening (voice bars + pulse rings +
+  breathing edge glow) / thinking (dots) / answer; screen 0 lists the last 5
+  questions + answers. Violet.
 - `counter/` — a number with ±, persists; long-press the number to reset. Blue.
 - `settings/` — 3 screens: General (Display: brightness/sleep/raise-to-wake;
   Sound: volume/touch-sounds; Preferences: 24-hour/vibration/animations/auto-sync), Network
