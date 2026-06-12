@@ -217,6 +217,7 @@ int main(int, char**)
                    "scoreboard_glance settings network netoff sheet confirm keyboard result "
                    "about\n",
                    scr);
+            return 2;  // a typo'd key must fail loudly, not render the launcher
         }
         user_app();  // default: the launcher (home)
     }
@@ -239,6 +240,7 @@ int main(int, char**)
         printf("wrote /tmp/frij_snapshot.bmp\n");
     } else {
         printf("snapshot failed\n");
+        return 1;  // scriptable: a failed capture fails the run
     }
     return 0;
 }

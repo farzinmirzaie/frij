@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "system/haptics.h"
+#include "system/sleep.h"
 #include "ui/anim.h"
 #include "ui/components.h"
 #include "ui/theme.h"
@@ -169,6 +170,8 @@ static void on_start_stop(lv_event_t* e)
         s_start_tick = lv_tick_get();
         s_running    = true;
     }
+    // a running stopwatch keeps the screen awake (you're timing something)
+    frij_sleep_inhibit(s_running);
     frij_haptic(FRIJ_HAPTIC_SELECT);
     refresh_ui(c);
     sync_timer(c);

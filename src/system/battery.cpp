@@ -1,5 +1,7 @@
 #include "battery.h"
 
+#include "ui/components.h"  // frij_toast_status (the low-battery warning)
+
 /*
  * The readings (pct/charging) are board-specific — emulator mock vs M5.Power on
  * device — behind the usual guard. The reactive layer on top (subjects + refresh
@@ -43,8 +45,20 @@ lv_subject_t* frij_battery_charging_subject(void) { return &s_charging; }
 static void battery_refresh(lv_timer_t* t)
 {
     (void)t;
-    lv_subject_set_int(&s_level, frij_battery_pct());
-    lv_subject_set_int(&s_charging, frij_battery_charging() ? 1 : 0);
+    uint8_t pct = frij_battery_pct();
+    bool    chg = frij_battery_charging();
+    lv_subject_set_int(&s_level, pct);
+    lv_subject_set_int(&s_charging, chg ? 1 : 0);
+
+    // One-shot low warning: a toast at <=15% unplugged. Re-arms once power
+    // shows up or the level recovers (so it can't nag every 5 seconds).
+    static bool warned = false;
+    if (!warned && pct <= 15 && !chg) {
+        warned = true;
+        frij_toast_status("Battery low", false);
+    } else if (warned && (chg || pct > 30)) {
+        warned = false;
+    }
 }
 
 void frij_battery_init(void)

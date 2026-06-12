@@ -44,5 +44,6 @@ void frij_carousel_drag(frij_carousel_t* c, int dx);  // live horizontal offset
 void frij_carousel_end(frij_carousel_t* c, int dx);   // release: commit or revert
 void frij_carousel_goto(frij_carousel_t* c, int index);  // jump to a page (no slide)
 int  frij_carousel_index(const frij_carousel_t* c);
+void frij_carousel_refresh(frij_carousel_t* c);  // rebuild the current page in place (fresh data)
 
 #endif  // FRIJ_CAROUSEL_H

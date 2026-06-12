@@ -417,7 +417,8 @@ static void build_about(lv_obj_t* col)
     // hero: the logo clover + wordmark, with generous breathing room around it
     lv_obj_t* hero = frij_logo(col, 72, true);
     lv_obj_set_style_margin_top(hero, FRIJ_SP_XXL * 2, LV_PART_MAIN);  // 48
-    lv_obj_t* ver = frij_label(col, FRIJ_VERSION, FRIJ_FONT_BODY, FRIJ_TEXT_2);
+    // version + when this firmware was compiled ("which build is on the fridge?")
+    lv_obj_t* ver = frij_label(col, FRIJ_VERSION ", " __DATE__, FRIJ_FONT_BODY, FRIJ_TEXT_2);
     lv_obj_set_style_margin_bottom(ver, FRIJ_SP_XXL * 2, LV_PART_MAIN);  // 48
 
     // Battery row — bound to the battery subjects so it tracks live (observer),

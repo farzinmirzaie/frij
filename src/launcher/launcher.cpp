@@ -5,6 +5,7 @@
 #include "lvgl.h"
 #include "lvgl_port_m5stack.hpp"
 #include "store/store.h"
+#include "system/haptics.h"
 #include "ui/anim.h"
 #include "ui/carousel.h"
 #include "ui/components.h"
@@ -278,19 +279,27 @@ static void slide_y(lv_obj_t* o, int to, lv_anim_completed_cb_t done)
     lv_anim_start(&a);
 }
 
-static void done_enter_app(lv_anim_t* a)      { (void)a; s_cur = APP;      s_active = &s_capp; s_anim = false; }
-static void done_enter_settings(lv_anim_t* a) { (void)a; s_cur = SETTINGS; s_active = &s_cset; s_anim = false; }
+static void done_enter_app(lv_anim_t* a)      { (void)a; s_cur = APP;      s_active = &s_capp; s_anim = false; frij_haptic(FRIJ_HAPTIC_TAP); }
+static void done_enter_settings(lv_anim_t* a) { (void)a; s_cur = SETTINGS; s_active = &s_cset; s_anim = false; frij_haptic(FRIJ_HAPTIC_TAP); }
 
 // We're back on home (a close finished, or a partial open was cancelled): drop
 // whichever transient layer exists — only one can at a time.
 static void done_back_home(lv_anim_t* a)
 {
     (void)a;
+    bool closed = s_cur != HOME;  // a real close, not a cancelled partial open
     if (s_app)      { lv_obj_delete(s_app);      s_app = NULL; }
     if (s_settings) { lv_obj_delete(s_settings); s_settings = NULL; }
     s_layer_app = NULL; s_layer_header = NULL;
     s_cur = HOME; s_active = &s_chome; s_anim = false;
     layer_fx(s_home, 0);  // safety: home settles at native scale/opacity
+    if (closed) {
+        frij_haptic(FRIJ_HAPTIC_TAP);
+        // Returning from an app: rebuild the visible glance so it shows fresh
+        // data (random todo pick, new events, …) — glances otherwise live from
+        // boot and would only refresh when swiped away and back.
+        frij_carousel_refresh(&s_chome);
+    }
 }
 
 static void done_revert_simple(lv_anim_t* a) { (void)a; s_anim = false; }

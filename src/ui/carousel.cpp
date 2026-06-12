@@ -4,6 +4,7 @@
 
 #include "anim.h"
 #include "theme.h"
+#include "system/haptics.h"
 
 static const int SNAP_PERCENT = 35;   // drag past this % of width to commit
 static const int ANIM_MS      = 160;
@@ -266,6 +267,7 @@ static void commit_done(lv_anim_t* a)
     page_fx(c->cur, 0);  // make sure the settled page is at native scale/opa
     refresh_dots(c);
     dots_show(c);
+    frij_haptic(FRIJ_HAPTIC_TAP);  // light tick: the page change landed
     notify(c);
 }
 
@@ -425,4 +427,14 @@ void frij_carousel_goto(frij_carousel_t* c, int index)
 int frij_carousel_index(const frij_carousel_t* c)
 {
     return c->index;
+}
+
+void frij_carousel_refresh(frij_carousel_t* c)
+{
+    if (c->busy) {
+        return;  // mid-transition; the fresh page is being built anyway
+    }
+    build_into(c, c->cur, c->index);
+    page_fx(c->cur, 0);
+    dots_to_front(c);
 }

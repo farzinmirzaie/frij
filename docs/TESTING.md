@@ -37,7 +37,8 @@ sips -s format png /tmp/frij_snapshot.bmp --out /tmp/frij_snapshot.png
 `events_glance` `events_countdown` `counter` `stopwatch` `stopwatch_glance` `scoreboard`
 `scoreboard_glance` `settings`
 (General) `network` `netoff` `sheet` `confirm` `keyboard` (numpad) `result`
-`about`. (unset = the launcher/home.)
+`about`. (unset = the launcher/home.) Exit codes: 0 ok, 1 capture failed,
+2 unknown key — scriptable in CI.
 
 Then open/Read `/tmp/frij_snapshot.png`. It renders the real UI offscreen at
 466×466 with the round clip, so it's faithful to the device.

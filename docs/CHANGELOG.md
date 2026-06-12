@@ -2,6 +2,29 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-12 — 10-improvement round (UX / micro-interactions / hygiene)
+
+- **Glances refresh on return home**: closing an app rebuilds the visible
+  glance (new `frij_carousel_refresh`) — the random todo pick, events, etc.
+  no longer live frozen from boot.
+- **Nav haptics**: a light tick when a page swipe commits and when an app/
+  settings layer opens or closes (cancelled partial drags stay silent).
+- **Pre-sleep dim warning**: the last 10s before idle-sleep drop brightness to
+  15% — a touch restores it and resets the countdown.
+- **Sleep fades to black**: the shade eases in over 300ms (panel powers off
+  when the fade lands); waking stays instant. Reduce-motion: snap.
+- **Stopwatch keeps the screen awake** while running (new
+  `frij_sleep_inhibit`), released on stop.
+- **Low-battery toast**: one-shot "Battery low" at ≤15% unplugged; re-arms
+  after charging or recovering above 30%. (on device)
+- **Charging pulse**: the home battery readout breathes gently while on
+  power. (on device)
+- **Esc = Back** in the emulator, alongside Backspace.
+- **Snapshot tool is scriptable**: exit 1 on a failed capture, exit 2 on an
+  unknown `FRIJ_SNAP` key (no more silently rendering the launcher).
+- **About shows the build date**: "v0.1, Jun 12 2026" — which firmware is on
+  the fridge at a glance.
+
 ## 2026-06-11 — Events: sections, holidays feed, countdown screen, freshness
 
 - **Sections**: the list groups into Today / This week / Later with the shared
