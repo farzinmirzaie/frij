@@ -60,7 +60,17 @@ lib_deps =
 
 ## Map of which buttons/keys Frij uses
 
-- **Back** → Key A (G2). On the emulator this is Backspace (see `src/launcher/input.*`).
+The board has three buttons: **Key A (G2)**, **Key B (G1)**, and the **power
+button**.
+
+- **Back** → Key A (G2): short press = back one layer; **hold (600ms) = jump to
+  the watch face**. Emulator: Backspace or Esc (`src/launcher/input.*`); device
+  bring-up maps this to `M5.BtnA` (`wasReleased` short / `pressedFor(600)` hold).
+- **Key B (G1)** — unmapped, free for later (e.g. a user-pickable action).
+- **Power button** — wired to the M5PM1 PMIC, works **out of the box** in
+  hardware: press to power on, long-hold for hard power-off. No firmware
+  needed for that. (Later, firmware *can* subscribe to short-press events via
+  the PMIC over I2C for a software action like "screen off" — optional.)
 
 ## Adding another board
 

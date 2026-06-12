@@ -284,6 +284,8 @@ static void done_enter_settings(lv_anim_t* a) { (void)a; s_cur = SETTINGS; s_act
 
 // We're back on home (a close finished, or a partial open was cancelled): drop
 // whichever transient layer exists — only one can at a time.
+static bool s_home_index0 = false;  // hold-Back: land on glance 0 after the close
+
 static void done_back_home(lv_anim_t* a)
 {
     (void)a;
@@ -295,6 +297,13 @@ static void done_back_home(lv_anim_t* a)
     layer_fx(s_home, 0);  // safety: home settles at native scale/opacity
     if (closed) {
         frij_haptic(FRIJ_HAPTIC_TAP);
+        if (s_home_index0 && frij_carousel_index(&s_chome) != 0) {
+            // hold-Back: continue to the watch face (goto builds it fresh)
+            s_home_index0 = false;
+            frij_carousel_goto(&s_chome, 0);
+            return;
+        }
+        s_home_index0 = false;
         // Returning from an app: rebuild the visible glance so it shows fresh
         // data (random todo pick, new events, …) — glances otherwise live from
         // boot and would only refresh when swiped away and back.
@@ -471,6 +480,24 @@ static void on_input(lv_event_t* e)
     }
 }
 
+// Close the open app/settings layer back to home (no screen-0 step).
+static void close_layer(void)
+{
+    int h  = height();
+    s_anim = true;
+    if (s_cur == APP) {
+        slide_y(s_app, h, NULL);
+        slide_y(s_home, 0, done_back_home);
+        layer_fx_to(s_app, 0, 256);  // app recedes, home grows back in
+        layer_fx_to(s_home, 256, 0);
+    } else {
+        slide_y(s_settings, -h, NULL);
+        slide_y(s_home, 0, done_back_home);
+        layer_fx_to(s_settings, 0, 256);
+        layer_fx_to(s_home, 256, 0);
+    }
+}
+
 void frij_back(void)
 {
     if (frij_modal_close_top()) {
@@ -486,19 +513,29 @@ void frij_back(void)
         }
         return;
     }
-    int h  = height();
-    s_anim = true;
-    if (s_cur == APP) {
-        slide_y(s_app, h, NULL);
-        slide_y(s_home, 0, done_back_home);
-        layer_fx_to(s_app, 0, 256);  // app recedes, home grows back in
-        layer_fx_to(s_home, 256, 0);
-    } else {
-        slide_y(s_settings, -h, NULL);
-        slide_y(s_home, 0, done_back_home);
-        layer_fx_to(s_settings, 0, 256);
-        layer_fx_to(s_home, 256, 0);
+    // Inside an app/settings: step back to its MAIN screen first (the user
+    // swiped sideways); only close the layer once already on screen 0.
+    if (s_active && frij_carousel_index(s_active) != 0) {
+        frij_carousel_goto(s_active, 0);
+        return;
     }
+    close_layer();
+}
+
+void frij_home(void)
+{
+    while (frij_modal_close_top()) {}  // shed every open dialog/sheet first
+    if (s_anim) {
+        return;
+    }
+    if (s_cur == HOME) {
+        if (frij_carousel_index(&s_chome) != 0) {
+            frij_carousel_goto(&s_chome, 0);
+        }
+        return;
+    }
+    s_home_index0 = true;   // done_back_home continues to glance 0
+    close_layer();          // skip Back's screen-0 step — hold means ALL the way
 }
 
 void frij_launcher_start(void)

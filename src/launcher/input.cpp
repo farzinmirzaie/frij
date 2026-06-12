@@ -7,8 +7,10 @@
 /*
  * Emulator: poll the SDL keyboard. SDL_GetKeyboardState reads a snapshot kept
  * up to date by the SDL panel's own event loop, so it doesn't steal events.
- * Backspace or Esc = Back. On real hardware this file will read a button GPIO
- * instead.
+ * Backspace or Esc = the Back button: a short press goes back one layer, a
+ * HOLD (600ms) jumps all the way to the watch face. Short-press fires on
+ * release — the only way to tell it apart from the start of a hold.
+ * On real hardware this file reads Key A instead (M5.BtnA short/hold).
  */
 #if defined(__has_include)
 #  if __has_include(<SDL2/SDL.h>)
@@ -21,14 +23,25 @@
 #endif
 
 #ifdef FRIJ_HAS_SDL
+#define HOLD_MS 600
+
 static void poll_back(lv_timer_t* timer)
 {
     (void)timer;
-    static bool was_down = false;
-    const Uint8* keys    = SDL_GetKeyboardState(NULL);
-    bool down            = keys && (keys[SDL_SCANCODE_BACKSPACE] || keys[SDL_SCANCODE_ESCAPE]);
-    if (down && !was_down) {
-        frij_back();
+    static bool     was_down  = false;
+    static bool     consumed  = false;  // this press already did its action
+    static uint32_t down_tick = 0;
+    const Uint8*    keys      = SDL_GetKeyboardState(NULL);
+    bool down = keys && (keys[SDL_SCANCODE_BACKSPACE] || keys[SDL_SCANCODE_ESCAPE]);
+
+    if (down && !was_down) {  // press started
+        down_tick = lv_tick_get();
+        consumed  = false;
+    } else if (down && !consumed && lv_tick_elaps(down_tick) >= HOLD_MS) {
+        consumed = true;  // held long enough: take me home (once)
+        frij_home();
+    } else if (!down && was_down && !consumed) {
+        frij_back();  // short press, decided on release
     }
     was_down = down;
 }

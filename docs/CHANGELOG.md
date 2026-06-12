@@ -2,6 +2,20 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-12 — Back steps to the app's main screen first
+
+- Inside an app (or Settings), Back now returns to screen 0 if the user has
+  swiped sideways; a second press closes the layer. Hold-Back still jumps
+  straight to the watch face (it skips the screen-0 step).
+
+## 2026-06-12 — hold-Back jumps to the watch face
+
+- New `frij_home()`: closes any open dialog/sheet/layer and lands on glance 0.
+- Back input is now short/hold aware: short press (on release) = back one
+  layer; hold 600ms = home. Emulator keys unchanged (Backspace/Esc).
+- HARDWARE.md documents all three buttons (Key A short/hold, Key B free,
+  power button = PMIC, works out of the box).
+
 ## 2026-06-12 — fix: home battery showed the date after leaving an app
 
 - Use-after-free: carousel pages are REUSED on rebuilds (`lv_obj_clean`, not a
