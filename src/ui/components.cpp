@@ -87,6 +87,140 @@ void frij_haptic_attach(lv_obj_t* obj)
     lv_obj_add_event_cb(obj, on_press_haptic, LV_EVENT_PRESSED, NULL);
 }
 
+static void bar_h_exec(void* o, int32_t v)
+{
+    lv_obj_set_height((lv_obj_t*)o, v);
+}
+
+lv_obj_t* frij_sound_bars(lv_obj_t* parent, int h, uint32_t color)
+{
+    lv_obj_t* box = lv_obj_create(parent);
+    lv_obj_remove_style_all(box);
+    lv_obj_set_size(box, LV_SIZE_CONTENT, h);
+    lv_obj_set_flex_flow(box, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(box, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(box, h / 7, LV_PART_MAIN);
+    lv_obj_clear_flag(box, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(box, LV_OBJ_FLAG_CLICKABLE);
+
+    static const int idle[4] = {45, 80, 100, 60};  // staircase when not animating
+    for (int i = 0; i < 4; i++) {
+        lv_obj_t* b = lv_obj_create(box);
+        lv_obj_remove_style_all(b);
+        lv_obj_set_size(b, h / 5, h * idle[i] / 100);
+        lv_obj_set_style_radius(b, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+        lv_obj_set_style_bg_color(b, lv_color_hex(color), LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(b, LV_OPA_COVER, LV_PART_MAIN);
+        lv_obj_clear_flag(b, LV_OBJ_FLAG_CLICKABLE);
+        if (!frij_anim_enabled()) {
+            continue;
+        }
+        // each bar bobs between a third and full height at its own rhythm
+        lv_anim_t a;
+        lv_anim_init(&a);
+        lv_anim_set_var(&a, b);
+        lv_anim_set_exec_cb(&a, bar_h_exec);
+        lv_anim_set_values(&a, h / 3, h);
+        lv_anim_set_duration(&a, 380 + i * 90);
+        lv_anim_set_playback_duration(&a, 380 + i * 90);
+        lv_anim_set_delay(&a, (uint32_t)i * 120);
+        lv_anim_set_repeat_count(&a, LV_ANIM_REPEAT_INFINITE);
+        lv_anim_set_path_cb(&a, lv_anim_path_ease_in_out);
+        lv_anim_start(&a);
+    }
+    return box;
+}
+
+static void glow_free_cb(lv_event_t* e);  // defined with frij_glow below
+
+lv_obj_t* frij_edge_glow(lv_obj_t* parent, uint32_t color)
+{
+    lv_obj_t* g = lv_obj_create(parent);
+    lv_obj_remove_style_all(g);
+    lv_obj_set_size(g, LV_PCT(100), LV_PCT(100));
+    lv_obj_add_flag(g, LV_OBJ_FLAG_FLOATING);
+    lv_obj_clear_flag(g, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_clear_flag(g, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_grad_dsc_t* d = (lv_grad_dsc_t*)lv_malloc(sizeof(lv_grad_dsc_t));
+    if (d == NULL) {
+        return g;
+    }
+    lv_memzero(d, sizeof(*d));
+    lv_grad_radial_init(d, LV_GRAD_CENTER, LV_GRAD_CENTER, LV_GRAD_RIGHT, LV_GRAD_CENTER,
+                        LV_GRAD_EXTEND_PAD);
+    d->stops_count    = 3;
+    d->stops[0].color = lv_color_hex(color);
+    d->stops[0].opa   = 0;
+    d->stops[0].frac  = 0;
+    d->stops[1].color = lv_color_hex(color);
+    d->stops[1].opa   = 0;
+    d->stops[1].frac  = 175;  // stay clear until ~70% out — the rim only
+    d->stops[2].color = lv_color_hex(color);
+    d->stops[2].opa   = 70;   // subtle even at the very edge
+    d->stops[2].frac  = 255;
+    lv_obj_set_style_bg_grad(g, d, LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(g, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_add_event_cb(g, glow_free_cb, LV_EVENT_DELETE, d);
+    return g;
+}
+
+static void ring_scale_exec(void* o, int32_t v)
+{
+    lv_obj_set_style_transform_scale((lv_obj_t*)o, v, LV_PART_MAIN);
+}
+
+lv_obj_t* frij_pulse_ring(lv_obj_t* parent, int size, uint32_t color)
+{
+    lv_obj_t* box = lv_obj_create(parent);
+    lv_obj_remove_style_all(box);
+    lv_obj_set_size(box, size, size);
+    lv_obj_clear_flag(box, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(box, LV_OBJ_FLAG_CLICKABLE);
+
+    int n = frij_anim_enabled() ? 3 : 1;  // reduce-motion: one calm static ring
+    for (int i = 0; i < n; i++) {
+        lv_obj_t* r = lv_obj_create(box);
+        lv_obj_remove_style_all(r);
+        lv_obj_set_size(r, LV_PCT(100), LV_PCT(100));
+        lv_obj_center(r);
+        lv_obj_set_style_radius(r, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+        lv_obj_set_style_border_width(r, 2, LV_PART_MAIN);
+        lv_obj_set_style_border_color(r, lv_color_hex(color), LV_PART_MAIN);
+        lv_obj_set_style_transform_pivot_x(r, lv_pct(50), LV_PART_MAIN);
+        lv_obj_set_style_transform_pivot_y(r, lv_pct(50), LV_PART_MAIN);
+        lv_obj_clear_flag(r, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_clear_flag(r, LV_OBJ_FLAG_SCROLLABLE);
+        if (!frij_anim_enabled()) {
+            lv_obj_set_style_opa(r, LV_OPA_60, LV_PART_MAIN);
+            break;
+        }
+        // each ring ripples out (grow + fade), staggered a third of a cycle
+        lv_anim_t grow;
+        lv_anim_init(&grow);
+        lv_anim_set_var(&grow, r);
+        lv_anim_set_exec_cb(&grow, ring_scale_exec);
+        lv_anim_set_values(&grow, 170, 256);
+        lv_anim_set_duration(&grow, 1500);
+        lv_anim_set_delay(&grow, (uint32_t)i * 500);
+        lv_anim_set_repeat_count(&grow, LV_ANIM_REPEAT_INFINITE);
+        lv_anim_set_path_cb(&grow, lv_anim_path_ease_out);
+        lv_anim_start(&grow);
+
+        lv_anim_t fade;
+        lv_anim_init(&fade);
+        lv_anim_set_var(&fade, r);
+        lv_anim_set_exec_cb(&fade, frij_anim_exec_opa);
+        lv_anim_set_values(&fade, 170, 0);
+        lv_anim_set_duration(&fade, 1500);
+        lv_anim_set_delay(&fade, (uint32_t)i * 500);
+        lv_anim_set_repeat_count(&fade, LV_ANIM_REPEAT_INFINITE);
+        lv_anim_set_path_cb(&fade, lv_anim_path_ease_out);
+        lv_anim_start(&fade);
+    }
+    return box;
+}
+
 static void glow_free_cb(lv_event_t* e)
 {
     lv_free(lv_event_get_user_data(e));  // the gradient descriptor outlives the call

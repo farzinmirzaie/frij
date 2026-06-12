@@ -17,6 +17,7 @@
 
 #include "lvgl.h"
 
+#include "apps/assistant/assistant.h"
 #include "apps/counter/counter.h"
 #include "apps/events/events.h"
 #include "apps/scoreboard/scoreboard.h"
@@ -173,6 +174,24 @@ int main(int, char**)
         build_glance_view(events_app());
     } else if (scr && strcmp(scr, "events_countdown") == 0) {
         build_app_screen(events_app(), 1);
+    } else if (scr && strcmp(scr, "assistant") == 0) {
+        frij_assistant_ptt(true);  // one full mock ask seeds the history...
+        frij_assistant_ptt(false);
+        s_tick_offset += 2000;
+        lv_timer_handler();        // ...the answer lands (and pushes history)
+        frij_modal_close_top();
+        s_tick_offset += 1000;
+        lv_timer_handler();        // overlay fade-out completes
+        build_app_screen(assistant_app(), 0);
+    } else if (scr && strcmp(scr, "assistant_glance") == 0) {
+        build_glance_view(assistant_app());
+    } else if (scr && strcmp(scr, "ai_listen") == 0) {
+        build_glance_view(assistant_app());
+        frij_assistant_ptt(true);
+    } else if (scr && strcmp(scr, "ai_answer") == 0) {
+        build_glance_view(assistant_app());
+        frij_assistant_ptt(true);
+        frij_assistant_ptt(false);  // 1.5s mock think + the 3s settle -> answer
     } else if (scr && strcmp(scr, "counter") == 0) {
         build_app_screen(counter_app(), 0);
     } else if (scr && strcmp(scr, "stopwatch") == 0) {
@@ -213,7 +232,8 @@ int main(int, char**)
     } else {
         if (scr && scr[0]) {  // typo'd key would silently render the launcher
             printf("unknown FRIJ_SNAP '%s' — valid: todo todo_progress todo_add todo_glance "
-                   "events events_glance events_countdown counter stopwatch stopwatch_glance scoreboard "
+                   "events events_glance events_countdown assistant assistant_glance ai_listen "
+                   "ai_answer counter stopwatch stopwatch_glance scoreboard "
                    "scoreboard_glance settings network netoff sheet confirm keyboard result "
                    "about\n",
                    scr);
@@ -230,6 +250,9 @@ int main(int, char**)
 
     // settle past entrance anims; the toast is transient, so sample it mid-hold
     s_tick_offset += (scr && strcmp(scr, "toast") == 0) ? 600 : 3000;
+    lv_timer_handler();  // let one-shot timers (e.g. the mock AI "thinking") fire
+    s_tick_offset += 1000;
+    lv_timer_handler();  // settle whatever those timers started (entrance anims)
     lv_refr_now(disp);  // render the settled UI once
 
     lv_draw_buf_t* snap = lv_snapshot_take(lv_screen_active(), LV_COLOR_FORMAT_ARGB8888);

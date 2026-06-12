@@ -34,7 +34,8 @@ sips -s format png /tmp/frij_snapshot.bmp --out /tmp/frij_snapshot.png
 ```
 
 `FRIJ_SNAP` values: `todo` `todo_progress` `todo_add` `todo_glance` `events`
-`events_glance` `events_countdown` `counter` `stopwatch` `stopwatch_glance` `scoreboard`
+`events_glance` `events_countdown` `assistant` `assistant_glance` `ai_listen`
+`ai_answer` `counter` `stopwatch` `stopwatch_glance` `scoreboard`
 `scoreboard_glance` `settings`
 (General) `network` `netoff` `sheet` `confirm` `keyboard` (numpad) `result`
 `about`. (unset = the launcher/home.) Exit codes: 0 ok, 1 capture failed,

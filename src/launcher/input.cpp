@@ -2,6 +2,7 @@
 
 #include "lvgl.h"
 #include "lvgl_port_m5stack.hpp"
+#include "apps/assistant/assistant.h"
 #include "launcher.h"
 
 /*
@@ -10,7 +11,9 @@
  * Backspace or Esc = the Back button: a short press goes back one layer, a
  * HOLD (600ms) jumps all the way to the watch face. Short-press fires on
  * release — the only way to tell it apart from the start of a hold.
- * On real hardware this file reads Key A instead (M5.BtnA short/hold).
+ * Space = Key B (blue): push-to-talk for Frij AI — only a deliberate HOLD
+ * (350ms) opens it (a stray tap shouldn't summon the assistant); release asks.
+ * On real hardware this file reads Key A / Key B instead (M5.BtnA / M5.BtnB).
  */
 #if defined(__has_include)
 #  if __has_include(<SDL2/SDL.h>)
@@ -44,6 +47,24 @@ static void poll_back(lv_timer_t* timer)
         frij_back();  // short press, decided on release
     }
     was_down = down;
+
+    // Key B (Space here): push-to-talk, hold-gated — listening only opens
+    // after AI_HOLD_MS, so a stray tap does nothing.
+    static bool     ai_was_down = false;
+    static bool     ai_active   = false;
+    static uint32_t ai_tick     = 0;
+    bool ai_down = keys && keys[SDL_SCANCODE_SPACE];
+    if (ai_down && !ai_was_down) {
+        ai_tick   = lv_tick_get();
+        ai_active = false;
+    } else if (ai_down && !ai_active && lv_tick_elaps(ai_tick) >= 350) {
+        ai_active = true;
+        frij_assistant_ptt(true);
+    } else if (!ai_down && ai_was_down && ai_active) {
+        ai_active = false;
+        frij_assistant_ptt(false);
+    }
+    ai_was_down = ai_down;
 }
 #endif
 

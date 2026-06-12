@@ -153,11 +153,6 @@ static void layer_fx_to(lv_obj_t* layer, int32_t from, int32_t to)
     lv_anim_start(&a);
 }
 
-static void anim_rotation(void* o, int32_t v)
-{
-    lv_obj_set_style_transform_rotation((lv_obj_t*)o, v, LV_PART_MAIN);
-}
-
 // The persistent header (above the content carousel) calls this on tap; it
 // dispatches to the app's action handler for the current screen.
 static void header_action_clicked(lv_event_t* e)
@@ -173,7 +168,7 @@ static void header_action_clicked(lv_event_t* e)
             lv_anim_t a;
             lv_anim_init(&a);
             lv_anim_set_var(&a, icon);
-            lv_anim_set_exec_cb(&a, anim_rotation);
+            lv_anim_set_exec_cb(&a, frij_anim_exec_rotation);
             lv_anim_set_values(&a, 0, 3600);  // 0.1° units = one full turn
             lv_anim_set_duration(&a, 450);
             lv_anim_set_path_cb(&a, lv_anim_path_ease_out);

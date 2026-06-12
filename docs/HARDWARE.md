@@ -63,14 +63,18 @@ lib_deps =
 The board has three buttons: **Key A (G2)**, **Key B (G1)**, and the **power
 button**.
 
-- **Back** → Key A (G2): short press = back one layer; **hold (600ms) = jump to
-  the watch face**. Emulator: Backspace or Esc (`src/launcher/input.*`); device
-  bring-up maps this to `M5.BtnA` (`wasReleased` short / `pressedFor(600)` hold).
-- **Key B (G1)** — unmapped, free for later (e.g. a user-pickable action).
+- **Back** → Key A (G2, **yellow**): short press = back one layer; **hold
+  (600ms) = jump to the watch face**. Emulator: Backspace or Esc
+  (`src/launcher/input.*`); device bring-up maps this to `M5.BtnA`
+  (`wasReleased` short / `pressedFor(600)` hold).
+- **Key B (G1, blue)** — **push-to-talk for Frij AI**, hold-gated: held 350ms =
+  listening overlay, release = ask; a stray tap does nothing. Emulator: Space.
+  Device bring-up: `M5.BtnB.pressedFor(350)` -> `frij_assistant_ptt(true)`,
+  release -> `frij_assistant_ptt(false)`.
 - **Power button** — wired to the M5PM1 PMIC, works **out of the box** in
-  hardware: press to power on, long-hold for hard power-off. No firmware
-  needed for that. (Later, firmware *can* subscribe to short-press events via
-  the PMIC over I2C for a software action like "screen off" — optional.)
+  hardware: short press = power on/reset, **double press = power off** (per the
+  official docs). No firmware needed. (Later, firmware *can* subscribe to
+  press events via the PMIC over I2C for a software action — optional.)
 
 ## Adding another board
 

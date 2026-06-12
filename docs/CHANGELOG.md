@@ -2,6 +2,39 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-12 — Frij AI: Recent-only screen + listening edge glow
+
+- The preset "Ask something" screen is gone — the app's single screen is the
+  Recent history (last 5 Q&As). Push-to-talk is the only way to ask.
+- The listening overlay gains a very subtle accent halo breathing at the
+  screen's rim (new reusable `frij_edge_glow`).
+
+## 2026-06-12 — Frij AI: hold gate, blue-button copy, history screen
+
+- Push-to-talk is **hold-gated** (350ms): a stray tap of Key B / Space no
+  longer summons the assistant.
+- Copy says "hold the **blue** button" — per the official M5 docs Key A (G2,
+  Back) is yellow and Key B (G1, AI) is blue; HARDWARE.md now records the
+  colors and the power button's real behavior (press on, double-press off).
+- New second screen in Frij AI: the **last 5 questions + answers** (RAM only),
+  newest first; empty state until something is asked. Snapshot key
+  `assistant_history`.
+
+## 2026-06-12 — Frij AI: push-to-talk UI shell (mock pipeline)
+
+- **New app: Frij AI** (violet) — the assistant's full interaction without the
+  cloud yet. Hold Key B (Space on the emulator) anywhere -> full-screen
+  listening overlay (rippling pulse rings + equalizer voice bars); release ->
+  spinning "Thinking" with the heard question; ~1.5s later the answer screen
+  (canned Q&A for now) with a dismiss button. Back cancels at any stage.
+- Glance shows the brand + how to invoke; the app screen offers preset
+  questions that run the same pipeline (works without a mic).
+- New reusable ui pieces: `frij_pulse_ring` (rippling live indicator),
+  `frij_sound_bars` (equalizer bars), `frij_modal_register` (app overlays get
+  Back-to-close), shared `frij_anim_exec_rotation`.
+- Snapshot keys: `assistant`, `assistant_glance`, `ai_listen`, `ai_answer`;
+  the snapshot tool now runs timers before rendering so timed states settle.
+
 ## 2026-06-12 — Back steps to the app's main screen first
 
 - Inside an app (or Settings), Back now returns to screen 0 if the user has

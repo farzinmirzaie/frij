@@ -17,6 +17,9 @@ target whatever board we run on (see [HARDWARE.md](HARDWARE.md)).
 - **Grocery list** — add/remove items, clear bought.
 - **Photos** — slideshow of family pics.
 - **Clock / weather** — ambient home-screen widgets (nice-to-have).
+- **Frij AI** — voice assistant. UI shell shipped (push-to-talk overlay,
+  mock pipeline); next: Supabase Edge Function (Whisper + LLM with store
+  tools), then device mic capture.
 
 ## Phases
 

@@ -21,6 +21,7 @@ void frij_anim_exec_bg_opa(void* obj, int32_t v);       // background opacity
 void frij_anim_exec_translate_y(void* obj, int32_t v);  // vertical translate
 void frij_anim_exec_scale(void* obj, int32_t v);        // transform scale (x+y)
 void frij_anim_exec_arc(void* obj, int32_t v);          // lv_arc value
+void frij_anim_exec_rotation(void* obj, int32_t v);      // transform rotation (0.1 deg)
 
 // Entrance animation: fade in + rise. `delay_ms` lets callers stagger a list.
 void frij_anim_enter(lv_obj_t* obj, uint32_t delay_ms);

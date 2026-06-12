@@ -165,6 +165,24 @@ void frij_prompt_screen(const char* symbol, uint32_t primary_color, const char* 
 // closed — the launcher's Back action calls this before navigating.
 bool frij_modal_close_top(void);
 
+// Register a custom full-screen overlay with the modal system: Back closes it
+// (fade-out + delete) before navigating. For app-built overlays that aren't
+// one of the canned prompt/sheet/numpad shapes.
+void frij_modal_register(lv_obj_t* overlay);
+
+// An equalizer-style "voice" indicator: four rounded bars bobbing at staggered
+// rhythms (static staircase under reduce-motion). `h` is the tallest bar.
+lv_obj_t* frij_sound_bars(lv_obj_t* parent, int h, uint32_t color);
+
+// A soft halo hugging the screen edge (transparent center -> faint `color` at
+// the rim). Static; animate its opacity for a breathing effect. FLOATING.
+lv_obj_t* frij_edge_glow(lv_obj_t* parent, uint32_t color);
+
+// A "live" indicator: concentric rings that ripple outward from the center,
+// `size` px, in `color`. Put your icon/content inside (it's a plain container)
+// and lv_obj_center it. Static single ring under reduce-motion.
+lv_obj_t* frij_pulse_ring(lv_obj_t* parent, int size, uint32_t color);
+
 // A full-screen numeric keypad (our own — themed + round-screen friendly): a
 // title (wraps to two lines), a masked dots display, and a 3×4 grid of round
 // keys (1–9, ⌫ backspace with hold-to-repeat, 0, ✓ confirm). `cb` fires with

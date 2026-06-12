@@ -61,6 +61,12 @@ bool frij_modal_close_top(void)
     return false;
 }
 
+void frij_modal_register(lv_obj_t* overlay)
+{
+    s_modal_top = overlay;  // Back / backdrop logic now closes this first
+    lv_obj_add_event_cb(overlay, modal_clear_top_cb, LV_EVENT_DELETE, NULL);
+}
+
 // Tap on the backdrop itself (not a child) closes the modal.
 static void modal_dismiss_cb(lv_event_t* e)
 {
