@@ -155,8 +155,10 @@ void frij_toast_status(const char* text, bool ok);
 // A full-screen prompt in the result-screen style: a big `primary_color` ring
 // with `symbol`, a title, an optional message, and one or two pill actions.
 // `primary_color` is usually the app accent — or FRIJ_DANGER for destructive
-// flows. With `cancel_text` NULL it's a single-action notice; otherwise the
-// secondary (and Back) dismiss without firing `on_primary`. Closes itself.
+// flows. The primary action is a round ✓ in `primary_color`; with `cancel_text`
+// set there's also a round ✕ (and Back) that dismiss without firing
+// `on_primary`. `primary_text` is unused now (kept for source compatibility).
+// Closes itself.
 void frij_prompt_screen(const char* symbol, uint32_t primary_color, const char* title,
                         const char* message, const char* primary_text, const char* cancel_text,
                         lv_event_cb_t on_primary);
@@ -173,6 +175,11 @@ void frij_modal_register(lv_obj_t* overlay);
 // An equalizer-style "voice" indicator: four rounded bars bobbing at staggered
 // rhythms (static staircase under reduce-motion). `h` is the tallest bar.
 lv_obj_t* frij_sound_bars(lv_obj_t* parent, int h, uint32_t color);
+
+// A "loading" indicator: three dots bouncing in sequence, `dot` px each
+// (static row under reduce-motion). Pair with frij_pulse_ring for a "thinking"
+// visual that matches the listening one.
+lv_obj_t* frij_loading_dots(lv_obj_t* parent, int dot, uint32_t color);
 
 // A soft halo hugging the screen edge (transparent center -> faint `color` at
 // the rim). Static; animate its opacity for a breathing effect. FLOATING.

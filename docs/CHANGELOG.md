@@ -2,6 +2,64 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-12 — Frij AI: real device mic capture (end to end)
+
+- `system/ai` device backend: hold Key B (blue) records the ES8311 mic
+  (M5.Mic, 16 kHz mono, ≤12s) on a FreeRTOS task; release wraps WAV +
+  base64 + POSTs to the `ask` edge function over WiFiClientSecure. Gemini
+  transcribes and answers in one call (audio path the function already had).
+- New `frij_ai_listen_start/ask`: the assistant starts capture on press and
+  sends audio on release; emulator no-ops them and keeps the text/sample mock.
+- Device Key A = Back (tap)/home (hold) + Key B = push-to-talk, wired in
+  main.cpp's loop via M5.BtnA/BtnB.
+- Supabase URL + anon key bake into the device build from the shell env
+  (platformio device build_flags); GEMINI_API_KEY stays server-side. The
+  device path is compile-only — verify on flash. See docs/AI.md.
+
+## 2026-06-12 — consistent round ✓ on prompts + non-clipping loading dots
+
+- Single-action prompts/result screens now use the round ✓ icon button (same
+  as the two-action confirm's primary) instead of a text pill — every
+  confirm/notice/result across the apps dismisses with the same control.
+- `frij_loading_dots` pulses opacity in place instead of bouncing, so the dots
+  can't clip against the round core they sit in (the Thinking screen).
+
+## 2026-06-12 — Frij AI: shared error prompt + dots thinking loader
+
+- Errors now use the same full-screen prompt as Reset/Erase (warning ring,
+  message, single OK) instead of a bespoke screen with a retry button.
+- Thinking drops the spinner for the listening visual's rippling rings with a
+  three-dot loading bounce at the center (new reusable `frij_loading_dots`).
+- Snapshot key `ai_thinking`.
+
+## 2026-06-12 — Frij AI: friendly error UI
+
+- The "ask" function now returns a short human message (e.g. "Frij AI is busy
+  right now. Try again in a moment.") instead of leaking the raw provider JSON.
+- The assistant renders errors as a dedicated state — amber warning ring, the
+  message, and two round actions (dismiss + retry) — not as a wall of text in
+  the answer slot. Errors aren't saved to Recent. Snapshot key `ai_error`.
+
+## 2026-06-12 — ask function: wider scope + free-tier retries (v4 deployed)
+
+- System prompt no longer implies the tools are its whole job — general
+  kitchen/household questions get answered instead of refused.
+- Transient Gemini free-tier 503/429s retry up to twice with backoff.
+
+## 2026-06-12 — Frij AI backend: Gemini via a Supabase Edge Function
+
+- New edge function `ask` (deployed): Gemini free tier + a tool loop over the
+  store — reads events/todos, queues voice-added todos in `store:todo_inbox`,
+  bumps the scoreboard. Returns {"q","a"}; audio input is already accepted for
+  the device's future mic path. The Gemini key never leaves the function.
+- New board service `system/ai`: worker-thread ask (libcurl, reuses the
+  store's Supabase config), polled by the UI. Device backend TODO.
+- The assistant now asks the REAL backend when configured (the emulator sends
+  a sample question standing in for the mic) and renders the real answer;
+  errors show honestly; no cloud -> canned answers as before. History stores
+  dynamic strings now.
+- Setup + curl test: docs/AI.md. Needs one secret: GEMINI_API_KEY.
+
 ## 2026-06-12 — Frij AI: Recent-only screen + listening edge glow
 
 - The preset "Ask something" screen is gone — the app's single screen is the

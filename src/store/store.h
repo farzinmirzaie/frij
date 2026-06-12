@@ -35,6 +35,10 @@ void frij_store_pull_async(const char* key);
 // touch the cloud; apps fall back to their defaults on the next read.
 void frij_store_clear(void);
 
+// The Supabase project config the store loaded (.env on the emulator). Other
+// cloud services (the AI edge function) reuse it. False until configured.
+bool frij_store_cloud_config(char* url, size_t url_n, char* key, size_t key_n);
+
 // Typed convenience accessors built on load/save. Values are stored as plain
 // text (a decimal for ints, "1"/"0" for bools); `def` is returned when the key
 // is absent. Saves go through the same cloud-backed path as frij_store_save.

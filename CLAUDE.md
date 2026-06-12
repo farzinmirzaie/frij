@@ -60,6 +60,7 @@ Each `src/*` folder has its own `README.md` with the details.
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how boot, render loop, and the port layer work.
 - [docs/TESTING.md](docs/TESTING.md) — **how to build + visually verify changes (snapshot tool).**
 - [docs/STORAGE.md](docs/STORAGE.md) — cloud setup (Supabase table, env, keys).
+- [docs/AI.md](docs/AI.md) — the assistant pipeline (edge function, Gemini, setup).
 - Per-package detail lives in `src/*/README.md` (launcher, apps, ui, store, utility).
 - [docs/HARDWARE.md](docs/HARDWARE.md) — board targets + how to add a new one.
 - [docs/SKILLS.md](docs/SKILLS.md) — Claude skills/tools worth using on this stack.

@@ -131,6 +131,46 @@ lv_obj_t* frij_sound_bars(lv_obj_t* parent, int h, uint32_t color)
     return box;
 }
 
+lv_obj_t* frij_loading_dots(lv_obj_t* parent, int dot, uint32_t color)
+{
+    lv_obj_t* box = lv_obj_create(parent);
+    lv_obj_remove_style_all(box);
+    lv_obj_set_size(box, LV_SIZE_CONTENT, dot);  // dots stay put — just fade
+    lv_obj_set_flex_flow(box, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(box, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(box, dot / 2, LV_PART_MAIN);
+    lv_obj_clear_flag(box, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(box, LV_OBJ_FLAG_CLICKABLE);
+
+    for (int i = 0; i < 3; i++) {
+        lv_obj_t* d = lv_obj_create(box);
+        lv_obj_remove_style_all(d);
+        lv_obj_set_size(d, dot, dot);
+        lv_obj_set_style_radius(d, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+        lv_obj_set_style_bg_color(d, lv_color_hex(color), LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(d, LV_OPA_COVER, LV_PART_MAIN);
+        lv_obj_clear_flag(d, LV_OBJ_FLAG_CLICKABLE);
+        if (!frij_anim_enabled()) {
+            continue;
+        }
+        // each dot fades down then back, staggered — a calm "typing" pulse that
+        // never moves (so it can't clip against the round core it sits in)
+        lv_anim_t a;
+        lv_anim_init(&a);
+        lv_anim_set_var(&a, d);
+        lv_anim_set_exec_cb(&a, frij_anim_exec_bg_opa);
+        lv_anim_set_values(&a, 255, 70);
+        lv_anim_set_duration(&a, 340);
+        lv_anim_set_playback_duration(&a, 340);
+        lv_anim_set_delay(&a, (uint32_t)i * 180);
+        lv_anim_set_repeat_count(&a, LV_ANIM_REPEAT_INFINITE);
+        lv_anim_set_repeat_delay(&a, 340);  // brief pause before the wave restarts
+        lv_anim_set_path_cb(&a, lv_anim_path_ease_in_out);
+        lv_anim_start(&a);
+    }
+    return box;
+}
+
 static void glow_free_cb(lv_event_t* e);  // defined with frij_glow below
 
 lv_obj_t* frij_edge_glow(lv_obj_t* parent, uint32_t color)

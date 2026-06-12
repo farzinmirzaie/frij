@@ -1,16 +1,20 @@
 #include "assistant.h"
 
+#include <string.h>
+
+#include "system/ai.h"
 #include "system/haptics.h"
 #include "ui/anim.h"
 #include "ui/components.h"
 #include "ui/theme.h"
 
 /*
- * Frij AI — the voice assistant's UI shell. The full pipeline will be:
- * hold Key B -> record mic -> Supabase Edge Function (Whisper + LLM with
- * store tools) -> answer. For now the listening / thinking / answer flow is
- * real UI over a MOCK pipeline (canned Q&A, fixed delay) so the interaction
- * can be designed and felt before any cloud wiring.
+ * Frij AI — the voice assistant. With the cloud configured (system/ai ->
+ * the Supabase "ask" edge function -> Gemini with store tools), releasing the
+ * button sends a REAL question and renders the real answer. Until the device
+ * has a mic, the emulator picks one of the sample questions as the "voice"
+ * input. With no cloud (device today, or no .env) it falls back to canned
+ * answers so the interaction still demos.
  *
  *   glance   : branding + how to invoke
  *   screen 0 : the last 5 questions + answers (RAM only — resets on reboot)
@@ -19,8 +23,8 @@
 
 static const uint32_t ACCENT = FRIJ_INFO;  // violet — the AI color
 
-// Canned Q&A until the cloud pipeline exists. PTT picks one at random
-// (pretending it transcribed you); the preset screen asks a specific one.
+// Sample questions: the emulator's stand-in for the mic (one is picked at
+// random and actually sent to the cloud); the answers are the offline mock.
 typedef struct {
     const char* q;
     const char* a;
@@ -38,22 +42,30 @@ static const qa_t QA[] = {
 };
 #define QA_COUNT ((int)(sizeof(QA) / sizeof(QA[0])))
 
-// The last few asked questions, newest first (RAM only; entries point into QA
-// until the real pipeline produces dynamic strings).
+// The last few asked questions, newest first (RAM only).
 #define HIST_MAX 5
-static const qa_t* s_hist[HIST_MAX];
-static int         s_hist_n = 0;
+#define Q_LEN    160
+#define A_LEN    600
+static char s_hist_q[HIST_MAX][Q_LEN];
+static char s_hist_a[HIST_MAX][A_LEN];
+static int  s_hist_n = 0;
 
-static void hist_push(const qa_t* qa)
+static void hist_push(const char* q, const char* a)
 {
     for (int i = HIST_MAX - 1; i > 0; i--) {
-        s_hist[i] = s_hist[i - 1];
+        strcpy(s_hist_q[i], s_hist_q[i - 1]);
+        strcpy(s_hist_a[i], s_hist_a[i - 1]);
     }
-    s_hist[0] = qa;
+    lv_snprintf(s_hist_q[0], Q_LEN, "%s", q);
+    lv_snprintf(s_hist_a[0], A_LEN, "%s", a);
     if (s_hist_n < HIST_MAX) {
         s_hist_n++;
     }
 }
+
+// The in-flight session's question + answer (cloud or mock fills them).
+static char s_cur_q[Q_LEN];
+static char s_cur_a[A_LEN];
 
 // ---- overlay state machine ---------------------------------------------------
 
@@ -61,8 +73,11 @@ typedef enum { AI_IDLE, AI_LISTENING, AI_THINKING, AI_ANSWER } ai_state_t;
 
 static ai_state_t  s_state   = AI_IDLE;
 static lv_obj_t*   s_overlay = NULL;
-static lv_timer_t* s_timer   = NULL;  // the mock "thinking" delay
-static int         s_qa      = 0;     // which canned pair this session uses
+static lv_timer_t* s_timer   = NULL;  // thinking: cloud poll, or the mock delay
+static int         s_qa      = 0;     // which sample question this session uses
+static bool        s_cloud   = false; // this session asks the real backend
+static bool        s_error   = false; // the answer is an error message
+static bool        s_voice   = false; // device mic capture is in flight
 
 static void on_overlay_deleted(lv_event_t* e)
 {
@@ -157,7 +172,27 @@ static void build_listening(void)
     frij_label(col, "Release to ask", FRIJ_FONT_SMALL, FRIJ_TEXT_3);
 }
 
-static void show_answer(lv_timer_t* t);
+static void show_answer(void);
+
+// Thinking tick: cloud mode polls the worker; mock mode is a fixed delay.
+static void think_tick(lv_timer_t* t)
+{
+    (void)t;
+    if (!s_overlay || s_state != AI_THINKING) {
+        return;
+    }
+    if (s_cloud) {
+        frij_ai_state_t st = frij_ai_state();
+        if (st != FRIJ_AI_DONE && st != FRIJ_AI_ERROR) {
+            return;  // still working
+        }
+        s_error = (st == FRIJ_AI_ERROR);
+        frij_ai_take(s_cur_q, sizeof(s_cur_q), s_cur_a, sizeof(s_cur_a));
+    }
+    lv_timer_delete(s_timer);
+    s_timer = NULL;
+    show_answer();
+}
 
 static void build_thinking(void)
 {
@@ -165,41 +200,32 @@ static void build_thinking(void)
     overlay_glow();
     lv_obj_t* col = overlay_col();
 
-    // a slow-spinning open arc — "working on it"
-    lv_obj_t* arc = lv_arc_create(col);
-    lv_obj_set_size(arc, 96, 96);
-    lv_arc_set_rotation(arc, 270);
-    lv_arc_set_bg_angles(arc, 0, 80);  // short sweep; the rotation anim spins it
-    lv_arc_set_value(arc, 0);
-    lv_obj_remove_style(arc, NULL, LV_PART_KNOB);
-    lv_obj_remove_style(arc, NULL, LV_PART_INDICATOR);
-    lv_obj_clear_flag(arc, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_set_style_arc_width(arc, 5, LV_PART_MAIN);
-    lv_obj_set_style_arc_color(arc, lv_color_hex(ACCENT), LV_PART_MAIN);
-    lv_obj_set_style_arc_rounded(arc, true, LV_PART_MAIN);
-    if (frij_anim_enabled()) {
-        lv_obj_set_style_transform_pivot_x(arc, lv_pct(50), LV_PART_MAIN);
-        lv_obj_set_style_transform_pivot_y(arc, lv_pct(50), LV_PART_MAIN);
-        lv_anim_t a;
-        lv_anim_init(&a);
-        lv_anim_set_var(&a, arc);
-        lv_anim_set_exec_cb(&a, frij_anim_exec_rotation);
-        lv_anim_set_values(&a, 0, 3600);
-        lv_anim_set_duration(&a, 1100);
-        lv_anim_set_repeat_count(&a, LV_ANIM_REPEAT_INFINITE);
-        lv_anim_start(&a);
-    }
+    // same rippling rings as Listening, but with loading dots at the heart
+    // (not the voice bars) — "heard you, working on it"
+    lv_obj_t* ring = frij_pulse_ring(col, 150, ACCENT);
+    lv_obj_t* core = lv_obj_create(ring);
+    lv_obj_remove_style_all(core);
+    lv_obj_set_size(core, 84, 84);
+    lv_obj_center(core);
+    lv_obj_set_style_radius(core, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(core, lv_color_hex(ACCENT), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(core, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_t* dots = frij_loading_dots(core, 12, 0xFFFFFF);
+    lv_obj_center(dots);
 
     lv_obj_t* title = frij_label(col, "Thinking", FRIJ_FONT_TITLE, FRIJ_TEXT);
     lv_obj_set_style_margin_top(title, FRIJ_SP_L, LV_PART_MAIN);
-    lv_obj_t* q = frij_label(col, QA[s_qa].q, FRIJ_FONT_SMALL, FRIJ_TEXT_3);
-    lv_obj_set_width(q, LV_PCT(90));
-    lv_label_set_long_mode(q, LV_LABEL_LONG_WRAP);
-    lv_obj_set_style_text_align(q, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    if (s_cur_q[0]) {  // device voice: the question is unknown until it answers
+        lv_obj_t* q = frij_label(col, s_cur_q, FRIJ_FONT_SMALL, FRIJ_TEXT_3);
+        lv_obj_set_width(q, LV_PCT(90));
+        lv_label_set_long_mode(q, LV_LABEL_LONG_WRAP);
+        lv_obj_set_style_text_align(q, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    }
 
     s_state = AI_THINKING;
-    s_timer = lv_timer_create(show_answer, 1500, NULL);  // the mock "cloud"
-    lv_timer_set_repeat_count(s_timer, 1);
+    // The ask was already kicked in frij_assistant_ptt (audio on device, text
+    // on the emulator); cloud asks poll fast, the mock pretends for ~1.5s.
+    s_timer = lv_timer_create(think_tick, s_cloud ? 200 : 1500, NULL);
 }
 
 static void on_answer_done(lv_event_t* e)
@@ -208,11 +234,26 @@ static void on_answer_done(lv_event_t* e)
     frij_modal_close_top();  // the overlay is the registered modal
 }
 
-static void show_answer(lv_timer_t* t)
+// Error: dismiss our overlay and show the shared full-screen prompt (the same
+// one Reset/Erase use), single OK action. Errors aren't saved to Recent.
+static void show_error(void)
 {
-    (void)t;
-    s_timer = NULL;  // one-shot timer self-deletes after this returns
+    char msg[A_LEN];
+    lv_snprintf(msg, sizeof(msg), "%s", s_cur_a);
+    if (s_overlay) {
+        lv_obj_delete(s_overlay);  // on_overlay_deleted resets state + timer
+        s_overlay = NULL;
+    }
+    frij_prompt_screen(LV_SYMBOL_WARNING, FRIJ_WARNING, "Frij AI", msg, "OK", NULL, NULL);
+}
+
+static void show_answer(void)
+{
     if (!s_overlay) {
+        return;
+    }
+    if (s_error) {
+        show_error();
         return;
     }
     s_state = AI_ANSWER;
@@ -220,12 +261,12 @@ static void show_answer(lv_timer_t* t)
     overlay_glow();
     lv_obj_t* col = overlay_col();
 
-    lv_obj_t* q = frij_label(col, QA[s_qa].q, FRIJ_FONT_SMALL, FRIJ_TEXT_3);
+    lv_obj_t* q = frij_label(col, s_cur_q, FRIJ_FONT_SMALL, FRIJ_TEXT_3);
     lv_obj_set_width(q, LV_PCT(90));
     lv_label_set_long_mode(q, LV_LABEL_LONG_WRAP);
     lv_obj_set_style_text_align(q, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
 
-    lv_obj_t* a = frij_label(col, QA[s_qa].a, FRIJ_FONT_BODY, FRIJ_TEXT);
+    lv_obj_t* a = frij_label(col, s_cur_a, FRIJ_FONT_BODY, FRIJ_TEXT);
     lv_obj_set_width(a, LV_PCT(100));
     lv_label_set_long_mode(a, LV_LABEL_LONG_WRAP);
     lv_obj_set_style_text_align(a, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
@@ -236,7 +277,7 @@ static void show_answer(lv_timer_t* t)
                        on_answer_done);
     frij_anim_enter(col, 0);
     frij_haptic(FRIJ_HAPTIC_SUCCESS);
-    hist_push(&QA[s_qa]);
+    hist_push(s_cur_q, s_cur_a);
 }
 
 // ---- push-to-talk (the input layer drives this) -------------------------------
@@ -247,7 +288,13 @@ void frij_assistant_ptt(bool pressed)
         if (s_overlay) {
             return;  // already in a session — ignore re-presses
         }
-        s_qa      = (int)lv_rand(0, QA_COUNT - 1);  // "transcription" preview
+        s_error = false;
+        // Device: start real mic capture. Emulator: no-op (false) -> a random
+        // sample question stands in for the recording on release.
+        s_voice = frij_ai_listen_start();
+        s_qa    = (int)lv_rand(0, QA_COUNT - 1);
+        lv_snprintf(s_cur_q, sizeof(s_cur_q), "%s", QA[s_qa].q);
+        lv_snprintf(s_cur_a, sizeof(s_cur_a), "%s", QA[s_qa].a);  // mock fallback
         s_overlay = make_overlay();
         s_state   = AI_LISTENING;
         build_listening();
@@ -255,6 +302,15 @@ void frij_assistant_ptt(bool pressed)
     } else {
         if (!s_overlay || s_state != AI_LISTENING) {
             return;  // releases only matter while listening
+        }
+        // Kick the ask now (build_thinking just shows the UI + polls):
+        if (s_voice) {
+            // device: send the recorded audio; the question is unknown until
+            // the cloud transcribes it, so blank it for the Thinking screen.
+            s_cloud    = frij_ai_listen_ask();
+            s_cur_q[0] = '\0';
+        } else {
+            s_cloud = frij_ai_ask(s_cur_q);  // emulator: text ask (or mock)
         }
         build_thinking();
     }
@@ -297,10 +353,10 @@ static void build_history(lv_obj_t* col)
         lv_obj_t* texts = frij_col(row, 4);
         lv_obj_set_flex_grow(texts, 1);
         lv_obj_set_style_flex_cross_place(texts, LV_FLEX_ALIGN_START, LV_PART_MAIN);
-        lv_obj_t* q = frij_label(texts, s_hist[i]->q, FRIJ_FONT_BODY, FRIJ_TEXT);
+        lv_obj_t* q = frij_label(texts, s_hist_q[i], FRIJ_FONT_BODY, FRIJ_TEXT);
         lv_obj_set_width(q, LV_PCT(100));
         lv_label_set_long_mode(q, LV_LABEL_LONG_WRAP);
-        lv_obj_t* a = frij_label(texts, s_hist[i]->a, FRIJ_FONT_SMALL, FRIJ_TEXT_2);
+        lv_obj_t* a = frij_label(texts, s_hist_a[i], FRIJ_FONT_SMALL, FRIJ_TEXT_2);
         lv_obj_set_width(a, LV_PCT(100));
         lv_label_set_long_mode(a, LV_LABEL_LONG_WRAP);
     }
@@ -312,6 +368,26 @@ static void screen(lv_obj_t* parent, int index)
     (void)index;
     build_history(frij_page(parent));
 }
+
+#if defined(FRIJ_SNAPSHOT)
+// Render the error overlay for the snapshot harness (no real failure needed).
+void frij_assistant_demo_error(void)
+{
+    lv_snprintf(s_cur_a, sizeof(s_cur_a), "%s",
+                "Frij AI is busy right now. Try again in a moment.");
+    show_error();  // opens the shared prompt screen directly
+}
+
+// Render the thinking overlay for the snapshot harness. s_cloud=true makes
+// think_tick poll the (idle) cloud, so it never advances to an answer.
+void frij_assistant_demo_thinking(void)
+{
+    s_cloud    = true;
+    s_cur_q[0] = '\0';
+    s_overlay  = make_overlay();
+    build_thinking();
+}
+#endif
 
 const frij_app_t* assistant_app(void)
 {

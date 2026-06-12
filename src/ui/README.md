@@ -54,6 +54,8 @@ theme, list rows, …) as patterns repeat.
     so scrolling rows dissolve into the dark zone instead of hard-clipping.
   - `frij_progress_ring` — thin arc gauge.
   - `frij_empty_state` — text-only "nothing here" placeholder: white title + faint subtitle hint.
+  - `frij_pulse_ring` / `frij_sound_bars` / `frij_loading_dots` — "live"/voice/loading indicators (Frij AI).
+  - `frij_edge_glow` — faint accent halo at the screen rim.
   - `frij_header` — shared app top bar: back button (returns to the launcher) +
     centered title + optional right action button. Round-safe placement.
   - (entrance/stagger animations live in `anim.*`.)

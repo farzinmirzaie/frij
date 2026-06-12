@@ -16,6 +16,11 @@ const frij_app_t* assistant_app(void);
 // listening and asks (currently a mock pipeline — no audio/cloud yet).
 void frij_assistant_ptt(bool pressed);
 
+#if defined(FRIJ_SNAPSHOT)
+void frij_assistant_demo_error(void);     // snapshot-only: render the error state
+void frij_assistant_demo_thinking(void);  // snapshot-only: render the thinking state
+#endif
+
 #ifdef __cplusplus
 }
 #endif

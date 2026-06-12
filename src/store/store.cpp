@@ -255,6 +255,16 @@ void frij_store_clear(void)
     closedir(d);
 }
 
+bool frij_store_cloud_config(char* url, size_t url_n, char* key, size_t key_n)
+{
+    if (!cloud_ready()) {
+        return false;
+    }
+    snprintf(url, url_n, "%s", s_url.c_str());
+    snprintf(key, key_n, "%s", s_key.c_str());
+    return true;
+}
+
 #else
 // ============================================================================
 // Device backend: TODO — Supabase over WiFiClientSecure + NVS/LittleFS cache,
@@ -289,6 +299,25 @@ void frij_store_pull_async(const char* key)
 }
 
 void frij_store_clear(void) {}  // device: TODO — erase NVS/LittleFS namespace
+
+bool frij_store_cloud_config(char* url, size_t url_n, char* key, size_t key_n)
+{
+    // The store backend itself is still a device TODO, but the Supabase
+    // project + anon key can be baked in at build time (platformio device env
+    // pulls them from the environment) so the AI service can reach the cloud.
+    // Defined => return them; undefined => unavailable (AI falls back to mock).
+#if defined(FRIJ_SUPABASE_URL) && defined(FRIJ_SUPABASE_ANON_KEY)
+    snprintf(url, url_n, "%s", FRIJ_SUPABASE_URL);
+    snprintf(key, key_n, "%s", FRIJ_SUPABASE_ANON_KEY);
+    return url[0] && key[0];
+#else
+    (void)url;
+    (void)url_n;
+    (void)key;
+    (void)key_n;
+    return false;
+#endif
+}
 
 #endif
 

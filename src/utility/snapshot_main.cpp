@@ -188,6 +188,12 @@ int main(int, char**)
     } else if (scr && strcmp(scr, "ai_listen") == 0) {
         build_glance_view(assistant_app());
         frij_assistant_ptt(true);
+    } else if (scr && strcmp(scr, "ai_error") == 0) {
+        build_glance_view(assistant_app());
+        frij_assistant_demo_error();
+    } else if (scr && strcmp(scr, "ai_thinking") == 0) {
+        build_glance_view(assistant_app());
+        frij_assistant_demo_thinking();
     } else if (scr && strcmp(scr, "ai_answer") == 0) {
         build_glance_view(assistant_app());
         frij_assistant_ptt(true);
@@ -233,7 +239,7 @@ int main(int, char**)
         if (scr && scr[0]) {  // typo'd key would silently render the launcher
             printf("unknown FRIJ_SNAP '%s' — valid: todo todo_progress todo_add todo_glance "
                    "events events_glance events_countdown assistant assistant_glance ai_listen "
-                   "ai_answer counter stopwatch stopwatch_glance scoreboard "
+                   "ai_answer ai_error ai_thinking counter stopwatch stopwatch_glance scoreboard "
                    "scoreboard_glance settings network netoff sheet confirm keyboard result "
                    "about\n",
                    scr);

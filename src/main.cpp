@@ -1,5 +1,7 @@
 #include <M5Unified.h>
 
+#include "apps/assistant/assistant.h"
+#include "launcher/launcher.h"
 #include "lvgl_port_m5stack.hpp"
 #include "system/motion.h"
 
@@ -29,5 +31,18 @@ void loop(void)
 {
     M5.update();           // refresh IMU + buttons
     frij_motion_update();  // raise-to-wake (no-op when the setting is off)
+
+    // Key A (G2, yellow) = Back: tap goes back one layer, hold jumps home.
+    if (M5.BtnA.wasReleased() && !M5.BtnA.wasHold()) {
+        frij_back();
+    } else if (M5.BtnA.wasHold()) {
+        frij_home();
+    }
+    // Key B (G1, blue) = push-to-talk for Frij AI: hold to record, release to ask.
+    if (M5.BtnB.wasPressed()) {
+        frij_assistant_ptt(true);
+    } else if (M5.BtnB.wasReleased()) {
+        frij_assistant_ptt(false);
+    }
     delay(5);
 }

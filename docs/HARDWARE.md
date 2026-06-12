@@ -26,7 +26,8 @@ ESP32-S3 round-display dev kit. Source: M5Stack docs
 - **Touch:** CST820B on I2C (SDA G47, SCL G48), INT G13.
 - **Buttons:** Key A = **G2**, Key B = **G1**, plus a separate power button.
 - **IMU:** BMI270 (I2C 0x68).  **RTC:** RX8130CE (0x32).
-- **Audio:** ES8311 codec + AW8737A amp (I2S G18/G17/G16/G15/G21).
+- **Audio:** ES8311 codec + AW8737A amp (I2S G18/G17/G16/G15/G21). Mic input
+  drives **Frij AI** push-to-talk (`M5.Mic` → `system/ai`, hold Key B).
 - **Power:** 450mAh battery, M5PM1 PMIC (I2C), USB-C.
 - Shared I2C bus (G47/G48): touch, IMU, RTC, PMIC, IO expander.
 

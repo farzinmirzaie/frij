@@ -513,12 +513,13 @@ static void prompt_screen(const char* symbol, uint32_t color, const char* title,
         lv_obj_t* yes = frij_circle_button(btns, 60, color, LV_SYMBOL_OK, FRIJ_FONT_SYMBOL,
                                            0xFFFFFF, NULL);
         lv_obj_add_event_cb(yes, prompt_primary_cb, LV_EVENT_CLICKED, overlay);
-    } else {  // single action: just dismiss
-        lv_obj_t* btn = pill_button(col, primary_text ? primary_text : "Done", FRIJ_SURFACE_3,
-                                    FRIJ_TEXT, prompt_primary_cb, overlay);
-        lv_obj_set_flex_grow(btn, 0);
-        lv_obj_set_width(btn, 150);
-        lv_obj_set_style_margin_top(btn, FRIJ_SP_M, LV_PART_MAIN);
+    } else {  // single action: a round ✓ in the accent color — matches the
+        // two-action confirm so every prompt/result dismisses the same way
+        (void)primary_text;
+        lv_obj_t* ok = frij_circle_button(col, 60, color, LV_SYMBOL_OK, FRIJ_FONT_SYMBOL,
+                                          0xFFFFFF, NULL);
+        lv_obj_add_event_cb(ok, prompt_primary_cb, LV_EVENT_CLICKED, overlay);
+        lv_obj_set_style_margin_top(ok, FRIJ_SP_M, LV_PART_MAIN);
     }
 
     frij_anim_enter(col, 0);  // fade + rise in (no-op under reduce-motion)
