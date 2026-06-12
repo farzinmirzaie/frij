@@ -119,17 +119,19 @@ static void battery_observer_cb(lv_observer_t* obs, lv_subject_t* subject)
     lv_obj_set_style_text_color(
         lbl, lv_color_hex((pct <= 15 && !charging) ? FRIJ_WARNING : FRIJ_TEXT_2), LV_PART_MAIN);
 
-    // gentle breathing while on power — "charging is happening" at a glance
+    // Breathe the readout: while charging ("power is flowing") and, faster,
+    // when low + unplugged ("plug me in"). Otherwise hold steady.
+    bool low = pct <= 15 && !charging;
     lv_anim_delete(lbl, battery_opa_exec);
     lv_obj_set_style_opa(lbl, LV_OPA_COVER, LV_PART_MAIN);
-    if (charging && frij_anim_enabled()) {
+    if ((charging || low) && frij_anim_enabled()) {
         lv_anim_t a;
         lv_anim_init(&a);
         lv_anim_set_var(&a, lbl);
         lv_anim_set_exec_cb(&a, battery_opa_exec);
-        lv_anim_set_values(&a, 255, 130);
-        lv_anim_set_duration(&a, 900);
-        lv_anim_set_playback_duration(&a, 900);
+        lv_anim_set_values(&a, 255, low ? 80 : 130);   // dip deeper when low
+        lv_anim_set_duration(&a, low ? 600 : 900);     // pulse faster when low
+        lv_anim_set_playback_duration(&a, low ? 600 : 900);
         lv_anim_set_repeat_count(&a, LV_ANIM_REPEAT_INFINITE);
         lv_anim_set_path_cb(&a, lv_anim_path_ease_in_out);
         lv_anim_start(&a);

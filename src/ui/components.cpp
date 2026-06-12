@@ -833,6 +833,7 @@ static void toggle_row_click_cb(lv_event_t* e)
     } else {
         lv_obj_add_state(sw, LV_STATE_CHECKED);
     }
+    frij_haptic(FRIJ_HAPTIC_SELECT);  // same feedback as the sliders/toggles
     lv_obj_send_event(sw, LV_EVENT_VALUE_CHANGED, NULL);  // run the caller's handler
 }
 

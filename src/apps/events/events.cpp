@@ -289,9 +289,23 @@ static void populate_list(lv_obj_t* col)
         char badge[8];
         badge_text(badge, sizeof(badge), days);
         // family events carry the app accent; holidays stay neutral gray
-        bool hol = s_holiday[i];
-        frij_circle_button(row, 44, hol ? FRIJ_SURFACE_3 : ACCENT, badge, FRIJ_FONT_SMALL,
-                           hol ? FRIJ_TEXT_2 : 0x101216, NULL);
+        bool      hol = s_holiday[i];
+        lv_obj_t* dot = frij_circle_button(row, 44, hol ? FRIJ_SURFACE_3 : ACCENT, badge,
+                                           FRIJ_FONT_SMALL, hol ? FRIJ_TEXT_2 : 0x101216, NULL);
+        if (days == 0 && frij_anim_enabled()) {  // today: a gentle breathing pulse
+            lv_obj_set_style_transform_pivot_x(dot, lv_pct(50), LV_PART_MAIN);
+            lv_obj_set_style_transform_pivot_y(dot, lv_pct(50), LV_PART_MAIN);
+            lv_anim_t a;
+            lv_anim_init(&a);
+            lv_anim_set_var(&a, dot);
+            lv_anim_set_exec_cb(&a, frij_anim_exec_scale);
+            lv_anim_set_values(&a, 256, 280);
+            lv_anim_set_duration(&a, 900);
+            lv_anim_set_playback_duration(&a, 900);
+            lv_anim_set_repeat_count(&a, LV_ANIM_REPEAT_INFINITE);
+            lv_anim_set_path_cb(&a, lv_anim_path_ease_in_out);
+            lv_anim_start(&a);
+        }
 
         lv_obj_t* texts = frij_col(row, 2);
         lv_obj_set_flex_grow(texts, 1);
@@ -414,6 +428,13 @@ static void build_countdown(lv_obj_t* parent)
     char when[56];
     row_when(when, sizeof(when), next);
     frij_label(col, when, FRIJ_FONT_SMALL, FRIJ_TEXT_2);
+
+    if (s_loc[next][0]) {  // where, if the event has a location
+        lv_obj_t* loc = frij_label(col, s_loc[next], FRIJ_FONT_SMALL, FRIJ_TEXT_3);
+        lv_obj_set_width(loc, LV_PCT(90));
+        lv_label_set_long_mode(loc, LV_LABEL_LONG_DOT);
+        lv_obj_set_style_text_align(loc, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    }
 }
 
 static void screen(lv_obj_t* parent, int index)

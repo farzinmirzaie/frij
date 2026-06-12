@@ -10,12 +10,14 @@
 //     {"audio": "<base64>", "mime": "audio/wav"}       — voice ask (device)
 //
 // Secrets:  supabase secrets set GEMINI_API_KEY=...   (aistudio.google.com)
-// Optional: GEMINI_MODEL (default gemini-2.5-flash)
+// Optional: GEMINI_MODEL (default gemini-2.0-flash)
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY") ?? "";
-const MODEL = Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash";
+// gemini-2.0-flash has a much larger free-tier daily quota than 2.5-flash
+// (which a day of testing can exhaust). Override with GEMINI_MODEL if needed.
+const MODEL = Deno.env.get("GEMINI_MODEL") ?? "gemini-2.0-flash";
 const TABLE = Deno.env.get("FRIJ_TABLE") ?? "store";
 
 // Service-role client: the function may write rows (scoreboard, todo inbox).
@@ -140,13 +142,16 @@ async function gemini(contents: unknown[]): Promise<Part[]> {
       const body = await r.json();
       return body.candidates?.[0]?.content?.parts ?? [];
     }
-    if (attempt < 2 && (r.status === 503 || r.status === 429)) {
+    if (attempt < 2 && r.status === 503) {  // overload is transient — retry
       await new Promise((res) => setTimeout(res, 1200 * (attempt + 1)));
       continue;
     }
-    // friendly, device-sized text (never leak the raw provider JSON)
+    // friendly, device-sized text (never leak the raw provider JSON). 429 is
+    // the daily free-tier quota — retrying won't help, so say so.
     throw new Error(
-      r.status === 503 || r.status === 429
+      r.status === 429
+        ? "Frij AI hit today's free limit. Try again tomorrow."
+        : r.status === 503
         ? "Frij AI is busy right now. Try again in a moment."
         : "Frij AI couldn't answer that. Please try again.",
     );

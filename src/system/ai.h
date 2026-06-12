@@ -40,6 +40,10 @@ bool frij_ai_listen_start(void);
 // True if an audio ask was dispatched; false if nothing was captured.
 bool frij_ai_listen_ask(void);
 
+// Abort an in-flight capture without sending (e.g. the user backed out). No-op
+// on the emulator.
+void frij_ai_listen_cancel(void);
+
 frij_ai_state_t frij_ai_state(void);
 
 // Copy the finished question/answer (or error text into `a`) and go IDLE.

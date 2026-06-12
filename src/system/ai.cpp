@@ -138,6 +138,8 @@ bool frij_ai_listen_ask(void)
     return false;
 }
 
+void frij_ai_listen_cancel(void) {}
+
 #else
 // ============================================================================
 // Device backend: push-to-talk over the ES8311 mic (M5.Mic) -> base64 WAV ->
@@ -164,6 +166,7 @@ bool frij_ai_listen_ask(void)
 
 static std::atomic<int>  s_state{FRIJ_AI_IDLE};
 static std::atomic<bool> s_capturing{false};
+static std::atomic<bool> s_cancelled{false};
 static int16_t*          s_pcm   = nullptr;   // PSRAM capture buffer
 static volatile size_t   s_pcm_n = 0;         // samples captured
 static char              s_res_q[200];
@@ -332,7 +335,9 @@ static void capture_task(void*)
     M5.Mic.end();
     M5.Speaker.begin();  // hand the bus back for click/tone feedback
 
-    if (s_pcm_n < MIC_RATE / 4) {  // < ~0.25s: too short to be a real question
+    if (s_cancelled.load()) {
+        // backed out — drop the clip, don't call the cloud
+    } else if (s_pcm_n < MIC_RATE / 4) {  // < ~0.25s: too short to be a question
         fail("Didn't catch that. Hold the button and speak.");
     } else {
         post_audio();
@@ -353,6 +358,7 @@ bool frij_ai_listen_start(void)
         return false;  // no PSRAM — fall back to the mock path
     }
     s_state     = FRIJ_AI_BUSY;
+    s_cancelled = false;
     s_capturing = true;
     // pinned to core 1 with a generous stack (HTTPS + JSON live here)
     xTaskCreatePinnedToCore(capture_task, "frij_ai", 8192, nullptr, 1, &s_task, 1);
@@ -366,6 +372,16 @@ bool frij_ai_listen_ask(void)
     }
     s_capturing = false;  // the task notices, stops recording, then POSTs
     return true;
+}
+
+void frij_ai_listen_cancel(void)
+{
+    if (!s_capturing.load()) {
+        return;
+    }
+    s_cancelled = true;
+    s_capturing = false;  // the task ends and skips the POST
+    s_state     = FRIJ_AI_IDLE;
 }
 
 #endif

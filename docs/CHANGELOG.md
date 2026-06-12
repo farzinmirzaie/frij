@@ -2,6 +2,20 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-12 — 10-improvement round (AI polish, events, haptics)
+
+- Frij AI: tap a Recent row to re-read that answer; long answers scroll; the
+  glance hint reflects whether the cloud is set up; backing out mid-capture on
+  device aborts the mic (new frij_ai_listen_cancel) instead of firing a wasted
+  call.
+- Events: the badge of a today event gently pulses; the countdown screen shows
+  the event location.
+- Settings ▸ About: a "Frij AI · Ready / Not set up" row.
+- Home: the battery readout pulses (deeper + faster) when low and unplugged,
+  not just while charging.
+- Toggle rows give a select haptic like the sliders; "Yesterday" added to the
+  relative-time helper (Last sync).
+
 ## 2026-06-12 — Frij AI: real device mic capture (end to end)
 
 - `system/ai` device backend: hold Key B (blue) records the ES8311 mic

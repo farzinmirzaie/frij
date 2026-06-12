@@ -78,10 +78,18 @@ static int         s_qa      = 0;     // which sample question this session uses
 static bool        s_cloud   = false; // this session asks the real backend
 static bool        s_error   = false; // the answer is an error message
 static bool        s_voice   = false; // device mic capture is in flight
+static bool        s_replay  = false; // re-showing a saved answer (don't re-push)
 
 static void on_overlay_deleted(lv_event_t* e)
 {
     (void)e;
+    // Backed out mid-capture (device): stop the mic so it doesn't keep
+    // recording to the cap and fire a wasted cloud call.
+    if (s_voice && s_state == AI_LISTENING) {
+        frij_ai_listen_cancel();
+    }
+    s_voice   = false;
+    s_replay  = false;
     s_overlay = NULL;
     s_state   = AI_IDLE;
     if (s_timer) {
@@ -123,6 +131,16 @@ static lv_obj_t* overlay_col(void)
     lv_obj_set_width(col, LV_PCT(86));
     lv_obj_center(col);
     return col;
+}
+
+// A scrollable centered page for the answer (long replies must not run off the
+// round screen). Call frij_page_settle() after filling it.
+static lv_obj_t* overlay_page(void)
+{
+    lv_obj_t* page = lv_obj_create(s_overlay);
+    lv_obj_remove_style_all(page);
+    lv_obj_set_size(page, LV_PCT(100), LV_PCT(100));
+    return frij_page(page);
 }
 
 // Soft ambient glow behind whichever state is showing.
@@ -259,7 +277,7 @@ static void show_answer(void)
     s_state = AI_ANSWER;
     lv_obj_clean(s_overlay);
     overlay_glow();
-    lv_obj_t* col = overlay_col();
+    lv_obj_t* col = overlay_page();  // scrolls if the answer is long
 
     lv_obj_t* q = frij_label(col, s_cur_q, FRIJ_FONT_SMALL, FRIJ_TEXT_3);
     lv_obj_set_width(q, LV_PCT(90));
@@ -275,9 +293,12 @@ static void show_answer(void)
 
     frij_circle_button(col, 56, ACCENT, LV_SYMBOL_OK, FRIJ_FONT_SYMBOL, 0xFFFFFF,
                        on_answer_done);
+    frij_page_settle(col);  // center if it fits, else top-align + scroll
     frij_anim_enter(col, 0);
     frij_haptic(FRIJ_HAPTIC_SUCCESS);
-    hist_push(s_cur_q, s_cur_a);
+    if (!s_replay) {  // re-reading a past answer shouldn't duplicate it
+        hist_push(s_cur_q, s_cur_a);
+    }
 }
 
 // ---- push-to-talk (the input layer drives this) -------------------------------
@@ -288,7 +309,8 @@ void frij_assistant_ptt(bool pressed)
         if (s_overlay) {
             return;  // already in a session — ignore re-presses
         }
-        s_error = false;
+        s_error  = false;
+        s_replay = false;
         // Device: start real mic capture. Emulator: no-op (false) -> a random
         // sample question stands in for the recording on release.
         s_voice = frij_ai_listen_start();
@@ -335,7 +357,29 @@ static void glance(lv_obj_t* parent)
 
     lv_obj_t* title = frij_label(col, "Frij AI", FRIJ_FONT_TITLE, FRIJ_TEXT);
     lv_obj_set_style_margin_top(title, FRIJ_SP_M, LV_PART_MAIN);
-    frij_label(col, "Hold the blue button to ask", FRIJ_FONT_BODY, FRIJ_TEXT_2);
+    // honest hint: if the cloud isn't set up, point at Settings instead of
+    // promising an answer the button can't give
+    frij_label(col, frij_ai_available() ? "Hold the blue button to ask"
+                                        : "Set up Frij AI in Settings",
+               FRIJ_FONT_BODY, FRIJ_TEXT_2);
+}
+
+// Tap a Recent row to re-read that answer full-screen (no new cloud call).
+static void on_history_tap(lv_event_t* e)
+{
+    if (s_overlay) {
+        return;
+    }
+    int i = (int)(intptr_t)lv_obj_get_user_data((lv_obj_t*)lv_event_get_current_target(e));
+    if (i < 0 || i >= s_hist_n) {
+        return;
+    }
+    s_error  = false;
+    s_replay = true;
+    lv_snprintf(s_cur_q, sizeof(s_cur_q), "%s", s_hist_q[i]);
+    lv_snprintf(s_cur_a, sizeof(s_cur_a), "%s", s_hist_a[i]);
+    s_overlay = make_overlay();
+    show_answer();
 }
 
 // Screen 1: the recent questions, newest first.
@@ -349,6 +393,8 @@ static void build_history(lv_obj_t* col)
     for (int i = 0; i < s_hist_n; i++) {
         lv_obj_t* row = frij_surface_row(col);
         lv_obj_set_height(row, LV_SIZE_CONTENT);  // Q + wrapped A need free height
+        lv_obj_set_user_data(row, (void*)(intptr_t)i);
+        lv_obj_add_event_cb(row, on_history_tap, LV_EVENT_CLICKED, NULL);
 
         lv_obj_t* texts = frij_col(row, 4);
         lv_obj_set_flex_grow(texts, 1);

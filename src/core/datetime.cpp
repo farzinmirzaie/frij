@@ -48,6 +48,8 @@ void frij_format_relative(char* buf, size_t n, time_t then)
         lv_snprintf(buf, n, "%ldm ago", diff / 60);
     } else if (diff < 86400) {
         lv_snprintf(buf, n, "%ldh ago", diff / 3600);
+    } else if (diff < 2 * 86400) {
+        lv_snprintf(buf, n, "Yesterday");
     } else if (diff < 7 * 86400) {
         lv_snprintf(buf, n, "%ldd ago", diff / 86400);
     } else {
