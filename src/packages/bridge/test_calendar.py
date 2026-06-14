@@ -7,8 +7,8 @@ Run:  python3 bridge/test_calendar.py
 import datetime
 import os
 
-from calendar_to_frij import (MAX_EVENTS, merge_events, parse_calendars,
-                              parse_color, payload, to_events_json)
+from calendar_to_frij import (MAX_EVENTS, clean_company_title, merge_events,
+                              parse_calendars, parse_color, payload, to_events_json)
 
 TODAY = datetime.date(2026, 6, 11)
 
@@ -62,6 +62,35 @@ END:VCALENDAR
 """
 
 
+# A BambooHR-style company feed: verbose titles, multiple regions, all-day.
+COMPANY_ICS = """BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//bamboo//EN
+BEGIN:VEVENT
+UID:my@test
+SUMMARY:Company Holiday - [MY] Wesak Day
+DTSTART;VALUE=DATE:20260701
+DTEND;VALUE=DATE:20260702
+END:VEVENT
+BEGIN:VEVENT
+UID:sg@test
+SUMMARY:Company Holiday - [SG] National Day
+DTSTART;VALUE=DATE:20260809
+DTEND;VALUE=DATE:20260810
+END:VEVENT
+END:VCALENDAR
+"""
+
+
+def test_company_cleanup():
+    # prefix dropped, [MY] kept + stripped, other regions skipped, plain kept
+    assert clean_company_title("Company Holiday - [MY] Wesak Day") == "Wesak Day"
+    assert clean_company_title("Company Holiday - [SG] National Day") is None
+    assert clean_company_title("Team Offsite") == "Team Offsite"
+    out = to_events_json(COMPANY_ICS.encode(), TODAY, "Company Holidays", company=True)
+    assert out == [{"t": "Wesak Day", "d": "2026-07-01", "c": "Company Holidays"}], out
+
+
 def test_color_normalizes():
     assert parse_color("#38BDF8") == "38BDF8"
     assert parse_color("f472b6") == "F472B6"
@@ -79,12 +108,14 @@ def test_parse_calendars(monkeyenv=None):
                 del os.environ[k]
         os.environ["GCALENDAR_FAMILY"] = "https://x/basic.ics,Family,#F472B6"
         os.environ["GCALENDAR_HOLIDAYS"] = "https://y/public.ics,Holidays,6B6B74,holiday"
+        os.environ["GCALENDAR_COMPANY"] = "https://c/feed.php,Company Holidays,FACC15"
         os.environ["GCALENDAR_NONAME"] = "https://z/basic.ics"      # name defaults from key
         cals = parse_calendars()
         assert cals == [
-            {"name": "Family", "color": "F472B6", "url": "https://x/basic.ics"},
-            {"name": "Holidays", "color": "6B6B74", "url": "https://y/public.ics"},
-            {"name": "Noname", "color": "F472B6", "url": "https://z/basic.ics"},
+            {"name": "Company Holidays", "color": "FACC15", "url": "https://c/feed.php", "company": True},
+            {"name": "Family", "color": "F472B6", "url": "https://x/basic.ics", "company": False},
+            {"name": "Holidays", "color": "6B6B74", "url": "https://y/public.ics", "company": False},
+            {"name": "Noname", "color": "F472B6", "url": "https://z/basic.ics", "company": False},
         ], cals
     finally:
         os.environ.clear()
@@ -132,14 +163,18 @@ def test_payload_shape():
 
 
 def test_caps_to_device_limit():
-    many = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//T//T//EN\n" + "".join(
+    base = TODAY + datetime.timedelta(days=1)  # consecutive future all-day events
+    evs = "".join(
         f"BEGIN:VEVENT\nUID:e{i}@test\nSUMMARY:Event {i}\n"
-        f"DTSTART;VALUE=DATE:202607{i + 1:02d}\nEND:VEVENT\n" for i in range(MAX_EVENTS + 4)
-    ) + "END:VCALENDAR\n"
+        f"DTSTART;VALUE=DATE:{base + datetime.timedelta(days=i):%Y%m%d}\nEND:VEVENT\n"
+        for i in range(MAX_EVENTS + 4)
+    )
+    many = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//T//T//EN\n" + evs + "END:VCALENDAR\n"
     assert len(merge_events(to_events_json(many.encode(), TODAY, "Family"))) == MAX_EVENTS
 
 
 if __name__ == "__main__":
+    test_company_cleanup()
     test_color_normalizes()
     test_parse_calendars()
     test_mapping()

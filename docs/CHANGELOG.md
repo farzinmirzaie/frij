@@ -2,6 +2,16 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-14 — events: raise cap to 50; GCALENDAR_COMPANY [MY]-only cleanup
+
+- Event cap raised 10 → 50 (`FRIJ_EVENTS_MAX` + bridge `MAX_EVENTS`); the
+  365-day window already bounds it to ~a year. The app's view buffer is now
+  `static` (50 views would overflow the stack).
+- Bridge special-cases `GCALENDAR_COMPANY` (the StashAway BambooHR feed): keeps
+  only `[MY]` events and strips the `Company Holiday - [MY] ` prefix
+  (`clean_company_title`). Other regions are dropped. Display name comes from
+  the env value (e.g. `Company Holidays`). Tests added.
+
 ## 2026-06-14 — events: calendar color dots, feed UA fix, dotenv path fix
 
 - Calendars screen: each row now shows a **leading dot in the calendar's color**

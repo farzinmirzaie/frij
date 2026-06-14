@@ -48,6 +48,7 @@ Usage:
 import datetime
 import json
 import os
+import re
 import sys
 import time
 import urllib.request
@@ -56,7 +57,7 @@ import urllib.request
 # bridge; both scripts run from this directory.
 from keep_to_frij import clean_text, env, load_dotenv, upsert_supabase
 
-MAX_EVENTS = 10   # matches the device's cap (src/packages/data/events.h FRIJ_EVENTS_MAX)
+MAX_EVENTS = 50   # matches the device's cap (src/packages/data/events.h FRIJ_EVENTS_MAX)
 MAX_CALS = 8      # matches the device's cap (FRIJ_CAL_MAX)
 TEXT_MAX = 63     # matches the device's TEXT_LEN - 1
 WINDOW_DAYS = 365  # how far ahead to look (covers anniversaries/birthdays)
@@ -88,12 +89,30 @@ def parse_calendars():
             continue
         name = (parts[1] if len(parts) > 1 and parts[1] else key[len("GCALENDAR_"):].title())
         color = parse_color(parts[2] if len(parts) > 2 else "")
-        cals.append({"name": name[:TEXT_MAX], "color": color, "url": url})
+        # GCALENDAR_COMPANY is the BambooHR company-holidays feed: titles look
+        # like "Company Holiday - [MY] Wesak Day" across many regions. We keep
+        # only [MY] and strip the verbose prefix (see clean_company_title).
+        company = key == "GCALENDAR_COMPANY"
+        cals.append({"name": name[:TEXT_MAX], "color": color, "url": url, "company": company})
     if not cals:
         sys.exit("error: no GCALENDAR_* calendars configured (see bridge/README.md)")
     if len(cals) > MAX_CALS:
         print(f"note: {len(cals)} calendars, capping to {MAX_CALS} (device limit)", file=sys.stderr)
     return cals[:MAX_CALS]
+
+
+def clean_company_title(title):
+    """For the GCALENDAR_COMPANY (BambooHR) feed: titles look like
+    "Company Holiday - [MY] Wesak Day". Drop the "Company Holiday - " prefix,
+    keep only [MY] entries (stripping the tag), and skip other regions.
+    Returns the cleaned title, or None to skip the event entirely."""
+    t = re.sub(r"^Company Holiday\s*-\s*", "", title)
+    m = re.match(r"^\[([A-Z]{2})\]\s*", t)
+    if m:
+        if m.group(1) != "MY":
+            return None
+        t = t[m.end():]
+    return t.strip()
 
 
 def fetch_ics(url):
@@ -117,10 +136,11 @@ def calendar_tz(cal):
         return None
 
 
-def to_events_json(ics_bytes, today, name):
+def to_events_json(ics_bytes, today, name, company=False):
     """Expand one calendar feed into device items tagged with `name`: every
     occurrence inside the window, soonest first (uncapped — merge_events applies
-    the device cap)."""
+    the device cap). `company` runs each title through clean_company_title
+    (keep [MY] only, strip the verbose prefix)."""
     import icalendar
     import recurring_ical_events
 
@@ -136,6 +156,10 @@ def to_events_json(ics_bytes, today, name):
         end = ev.get("DTEND")
         end = end.dt if end is not None else None
         title = clean_text(str(ev.get("SUMMARY", "")))
+        if company:
+            title = clean_company_title(title)
+            if title is None:   # a non-MY region — drop it
+                continue
         if not title:
             continue
         item = {"t": title[:TEXT_MAX]}
@@ -198,7 +222,7 @@ def main():
     per_feed = []
     for c in cals:
         try:
-            per_feed.append(to_events_json(fetch_ics(c["url"]), today, c["name"]))
+            per_feed.append(to_events_json(fetch_ics(c["url"]), today, c["name"], c["company"]))
         except Exception as e:  # noqa: BLE001 — one feed must not block the rest
             print(f"warning: calendar '{c['name']}' failed ({e}); skipping it this run",
                   file=sys.stderr)

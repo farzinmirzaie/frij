@@ -26,7 +26,7 @@
 extern "C" {
 #endif
 
-#define FRIJ_EVENTS_MAX  10  // most events the list/load returns
+#define FRIJ_EVENTS_MAX  50  // most events the list/load returns (~a year's worth)
 #define FRIJ_EVENT_TITLE 64
 #define FRIJ_EVENT_LOC   64
 #define FRIJ_CAL_MAX     8   // most calendars (matches the bridge MAX_CALS)

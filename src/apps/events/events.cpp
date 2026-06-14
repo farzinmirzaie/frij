@@ -88,8 +88,8 @@ static void populate_list(lv_obj_t* col)
 {
     static const char* SECTIONS[] = {"Today", "This week", "Later"};
 
-    frij_event_view_t views[FRIJ_EVENTS_MAX];
-    int                n = frij_events_load(views, FRIJ_EVENTS_MAX);
+    static frij_event_view_t views[FRIJ_EVENTS_MAX];  // static: 50 views is too big for the stack
+    int                      n = frij_events_load(views, FRIJ_EVENTS_MAX);
 
     if (n == 0) {
         frij_empty_state(col, "No upcoming events", "Add events in the family\nGoogle Calendar");

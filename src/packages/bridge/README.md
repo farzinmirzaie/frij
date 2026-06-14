@@ -101,7 +101,7 @@ python3 test_mapping.py     # verifies the Keep-items → device-JSON mapping
 `store:events` for the device's **Events** app. One-way and official-API-free:
 it fetches each calendar's **secret iCal URL** (a plain `.ics` feed), expands
 recurring events (`recurring-ical-events`), tags each event with its calendar,
-and upserts the next 10 upcoming events as
+and upserts the next ~50 upcoming events (within a 365-day window) as
 
 ```json
 {"at": 1765400000,
@@ -145,6 +145,12 @@ bridge runs:
   GCALENDAR_FAMILY=https://calendar.google.com/.../basic.ics,Family,F472B6
   GCALENDAR_HOLIDAYS=https://.../public/basic.ics,Holidays,6B6B74
   ```
+
+**Special case — `GCALENDAR_COMPANY`** (the StashAway BambooHR holidays feed):
+its titles look like `Company Holiday - [MY] Wesak Day` across many regions. For
+this one key only, the bridge keeps **[MY] entries** and strips the
+`Company Holiday - [MY] ` prefix → `Wesak Day`. Other regions are dropped. The
+display name is whatever you put in the value (e.g. `…,Company Holidays,FACC15`).
 
 A single broken/unreachable feed is non-fatal: its calendar still appears (so
 its toggle persists) but contributes no events until the next run.

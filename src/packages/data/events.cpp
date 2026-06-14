@@ -91,7 +91,9 @@ static void reload_raw(void)
     s_cal_n     = 0;
     s_synced_at = 0;
     load_disabled();
-    char buf[2048];
+    // Big enough for FRIJ_EVENTS_MAX events + the calendar list; static (not on
+    // the stack) since 50 events of JSON is ~12 KB. Single-threaded UI use.
+    static char buf[16384];
     if (!frij_store_load(STORE_KEY, buf, sizeof(buf))) {
         return;
     }
