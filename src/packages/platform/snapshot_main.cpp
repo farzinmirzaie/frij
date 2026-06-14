@@ -170,6 +170,8 @@ int main(int, char**)
         build_glance_view(events_app());
     } else if (scr && strcmp(scr, "events_countdown") == 0) {
         build_app_screen(events_app(), 1);
+    } else if (scr && strcmp(scr, "events_calendars") == 0) {
+        build_app_screen(events_app(), 2);
     } else if (scr && strcmp(scr, "assistant") == 0) {
         frij_assistant_ptt(true);  // one full mock ask seeds the history...
         frij_assistant_ptt(false);

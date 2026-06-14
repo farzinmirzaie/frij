@@ -1,6 +1,7 @@
 #include "events.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
@@ -11,57 +12,111 @@
 
 /*
  * Events data layer — see events.h. Parses store:events, computes day math,
- * and formats display-ready view structs. No UI/LVGL dependency.
+ * formats display-ready view structs, and applies the per-calendar hide set.
+ * No UI/LVGL dependency.
  *
  * Store shape under key "events", soonest first:
- *   {"at": <sync epoch>, "ev": [{"t":"Dentist","d":"2026-06-14","tm":"09:30",
- *    "te":"10:30","l":"Qualiteeth"}, {"t":"Hari Raya","d":"...","h":true}, ...]}
+ *   {"at": <sync epoch>,
+ *    "cal": [{"n":"Family","c":"F472B6"}, {"n":"Holidays","c":"6B6B74","h":true}],
+ *    "ev": [{"t":"Dentist","d":"2026-06-14","tm":"09:30","te":"10:30",
+ *            "l":"Qualiteeth","c":"Family"},
+ *           {"t":"Hari Raya","d":"...","c":"Holidays","h":true}, ...]}
  * ("tm"/"te" = start/end clock, absent for all-day; "de" = inclusive end date
- * for multi-day all-day events; "l" = location; "h" = holiday. A bare array,
- * the pre-"at" shape, still loads.)
+ * for multi-day all-day events; "l" = location; "c" = calendar name; "h" =
+ * holiday.) The hidden-calendar set is a JSON array of names under "events_off"
+ * (e.g. ["Holidays"]).
  */
 
-#define MAX_EVENTS FRIJ_EVENTS_MAX
-#define TEXT_LEN   FRIJ_EVENT_TITLE
-#define DATE_LEN   11  // "YYYY-MM-DD"
-#define TIME_LEN   6   // "HH:MM"
-#define STORE_KEY  "events"
+#define MAX_EVENTS    FRIJ_EVENTS_MAX
+#define TEXT_LEN      FRIJ_EVENT_TITLE
+#define DATE_LEN      11  // "YYYY-MM-DD"
+#define TIME_LEN      6   // "HH:MM"
+#define STORE_KEY     "events"
+#define OFF_KEY       "events_off"
+#define DEFAULT_COLOR 0xF472B6u  // brand pink, when a calendar color is missing
 
-static char   s_title[MAX_EVENTS][TEXT_LEN];
-static char   s_date[MAX_EVENTS][DATE_LEN];
-static char   s_date_end[MAX_EVENTS][DATE_LEN];  // "" = single day
-static char   s_time[MAX_EVENTS][TIME_LEN];      // "" = all-day
-static char   s_time_end[MAX_EVENTS][TIME_LEN];  // "" = no end / all-day
-static char   s_loc[MAX_EVENTS][TEXT_LEN];       // "" = no location
-static bool   s_holiday[MAX_EVENTS];
-static time_t s_synced_at = 0;                   // bridge sync epoch (0 = unknown)
-static int    s_n         = 0;
+static char     s_title[MAX_EVENTS][TEXT_LEN];
+static char     s_date[MAX_EVENTS][DATE_LEN];
+static char     s_date_end[MAX_EVENTS][DATE_LEN];  // "" = single day
+static char     s_time[MAX_EVENTS][TIME_LEN];      // "" = all-day
+static char     s_time_end[MAX_EVENTS][TIME_LEN];  // "" = no end / all-day
+static char     s_loc[MAX_EVENTS][TEXT_LEN];       // "" = no location
+static char     s_cal_of[MAX_EVENTS][FRIJ_CAL_NAME];  // "" = no calendar tag
+static bool     s_holiday[MAX_EVENTS];
+static time_t   s_synced_at = 0;                   // bridge sync epoch (0 = unknown)
+static int      s_n         = 0;
+
+static char     s_cal_name[FRIJ_CAL_MAX][FRIJ_CAL_NAME];
+static uint32_t s_cal_color[FRIJ_CAL_MAX];
+static bool     s_cal_holiday[FRIJ_CAL_MAX];
+static int      s_cal_n = 0;
+
+static char     s_off[FRIJ_CAL_MAX][FRIJ_CAL_NAME];  // hidden calendar names
+static int      s_off_n = 0;
 
 // ---- parse ------------------------------------------------------------------
+
+static uint32_t parse_color_hex(const char* hex)
+{
+    if (!hex || !hex[0]) {
+        return DEFAULT_COLOR;
+    }
+    char* end = NULL;
+    unsigned long v = strtoul(hex, &end, 16);
+    return (end && *end == '\0') ? (uint32_t)v : DEFAULT_COLOR;
+}
+
+// Load the hidden-calendar names from store:events_off (a JSON array).
+static void load_disabled(void)
+{
+    s_off_n = 0;
+    char buf[256];
+    if (!frij_store_load(OFF_KEY, buf, sizeof(buf))) {
+        return;
+    }
+    JsonDocument doc;
+    if (deserializeJson(doc, buf) != DeserializationError::Ok || !doc.is<JsonArray>()) {
+        return;
+    }
+    for (JsonVariant n : doc.as<JsonArray>()) {
+        if (s_off_n >= FRIJ_CAL_MAX) {
+            break;
+        }
+        snprintf(s_off[s_off_n++], FRIJ_CAL_NAME, "%s", n.as<const char*>() ? n.as<const char*>() : "");
+    }
+}
 
 static void reload_raw(void)
 {
     s_n         = 0;
+    s_cal_n     = 0;
     s_synced_at = 0;
+    load_disabled();
     char buf[2048];
     if (!frij_store_load(STORE_KEY, buf, sizeof(buf))) {
         return;
     }
     JsonDocument doc;
-    if (deserializeJson(doc, buf) != DeserializationError::Ok) {
+    if (deserializeJson(doc, buf) != DeserializationError::Ok || !doc.is<JsonObject>()) {
         return;
     }
-    JsonArray arr;
-    if (doc.is<JsonObject>()) {  // current shape: {"at": epoch, "ev": [...]}
-        s_synced_at = (time_t)(doc["at"] | 0L);
-        arr         = doc["ev"].as<JsonArray>();
-    } else if (doc.is<JsonArray>()) {  // pre-"at" shape: a bare array
-        arr = doc.as<JsonArray>();
+    s_synced_at = (time_t)(doc["at"] | 0L);
+
+    for (JsonObject c : doc["cal"].as<JsonArray>()) {  // declared calendars
+        if (s_cal_n >= FRIJ_CAL_MAX) {
+            break;
+        }
+        const char* name = c["n"] | "";
+        if (!name[0]) {
+            continue;
+        }
+        snprintf(s_cal_name[s_cal_n], FRIJ_CAL_NAME, "%s", name);
+        s_cal_color[s_cal_n]   = parse_color_hex(c["c"] | "");
+        s_cal_holiday[s_cal_n] = c["h"] | false;
+        s_cal_n++;
     }
-    if (arr.isNull()) {
-        return;
-    }
-    for (JsonObject o : arr) {
+
+    for (JsonObject o : doc["ev"].as<JsonArray>()) {
         if (s_n >= MAX_EVENTS) {
             break;
         }
@@ -76,9 +131,32 @@ static void reload_raw(void)
         snprintf(s_time[s_n], TIME_LEN, "%s", o["tm"] | "");
         snprintf(s_time_end[s_n], TIME_LEN, "%s", o["te"] | "");
         snprintf(s_loc[s_n], TEXT_LEN, "%s", o["l"] | "");
+        snprintf(s_cal_of[s_n], FRIJ_CAL_NAME, "%s", o["c"] | "");
         s_holiday[s_n] = o["h"] | false;
         s_n++;
     }
+}
+
+// ---- calendars --------------------------------------------------------------
+
+static int cal_index(const char* name)
+{
+    for (int i = 0; i < s_cal_n; i++) {
+        if (strcmp(s_cal_name[i], name) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+static bool cal_hidden(const char* name)
+{
+    for (int i = 0; i < s_off_n; i++) {
+        if (strcmp(s_off[i], name) == 0) {
+            return true;
+        }
+    }
+    return false;
 }
 
 // ---- day math ---------------------------------------------------------------
@@ -122,9 +200,10 @@ static bool ended_today(int idx, int days)
     return tmv.tm_hour * 60 + tmv.tm_min > eh * 60 + em;
 }
 
+// Past, over for today, or on a calendar the user has hidden.
 static bool hidden(int idx, int days)
 {
-    return days < 0 || ended_today(idx, days);  // past, or over for today
+    return days < 0 || ended_today(idx, days) || cal_hidden(s_cal_of[idx]);
 }
 
 static int minutes_until_today(int idx)
@@ -251,8 +330,11 @@ static void build_view(int idx, int days, frij_event_view_t* v)
     badge_text(v->badge, sizeof(v->badge), idx, days);
     abs_when(v->when, sizeof(v->when), idx);
     rel_when(v->rel, sizeof(v->rel), idx, days);
-    v->days    = days;
-    v->holiday = s_holiday[idx];
+    v->days = days;
+
+    int ci      = cal_index(s_cal_of[idx]);
+    v->color    = ci >= 0 ? s_cal_color[ci] : DEFAULT_COLOR;
+    v->holiday  = s_holiday[idx] || (ci >= 0 && s_cal_holiday[ci]);
 }
 
 // ---- public -----------------------------------------------------------------
@@ -298,4 +380,37 @@ bool frij_events_synced_ago(char* buf, size_t n)
     frij_format_relative(ago, sizeof(ago), s_synced_at);
     snprintf(buf, n, "Updated %s", ago);
     return true;
+}
+
+int frij_events_calendars(frij_calendar_t* out, int max)
+{
+    reload_raw();
+    int n = 0;
+    for (int i = 0; i < s_cal_n && n < max; i++) {
+        snprintf(out[n].name, FRIJ_CAL_NAME, "%s", s_cal_name[i]);
+        out[n].color   = s_cal_color[i];
+        out[n].holiday = s_cal_holiday[i];
+        out[n].enabled = !cal_hidden(s_cal_name[i]);
+        n++;
+    }
+    return n;
+}
+
+void frij_events_set_calendar(const char* name, bool on)
+{
+    load_disabled();
+    // Rebuild the hidden list: drop `name`, then append it if hiding.
+    JsonDocument doc;
+    JsonArray    arr = doc.to<JsonArray>();
+    for (int i = 0; i < s_off_n; i++) {
+        if (strcmp(s_off[i], name) != 0) {
+            arr.add(s_off[i]);
+        }
+    }
+    if (!on) {
+        arr.add(name);
+    }
+    char buf[256];
+    serializeJson(doc, buf, sizeof(buf));
+    frij_store_save(OFF_KEY, buf);
 }

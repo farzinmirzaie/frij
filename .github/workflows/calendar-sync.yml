@@ -1,9 +1,11 @@
 name: Calendar → Frij sync
 
-# Mirrors the family Google Calendar's iCal feed into the Frij store
-# (store:events) for the device's Events countdown app. Read-only: Google →
-# Supabase. Configure FRIJ_ICS_URL (+ the Supabase secrets shared with the Keep
-# sync) in: Settings → Secrets and variables → Actions.
+# Mirrors one or more Google Calendar iCal feeds into the Frij store
+# (store:events) for the device's Events app. Read-only: Google → Supabase.
+# Each calendar is a GCALENDAR_* secret (value = url,name,color[,holiday]);
+# configure them (+ the Supabase secrets shared with the Keep sync) in:
+# Settings → Secrets and variables → Actions. Secrets can't be enumerated in
+# YAML, so map one env line per calendar secret below.
 
 on:
   schedule:
@@ -21,10 +23,11 @@ jobs:
       - run: pip install -r src/packages/bridge/requirements.txt
       - run: python src/packages/bridge/calendar_to_frij.py
         env:
-          FRIJ_ICS_URL: ${{ secrets.FRIJ_ICS_URL }}
-          # Optional public-holidays feed (e.g. Google's Malaysia holidays
-          # calendar) — leave the secret unset to sync family events only.
-          FRIJ_HOLIDAYS_ICS_URL: ${{ secrets.FRIJ_HOLIDAYS_ICS_URL }}
+          # One line per calendar secret (value = url,name,color[,holiday]).
+          # The script picks up every GCALENDAR_* env var; add/remove lines here
+          # to match your secrets. An unset secret becomes empty and is skipped.
+          GCALENDAR_FAMILY: ${{ secrets.GCALENDAR_FAMILY }}
+          GCALENDAR_HOLIDAYS: ${{ secrets.GCALENDAR_HOLIDAYS }}
           # Home timezone for clock times. The calendar's own X-WR-TIMEZONE is
           # UTC, so the feed can't tell us; without this, 12:00 shows as 04:00.
           FRIJ_TZ: Asia/Kuala_Lumpur

@@ -2,6 +2,23 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-14 — events: multiple calendars (colors + on/off toggles)
+
+- Bridge (`calendar_to_frij.py`) now reads **any number of `GCALENDAR_*`** env
+  vars (`url,name,color[,holiday]`) instead of `FRIJ_ICS_URL`/
+  `FRIJ_HOLIDAYS_ICS_URL`. Each event is tagged with its calendar; the payload
+  gains a `cal` list (name/color/holiday) and per-event `c`. One broken feed is
+  non-fatal. Tests updated (color/calendar parsing + new shape).
+- Data layer (`packages/data/events`) parses `cal[]` + per-event color, exposes
+  the calendar list, and persists a per-calendar hide set in `store:events_off`
+  (applies to list, glance, and countdown).
+- Events app: each badge/countdown/glance uses its **calendar's color** (gray
+  for holidays, readable text by luminance); new **Calendars** screen (screen 2)
+  toggles each calendar on/off. Added the `events_calendars` snapshot key.
+- Docs: `.env.example`, `bridge/README.md`, `calendar-sync.yml` rewritten for
+  `GCALENDAR_*`. Clarified `GKEEP_DEVICE_ID` is printed for reference but unused
+  by the Keep sync (removed from setup as a required secret).
+
 ## 2026-06-14 — restructure: src/packages layout + events decoupled (pilot)
 
 - Monorepo-style layout: shared code moved under `src/packages/` (ui, core,

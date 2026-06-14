@@ -6,18 +6,26 @@
 #include "ui/theme.h"
 
 /*
- * Events — countdowns to the family calendar's upcoming events. PURE UI: it
- * asks the data layer (data/events.h) for display-ready view structs and lays
- * them out. It knows nothing about the store, the cloud, or the JSON shape.
+ * Events — countdowns to upcoming events across one or more calendars. PURE UI:
+ * it asks the data layer (data/events.h) for display-ready view structs and
+ * lays them out. It knows nothing about the store, the cloud, or the JSON shape.
  *
  *   glance   : the nearest upcoming event + how soon
  *   screen 0 : the list — Today / This week / Later sections, a unit-scaled
- *              badge per event (accent = family, gray = holiday), "Updated Xm
- *              ago" footer
- *   screen 1 : big-number countdown to the next family event
+ *              badge per event in its calendar's color (gray = holiday),
+ *              "Updated Xm ago" footer
+ *   screen 1 : big-number countdown to the next family (non-holiday) event
+ *   screen 2 : Calendars — toggle each calendar on/off (hides it everywhere)
  */
 
-static const uint32_t ACCENT = FRIJ_PINK;  // Events' color scheme
+static const uint32_t ACCENT = FRIJ_PINK;  // Events' app accent (header, fallbacks)
+
+// Readable text on a colored badge: dark on light colors, white on dark ones.
+static uint32_t on_color(uint32_t bg)
+{
+    uint32_t r = (bg >> 16) & 0xFF, g = (bg >> 8) & 0xFF, b = bg & 0xFF;
+    return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? 0x101216 : FRIJ_TEXT;
+}
 
 // ---- the list screen ----------------------------------------------------------
 
@@ -37,9 +45,10 @@ static void add_event_row(lv_obj_t* col, const frij_event_view_t* v)
     lv_obj_t* row = frij_surface_row(col);
     lv_obj_set_height(row, has_loc ? 88 : 72);  // 2 lines + badge, 3 with a location
 
-    // family events carry the app accent; holidays stay neutral gray
-    lv_obj_t* dot = frij_circle_button(row, 44, v->holiday ? FRIJ_SURFACE_3 : ACCENT, v->badge,
-                                       FRIJ_FONT_SMALL, v->holiday ? FRIJ_TEXT_2 : 0x101216, NULL);
+    // each event carries its calendar's color; holidays stay neutral gray
+    uint32_t dot_bg = v->holiday ? FRIJ_SURFACE_3 : v->color;
+    uint32_t dot_fg = v->holiday ? FRIJ_TEXT_2 : on_color(v->color);
+    lv_obj_t* dot   = frij_circle_button(row, 44, dot_bg, v->badge, FRIJ_FONT_SMALL, dot_fg, NULL);
     if (v->days == 0 && frij_anim_enabled()) {  // today: a gentle breathing pulse
         lv_obj_set_style_transform_pivot_x(dot, lv_pct(50), LV_PART_MAIN);
         lv_obj_set_style_transform_pivot_y(dot, lv_pct(50), LV_PART_MAIN);
@@ -130,7 +139,7 @@ static void glance(lv_obj_t* parent)
     lv_label_set_long_mode(title, LV_LABEL_LONG_WRAP);
     lv_obj_set_style_text_align(title, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
 
-    frij_label(col, v[0].rel, FRIJ_FONT_BODY, ACCENT);
+    frij_label(col, v[0].rel, FRIJ_FONT_BODY, v[0].holiday ? FRIJ_TEXT_2 : v[0].color);
 
     if (v[0].loc[0]) {
         lv_obj_t* loc = frij_label(col, v[0].loc, FRIJ_FONT_SMALL, FRIJ_TEXT_2);
@@ -162,7 +171,7 @@ static void build_countdown(lv_obj_t* parent)
         frij_label(col, "days", FRIJ_FONT_BODY, FRIJ_TEXT_2);
     }
 
-    lv_obj_t* title = frij_label(col, v.title, FRIJ_FONT_TITLE, ACCENT);
+    lv_obj_t* title = frij_label(col, v.title, FRIJ_FONT_TITLE, v.color);
     lv_obj_set_width(title, LV_PCT(100));
     lv_label_set_long_mode(title, LV_LABEL_LONG_WRAP);
     lv_obj_set_style_text_align(title, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
@@ -177,13 +186,50 @@ static void build_countdown(lv_obj_t* parent)
     }
 }
 
+// ---- the Calendars screen ------------------------------------------------------
+
+// Names backing each toggle's user_data (kept alive for the screen's lifetime;
+// at most FRIJ_CAL_MAX rows). The switch passes its name to the data layer.
+static char s_cal_names[FRIJ_CAL_MAX][FRIJ_CAL_NAME];
+
+static void on_cal_toggle(lv_event_t* e)
+{
+    const char* name = (const char*)lv_event_get_user_data(e);
+    lv_obj_t*   sw   = (lv_obj_t*)lv_event_get_target(e);
+    bool        on   = lv_obj_has_state(sw, LV_STATE_CHECKED);
+    frij_events_set_calendar(name, on);  // hides/shows it in list + glance + countdown
+}
+
+static void build_calendars(lv_obj_t* parent)
+{
+    lv_obj_t*       col = frij_page(parent);
+    frij_calendar_t cals[FRIJ_CAL_MAX];
+    int             n = frij_events_calendars(cals, FRIJ_CAL_MAX);
+
+    if (n == 0) {
+        frij_empty_state(col, "No calendars", "Add calendars off-device\n(see bridge)");
+        return;
+    }
+
+    frij_section_label(col, "Show calendars");
+    for (int i = 0; i < n; i++) {
+        lv_snprintf(s_cal_names[i], FRIJ_CAL_NAME, "%s", cals[i].name);
+        // the switch shows the calendar's own color when on (gray for holidays)
+        lv_obj_t* sw = frij_toggle_row(col, cals[i].name, cals[i].enabled, cals[i].color);
+        lv_obj_add_event_cb(sw, on_cal_toggle, LV_EVENT_VALUE_CHANGED, s_cal_names[i]);
+    }
+    frij_stagger_in(col, 45);
+}
+
 static void screen(lv_obj_t* parent, int index)
 {
     if (index == 0) {
         frij_events_sync();  // kick a background refresh; the list reads the cache
         build_list(parent);
-    } else {
+    } else if (index == 1) {
         build_countdown(parent);
+    } else {
+        build_calendars(parent);
     }
 }
 
@@ -218,6 +264,6 @@ static void ev_on_action(int index)
 
 const frij_app_t* events_app(void)
 {
-    static const frij_app_t app = {"Events", ACCENT, glance, 2, screen, ev_action, ev_on_action};
+    static const frij_app_t app = {"Events", ACCENT, glance, 3, screen, ev_action, ev_on_action};
     return &app;
 }

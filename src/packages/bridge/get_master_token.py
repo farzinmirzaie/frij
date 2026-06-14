@@ -44,6 +44,8 @@ if not token:
         )
     sys.exit(f"failed to exchange token: {res}")
 
-print("\n--- store these as secrets, keep them private ---")
+print("\n--- store GKEEP_MASTER_TOKEN as a secret, keep it private ---")
 print(f"GKEEP_MASTER_TOKEN={token}")
-print(f"GKEEP_DEVICE_ID={android_id}")
+# Printed for reference only — the sync doesn't use it (gkeepapi derives its
+# own device id), so there's no need to store GKEEP_DEVICE_ID.
+print(f"GKEEP_DEVICE_ID={android_id}  # not required by the sync")

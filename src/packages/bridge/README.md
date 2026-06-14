@@ -63,9 +63,10 @@ Tip: a virtualenv avoids the `--user` dance:
 
 It prints the steps: sign in to the account in an incognito window, visit
 `https://accounts.google.com/EmbeddedSetup`, copy the `oauth_token` cookie
-(`oauth2_4/...`), paste it in. The script prints `GKEEP_MASTER_TOKEN` and
-`GKEEP_DEVICE_ID` — store both as secrets. **The master token is as sensitive as
-the account password; never commit it.**
+(`oauth2_4/...`), paste it in. The script prints `GKEEP_MASTER_TOKEN` — that's
+the only secret to store. (It also prints a `GKEEP_DEVICE_ID` for reference, but
+the sync doesn't use it: `gkeepapi` derives its own, so there's no need to set
+it.) **The master token is as sensitive as the account password; never commit it.**
 
 ## Run it
 
@@ -96,34 +97,56 @@ python3 test_mapping.py     # verifies the Keep-items → device-JSON mapping
 
 ## Calendar → events
 
-`calendar_to_frij.py` mirrors a Google Calendar into `store:events` for the
-device's **Events** countdown app. One-way and official-API-free: it fetches
-the calendar's **secret iCal URL** (a plain `.ics` feed), expands recurring
-events (`recurring-ical-events`), and upserts the next 10 upcoming events as
+`calendar_to_frij.py` mirrors **one or more** Google Calendars into
+`store:events` for the device's **Events** app. One-way and official-API-free:
+it fetches each calendar's **secret iCal URL** (a plain `.ics` feed), expands
+recurring events (`recurring-ical-events`), tags each event with its calendar,
+and upserts the next 10 upcoming events as
 
 ```json
-[{"t": "Dentist", "d": "2026-06-14", "tm": "09:30", "te": "10:30", "l": "Qualiteeth"}, ...]
+{"at": 1765400000,
+ "cal": [{"n": "Family", "c": "F472B6"}, {"n": "Holidays", "c": "6B6B74", "h": true}],
+ "ev": [{"t": "Dentist", "d": "2026-06-14", "tm": "09:30", "te": "10:30",
+         "l": "Qualiteeth", "c": "Family"},
+        {"t": "Hari Raya", "d": "...", "c": "Holidays", "h": true}, ...]}
 ```
 
-(`tm`/`te` = start/end clock, omitted for all-day events; `de` = inclusive end
-date for multi-day all-day events; `l` = location; emoji are stripped like the
-todos.) Clock times are rendered in **`FRIJ_TZ`** (IANA name, e.g.
-`Asia/Kuala_Lumpur`) — set it next to `FRIJ_ICS_URL` (it's hardcoded in the
-workflow). Without it the calendar's own timezone is used, and Google calendars
-set to UTC would show 12:00 as 04:00.
+(`at` = sync epoch; `cal` = every declared calendar so the device can list +
+toggle each; `tm`/`te` = start/end clock, omitted for all-day events; `de` =
+inclusive end date for multi-day all-day events; `l` = location; `c` = calendar
+name; `h` = holiday; emoji are stripped like the todos.) Clock times are
+rendered in **`FRIJ_TZ`** (IANA name, e.g. `Asia/Kuala_Lumpur`, hardcoded in the
+workflow). Without it a calendar set to UTC would show 12:00 as 04:00.
 
 ### What you need to provide
 
-1. Google Calendar (web) → ⚙ Settings → your family calendar → **Integrate
-   calendar** → copy **"Secret address in iCal format"**.
-2. Put it where the bridge runs:
-   - **GitHub Actions** (default): repo → Settings → Secrets and variables →
-     Actions → add `FRIJ_ICS_URL` (Supabase secrets are shared with the Keep sync).
-   - **Local run**: append `FRIJ_ICS_URL=https://calendar.google.com/.../basic.ics`
-     to the repo-root `.env`.
+Each calendar is one `GCALENDAR_*` variable, value `url,name,color[,holiday]`:
 
-The secret URL grants read access to the whole calendar — treat it like a
-password (regenerate it from the same settings page if it ever leaks).
+- **url** — Google Calendar (web) → ⚙ Settings → the calendar → **Integrate
+  calendar** → **"Secret address in iCal format"**. (URLs have no commas, so the
+  split is safe.) Grants read access to the whole calendar — treat it like a
+  password (regenerate it from the same page if it leaks).
+- **name** — short display name; also the per-event tag the device filters and
+  colors on.
+- **color** — 6-hex `RRGGBB` (leading `#` optional), the calendar's badge color.
+- **holiday** — optional 4th token (`holiday`); renders the calendar gray.
+
+Add as many as you like (the device shows up to 8); each is toggleable on the
+device's Events ▸ Calendars screen. Put them where the bridge runs:
+
+- **GitHub Actions** (default): repo → Settings → Secrets and variables →
+  Actions → add a `GCALENDAR_<ID>` secret per calendar, then map each one in
+  [`calendar-sync.yml`](../../../.github/workflows/calendar-sync.yml)'s `env:`
+  (secrets can't be enumerated in YAML). Supabase secrets are shared with the
+  Keep sync.
+- **Local run**: append the `GCALENDAR_*` lines to the repo-root `.env`:
+  ```
+  GCALENDAR_FAMILY=https://calendar.google.com/.../basic.ics,Family,F472B6
+  GCALENDAR_HOLIDAYS=https://.../public/basic.ics,Holidays,6B6B74,holiday
+  ```
+
+A single broken/unreachable feed is non-fatal: its calendar still appears (so
+its toggle persists) but contributes no events until the next run.
 
 ### Run it
 
