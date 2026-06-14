@@ -2,6 +2,28 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-14 — events: 10-point cleanup (perf / structure / naming)
+
+Behavior-preserving refactor of the Events app + data layer:
+1. Data layer captures the clock **once per build** (`s_now_tm`/`s_today_noon`)
+   instead of calling `time()`/`localtime_r`/`mktime` for every event — cheaper
+   day math across up to 50 events.
+2. `frij_events_next()` is now a thin wrapper over `frij_events_load(out, 1)`
+   (dropped a duplicated loop).
+3. Widened the `events_off` JSON buffers 256 → 512 (8 max-length calendar names
+   could overflow 256).
+4. Extracted the breathing-pulse animation into reusable `frij_pulse()` in
+   `ui/anim`; the list badge calls it instead of 14 inline lines.
+5. Glance uses `frij_events_next(&v)` (clear intent; drops the `v[1]` array).
+6. Screen indices are an `enum` (`SCREEN_LIST`/`COUNTDOWN`/`CALENDARS`/`COUNT`);
+   `screen_count` derives from it.
+7. Shared `add_centered_title()` + `add_cal_tag()` helpers (glance + countdown
+   no longer duplicate the title/last-row layout).
+8. `section_of(days)` helper + named `THIS_WEEK_DAYS` (was an inline ternary).
+9. Named the badge-ink color (`BADGE_INK`) and row heights (`EVENT_ROW_H`,
+   `EVENT_ROW_H_LOC`).
+10. Tidied comments to match.
+
 ## 2026-06-14 — events: calendar name on glance + countdown
 
 - The glance and countdown screens show the event's **calendar name in its

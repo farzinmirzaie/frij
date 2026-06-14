@@ -53,6 +53,11 @@ static int      s_cal_n = 0;
 static char     s_off[FRIJ_CAL_MAX][FRIJ_CAL_NAME];  // hidden calendar names
 static int      s_off_n = 0;
 
+// "Now", captured once per reload_raw so the day math doesn't re-read the clock
+// for every event (the build is instantaneous, so one snapshot is correct).
+static struct tm s_now_tm    = {};  // localtime at the last reload
+static time_t    s_today_noon = 0;  // epoch of today 12:00 (whole-day diffs)
+
 // ---- parse ------------------------------------------------------------------
 
 static uint32_t parse_color_hex(const char* hex)
@@ -69,7 +74,7 @@ static uint32_t parse_color_hex(const char* hex)
 static void load_disabled(void)
 {
     s_off_n = 0;
-    char buf[256];
+    char buf[512];  // up to FRIJ_CAL_MAX names, quoted + comma-separated
     if (!frij_store_load(OFF_KEY, buf, sizeof(buf))) {
         return;
     }
@@ -90,6 +95,15 @@ static void reload_raw(void)
     s_n         = 0;
     s_cal_n     = 0;
     s_synced_at = 0;
+
+    time_t now = time(NULL);  // capture the clock once for this build's day math
+    localtime_r(&now, &s_now_tm);
+    struct tm noon = s_now_tm;
+    noon.tm_hour = 12;
+    noon.tm_min  = 0;
+    noon.tm_sec  = 0;
+    s_today_noon = mktime(&noon);
+
     load_disabled();
     // Big enough for FRIJ_EVENTS_MAX events + the calendar list; static (not on
     // the stack) since 50 events of JSON is ~12 KB. Single-threaded UI use.
@@ -173,13 +187,7 @@ static int days_until(const char* date)
     ev.tm_mon    = m - 1;
     ev.tm_mday   = d;
     ev.tm_hour   = 12;
-    time_t    now = time(NULL);
-    struct tm today_tm;
-    localtime_r(&now, &today_tm);
-    today_tm.tm_hour = 12;
-    today_tm.tm_min  = 0;
-    today_tm.tm_sec  = 0;
-    double diff = difftime(mktime(&ev), mktime(&today_tm));
+    double diff = difftime(mktime(&ev), s_today_noon);
     return (int)((diff + (diff < 0 ? -43200.0 : 43200.0)) / 86400.0);
 }
 
@@ -193,10 +201,7 @@ static bool ended_today(int idx, int days)
     if (sscanf(s_time_end[idx], "%d:%d", &eh, &em) != 2) {
         return false;
     }
-    time_t    now = time(NULL);
-    struct tm tmv;
-    localtime_r(&now, &tmv);
-    return tmv.tm_hour * 60 + tmv.tm_min > eh * 60 + em;
+    return s_now_tm.tm_hour * 60 + s_now_tm.tm_min > eh * 60 + em;
 }
 
 // Past, over for today, or on a calendar the user has hidden.
@@ -211,10 +216,7 @@ static int minutes_until_today(int idx)
     if (sscanf(s_time[idx], "%d:%d", &hh, &mm) != 2) {
         return -1;  // all-day
     }
-    time_t    now = time(NULL);
-    struct tm tmv;
-    localtime_r(&now, &tmv);
-    return (hh * 60 + mm) - (tmv.tm_hour * 60 + tmv.tm_min);
+    return (hh * 60 + mm) - (s_now_tm.tm_hour * 60 + s_now_tm.tm_min);
 }
 
 // ---- formatting -------------------------------------------------------------
@@ -359,15 +361,7 @@ int frij_events_load(frij_event_view_t* out, int max)
 
 bool frij_events_next(frij_event_view_t* out)
 {
-    reload_raw();
-    for (int i = 0; i < s_n; i++) {
-        int days = days_until(s_date[i]);
-        if (!hidden(i, days)) {
-            build_view(i, days, out);
-            return true;
-        }
-    }
-    return false;
+    return frij_events_load(out, 1) == 1;  // the nearest visible event
 }
 
 bool frij_events_synced_ago(char* buf, size_t n)
@@ -408,7 +402,7 @@ void frij_events_set_calendar(const char* name, bool on)
     if (!on) {
         arr.add(name);
     }
-    char buf[256];
+    char buf[512];  // up to FRIJ_CAL_MAX quoted names
     serializeJson(doc, buf, sizeof(buf));
     frij_store_save(OFF_KEY, buf);
 }

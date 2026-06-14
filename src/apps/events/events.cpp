@@ -20,13 +20,39 @@
  * (glance, countdown, the Calendars switches) uses the app accent.
  */
 
-static const uint32_t ACCENT = FRIJ_PINK;  // Events' app accent
+static const uint32_t ACCENT    = FRIJ_PINK;  // Events' app accent
+static const uint32_t BADGE_INK = 0x101216;   // near-black text on a light badge
+
+enum { SCREEN_LIST, SCREEN_COUNTDOWN, SCREEN_CALENDARS, SCREEN_COUNT };  // app's own screens
+
+static const int EVENT_ROW_H     = 72;  // badge + title + when
+static const int EVENT_ROW_H_LOC = 88;  // ...plus a location line
 
 // Readable text on a colored badge: dark on light colors, white on dark ones.
 static uint32_t on_color(uint32_t bg)
 {
     uint32_t r = (bg >> 16) & 0xFF, g = (bg >> 8) & 0xFF, b = bg & 0xFF;
-    return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? 0x101216 : FRIJ_TEXT;
+    return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? BADGE_INK : FRIJ_TEXT;
+}
+
+// A centered, wrapping title (kept off the round edges) — glance + countdown.
+static lv_obj_t* add_centered_title(lv_obj_t* col, const char* text, uint32_t color)
+{
+    lv_obj_t* t = frij_label(col, text, FRIJ_FONT_TITLE, color);
+    lv_obj_set_width(t, LV_PCT(100));
+    lv_obj_set_style_pad_left(t, FRIJ_SP_L, LV_PART_MAIN);
+    lv_obj_set_style_pad_right(t, FRIJ_SP_L, LV_PART_MAIN);
+    lv_label_set_long_mode(t, LV_LABEL_LONG_WRAP);
+    lv_obj_set_style_text_align(t, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    return t;
+}
+
+// The event's calendar name as a small colored last row (no-op if untagged).
+static void add_cal_tag(lv_obj_t* col, const frij_event_view_t* v)
+{
+    if (v->cal[0]) {
+        frij_label(col, v->cal, FRIJ_FONT_SMALL, v->color);
+    }
 }
 
 // ---- the list screen ----------------------------------------------------------
@@ -45,25 +71,14 @@ static void add_event_row(lv_obj_t* col, const frij_event_view_t* v)
     bool has_loc = v->loc[0] != '\0';
 
     lv_obj_t* row = frij_surface_row(col);
-    lv_obj_set_height(row, has_loc ? 88 : 72);  // 2 lines + badge, 3 with a location
+    lv_obj_set_height(row, has_loc ? EVENT_ROW_H_LOC : EVENT_ROW_H);
 
     // each event's badge carries its calendar's color (gray for a holidays feed
     // is just that calendar's own color — no special case)
     lv_obj_t* dot = frij_circle_button(row, 44, v->color, v->badge, FRIJ_FONT_SMALL,
                                        on_color(v->color), NULL);
-    if (v->days == 0 && frij_anim_enabled()) {  // today: a gentle breathing pulse
-        lv_obj_set_style_transform_pivot_x(dot, lv_pct(50), LV_PART_MAIN);
-        lv_obj_set_style_transform_pivot_y(dot, lv_pct(50), LV_PART_MAIN);
-        lv_anim_t a;
-        lv_anim_init(&a);
-        lv_anim_set_var(&a, dot);
-        lv_anim_set_exec_cb(&a, frij_anim_exec_scale);
-        lv_anim_set_values(&a, 256, 280);
-        lv_anim_set_duration(&a, 900);
-        lv_anim_set_playback_duration(&a, 900);
-        lv_anim_set_repeat_count(&a, LV_ANIM_REPEAT_INFINITE);
-        lv_anim_set_path_cb(&a, lv_anim_path_ease_in_out);
-        lv_anim_start(&a);
+    if (v->days == 0) {  // today: a gentle breathing pulse
+        frij_pulse(dot);
     }
 
     lv_obj_t* texts = frij_col(row, 2);
@@ -84,6 +99,13 @@ static void add_event_row(lv_obj_t* col, const frij_event_view_t* v)
     }
 }
 
+// Which list section an event falls in: 0 Today, 1 This week, 2 Later.
+static int section_of(int days)
+{
+    const int THIS_WEEK_DAYS = 7;
+    return days == 0 ? 0 : (days <= THIS_WEEK_DAYS ? 1 : 2);
+}
+
 static void populate_list(lv_obj_t* col)
 {
     static const char* SECTIONS[] = {"Today", "This week", "Later"};
@@ -98,7 +120,7 @@ static void populate_list(lv_obj_t* col)
 
     int last_sec = -1;
     for (int i = 0; i < n; i++) {
-        int sec = views[i].days == 0 ? 0 : (views[i].days <= 7 ? 1 : 2);
+        int sec = section_of(views[i].days);
         if (sec != last_sec) {  // views arrive sorted, so sections are runs
             frij_section_label(col, SECTIONS[sec]);
             last_sec = sec;
@@ -126,33 +148,25 @@ static void build_list(lv_obj_t* parent)
 static void glance(lv_obj_t* parent)
 {
     lv_obj_t*         col = frij_page(parent);
-    frij_event_view_t v[1];
-    if (frij_events_load(v, 1) == 0) {
+    frij_event_view_t v;
+    if (!frij_events_next(&v)) {
         frij_label(col, "No events", FRIJ_FONT_TITLE, FRIJ_TEXT);
         frij_label(col, "Add via Google Calendar", FRIJ_FONT_BODY, FRIJ_TEXT_2);
         return;
     }
 
-    lv_obj_t* title = frij_label(col, v[0].title, FRIJ_FONT_TITLE, FRIJ_TEXT);
-    lv_obj_set_width(title, LV_PCT(100));
-    lv_obj_set_style_pad_left(title, FRIJ_SP_L, LV_PART_MAIN);
-    lv_obj_set_style_pad_right(title, FRIJ_SP_L, LV_PART_MAIN);
-    lv_label_set_long_mode(title, LV_LABEL_LONG_WRAP);
-    lv_obj_set_style_text_align(title, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    add_centered_title(col, v.title, FRIJ_TEXT);
+    frij_label(col, v.rel, FRIJ_FONT_BODY, ACCENT);
 
-    frij_label(col, v[0].rel, FRIJ_FONT_BODY, ACCENT);
-
-    if (v[0].loc[0]) {
-        lv_obj_t* loc = frij_label(col, v[0].loc, FRIJ_FONT_SMALL, FRIJ_TEXT_2);
+    if (v.loc[0]) {
+        lv_obj_t* loc = frij_label(col, v.loc, FRIJ_FONT_SMALL, FRIJ_TEXT_2);
         lv_obj_set_width(loc, LV_PCT(80));
         lv_obj_set_height(loc, lv_font_get_line_height(FRIJ_FONT_SMALL));
         lv_label_set_long_mode(loc, LV_LABEL_LONG_DOT);
         lv_obj_set_style_text_align(loc, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     }
 
-    if (v[0].cal[0]) {  // calendar name, in its color — last row
-        frij_label(col, v[0].cal, FRIJ_FONT_SMALL, v[0].color);
-    }
+    add_cal_tag(col, &v);
 }
 
 // Countdown screen: the next upcoming event as a big number.
@@ -176,11 +190,7 @@ static void build_countdown(lv_obj_t* parent)
         frij_label(col, "days", FRIJ_FONT_BODY, FRIJ_TEXT_2);
     }
 
-    lv_obj_t* title = frij_label(col, v.title, FRIJ_FONT_TITLE, ACCENT);
-    lv_obj_set_width(title, LV_PCT(100));
-    lv_label_set_long_mode(title, LV_LABEL_LONG_WRAP);
-    lv_obj_set_style_text_align(title, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
-
+    add_centered_title(col, v.title, ACCENT);
     frij_label(col, v.when, FRIJ_FONT_SMALL, FRIJ_TEXT_2);
 
     if (v.loc[0]) {  // where, if the event has a location
@@ -190,9 +200,7 @@ static void build_countdown(lv_obj_t* parent)
         lv_obj_set_style_text_align(loc, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     }
 
-    if (v.cal[0]) {  // calendar name, in its color — last row
-        frij_label(col, v.cal, FRIJ_FONT_SMALL, v.color);
-    }
+    add_cal_tag(col, &v);
 }
 
 // ---- the Calendars screen ------------------------------------------------------
@@ -232,20 +240,20 @@ static void build_calendars(lv_obj_t* parent)
 
 static void screen(lv_obj_t* parent, int index)
 {
-    if (index == 0) {
+    if (index == SCREEN_LIST) {
         frij_events_sync();  // kick a background refresh; the list reads the cache
         build_list(parent);
-    } else if (index == 1) {
+    } else if (index == SCREEN_COUNTDOWN) {
         build_countdown(parent);
     } else {
         build_calendars(parent);
     }
 }
 
-// Header action: refresh — pull the latest and rebuild. Non-blocking.
+// Header action: refresh (list screen only) — pull the latest and rebuild.
 static const char* ev_action(int index)
 {
-    return index == 0 ? LV_SYMBOL_REFRESH : NULL;
+    return index == SCREEN_LIST ? LV_SYMBOL_REFRESH : NULL;
 }
 
 static void ev_refresh_cb(lv_timer_t* t)
@@ -262,7 +270,7 @@ static void ev_refresh_cb(lv_timer_t* t)
 
 static void ev_on_action(int index)
 {
-    if (index != 0 || !s_list_col) {
+    if (index != SCREEN_LIST || !s_list_col) {
         return;
     }
     frij_events_sync();
@@ -273,6 +281,6 @@ static void ev_on_action(int index)
 
 const frij_app_t* events_app(void)
 {
-    static const frij_app_t app = {"Events", ACCENT, glance, 3, screen, ev_action, ev_on_action};
+    static const frij_app_t app = {"Events", ACCENT, glance, SCREEN_COUNT, screen, ev_action, ev_on_action};
     return &app;
 }

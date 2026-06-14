@@ -23,6 +23,10 @@ void frij_anim_exec_scale(void* obj, int32_t v);        // transform scale (x+y)
 void frij_anim_exec_arc(void* obj, int32_t v);          // lv_arc value
 void frij_anim_exec_rotation(void* obj, int32_t v);      // transform rotation (0.1 deg)
 
+// A gentle infinite "breathing" scale pulse (e.g. to mark a live/now item).
+// No-op when reduce-motion is on. Safe to call once after creating `obj`.
+void frij_pulse(lv_obj_t* obj);
+
 // Entrance animation: fade in + rise. `delay_ms` lets callers stagger a list.
 void frij_anim_enter(lv_obj_t* obj, uint32_t delay_ms);
 

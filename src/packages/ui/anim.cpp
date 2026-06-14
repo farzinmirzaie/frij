@@ -74,6 +74,25 @@ void frij_anim_enter(lv_obj_t* obj, uint32_t delay_ms)
     lv_anim_start(&rise);
 }
 
+void frij_pulse(lv_obj_t* obj)
+{
+    if (!frij_anim_enabled()) {
+        return;
+    }
+    lv_obj_set_style_transform_pivot_x(obj, lv_pct(50), LV_PART_MAIN);
+    lv_obj_set_style_transform_pivot_y(obj, lv_pct(50), LV_PART_MAIN);
+    lv_anim_t a;
+    lv_anim_init(&a);
+    lv_anim_set_var(&a, obj);
+    lv_anim_set_exec_cb(&a, frij_anim_exec_scale);
+    lv_anim_set_values(&a, 256, 280);  // 1.0x -> ~1.09x
+    lv_anim_set_duration(&a, 900);
+    lv_anim_set_playback_duration(&a, 900);
+    lv_anim_set_repeat_count(&a, LV_ANIM_REPEAT_INFINITE);
+    lv_anim_set_path_cb(&a, lv_anim_path_ease_in_out);
+    lv_anim_start(&a);
+}
+
 void frij_stagger_in(lv_obj_t* container, int step_ms)
 {
     uint32_t n = lv_obj_get_child_count(container);
