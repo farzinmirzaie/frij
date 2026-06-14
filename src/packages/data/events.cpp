@@ -326,6 +326,7 @@ static void build_view(int idx, int days, frij_event_view_t* v)
 {
     snprintf(v->title, sizeof(v->title), "%s", s_title[idx]);
     snprintf(v->loc, sizeof(v->loc), "%s", s_loc[idx]);
+    snprintf(v->cal, sizeof(v->cal), "%s", s_cal_of[idx]);
     badge_text(v->badge, sizeof(v->badge), idx, days);
     abs_when(v->when, sizeof(v->when), idx);
     rel_when(v->rel, sizeof(v->rel), idx, days);

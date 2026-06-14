@@ -133,7 +133,6 @@ static void glance(lv_obj_t* parent)
         return;
     }
 
-    frij_label(col, "Coming up", FRIJ_FONT_BODY, FRIJ_TEXT_2);
     lv_obj_t* title = frij_label(col, v[0].title, FRIJ_FONT_TITLE, FRIJ_TEXT);
     lv_obj_set_width(title, LV_PCT(100));
     lv_obj_set_style_pad_left(title, FRIJ_SP_L, LV_PART_MAIN);
@@ -149,6 +148,10 @@ static void glance(lv_obj_t* parent)
         lv_obj_set_height(loc, lv_font_get_line_height(FRIJ_FONT_SMALL));
         lv_label_set_long_mode(loc, LV_LABEL_LONG_DOT);
         lv_obj_set_style_text_align(loc, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    }
+
+    if (v[0].cal[0]) {  // calendar name, in its color — last row
+        frij_label(col, v[0].cal, FRIJ_FONT_SMALL, v[0].color);
     }
 }
 
@@ -185,6 +188,10 @@ static void build_countdown(lv_obj_t* parent)
         lv_obj_set_width(loc, LV_PCT(90));
         lv_label_set_long_mode(loc, LV_LABEL_LONG_DOT);
         lv_obj_set_style_text_align(loc, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    }
+
+    if (v.cal[0]) {  // calendar name, in its color — last row
+        frij_label(col, v.cal, FRIJ_FONT_SMALL, v.color);
     }
 }
 

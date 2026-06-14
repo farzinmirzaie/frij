@@ -2,6 +2,12 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-14 — events: calendar name on glance + countdown
+
+- The glance and countdown screens show the event's **calendar name in its
+  color** as the **last row** (plain colored label, no dot). View struct gains
+  `cal`.
+
 ## 2026-06-14 — events: raise cap to 50; GCALENDAR_COMPANY [MY]-only cleanup
 
 - Event cap raised 10 → 50 (`FRIJ_EVENTS_MAX` + bridge `MAX_EVENTS`); the

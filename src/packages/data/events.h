@@ -39,6 +39,7 @@ typedef struct {
     char     when[56];                 // absolute: "Sat 13 Jun, 12:00 - 13:00" / ", all day" / span
     char     rel[40];                  // relative: "Today, 12:00 - 13:00" / "Tomorrow" / "In 3 days"
     char     loc[FRIJ_EVENT_LOC];      // "" if none
+    char     cal[FRIJ_CAL_NAME];       // calendar name ("" if untagged)
     uint32_t color;                    // the event's calendar color (0xRRGGBB)
     int      days;                     // 0 = today … (section bucket + pulse + countdown)
 } frij_event_view_t;
