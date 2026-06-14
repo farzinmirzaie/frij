@@ -17,13 +17,14 @@
  *
  * Store shape under key "events", soonest first:
  *   {"at": <sync epoch>,
- *    "cal": [{"n":"Family","c":"F472B6"}, {"n":"Holidays","c":"6B6B74","h":true}],
+ *    "cal": [{"n":"Family","c":"F472B6"}, {"n":"Holidays","c":"6B6B74"}],
  *    "ev": [{"t":"Dentist","d":"2026-06-14","tm":"09:30","te":"10:30",
  *            "l":"Qualiteeth","c":"Family"},
- *           {"t":"Hari Raya","d":"...","c":"Holidays","h":true}, ...]}
+ *           {"t":"Hari Raya","d":"...","c":"Holidays"}, ...]}
  * ("tm"/"te" = start/end clock, absent for all-day; "de" = inclusive end date
- * for multi-day all-day events; "l" = location; "c" = calendar name; "h" =
- * holiday.) The hidden-calendar set is a JSON array of names under "events_off"
+ * for multi-day all-day events; "l" = location; "c" = calendar name.) All
+ * calendars are treated alike (a holidays feed is just one whose color is gray).
+ * The hidden-calendar set is a JSON array of names under "events_off"
  * (e.g. ["Holidays"]).
  */
 
@@ -42,13 +43,11 @@ static char     s_time[MAX_EVENTS][TIME_LEN];      // "" = all-day
 static char     s_time_end[MAX_EVENTS][TIME_LEN];  // "" = no end / all-day
 static char     s_loc[MAX_EVENTS][TEXT_LEN];       // "" = no location
 static char     s_cal_of[MAX_EVENTS][FRIJ_CAL_NAME];  // "" = no calendar tag
-static bool     s_holiday[MAX_EVENTS];
 static time_t   s_synced_at = 0;                   // bridge sync epoch (0 = unknown)
 static int      s_n         = 0;
 
 static char     s_cal_name[FRIJ_CAL_MAX][FRIJ_CAL_NAME];
 static uint32_t s_cal_color[FRIJ_CAL_MAX];
-static bool     s_cal_holiday[FRIJ_CAL_MAX];
 static int      s_cal_n = 0;
 
 static char     s_off[FRIJ_CAL_MAX][FRIJ_CAL_NAME];  // hidden calendar names
@@ -111,8 +110,7 @@ static void reload_raw(void)
             continue;
         }
         snprintf(s_cal_name[s_cal_n], FRIJ_CAL_NAME, "%s", name);
-        s_cal_color[s_cal_n]   = parse_color_hex(c["c"] | "");
-        s_cal_holiday[s_cal_n] = c["h"] | false;
+        s_cal_color[s_cal_n] = parse_color_hex(c["c"] | "");
         s_cal_n++;
     }
 
@@ -132,7 +130,6 @@ static void reload_raw(void)
         snprintf(s_time_end[s_n], TIME_LEN, "%s", o["te"] | "");
         snprintf(s_loc[s_n], TEXT_LEN, "%s", o["l"] | "");
         snprintf(s_cal_of[s_n], FRIJ_CAL_NAME, "%s", o["c"] | "");
-        s_holiday[s_n] = o["h"] | false;
         s_n++;
     }
 }
@@ -332,9 +329,8 @@ static void build_view(int idx, int days, frij_event_view_t* v)
     rel_when(v->rel, sizeof(v->rel), idx, days);
     v->days = days;
 
-    int ci      = cal_index(s_cal_of[idx]);
-    v->color    = ci >= 0 ? s_cal_color[ci] : DEFAULT_COLOR;
-    v->holiday  = s_holiday[idx] || (ci >= 0 && s_cal_holiday[ci]);
+    int ci   = cal_index(s_cal_of[idx]);
+    v->color = ci >= 0 ? s_cal_color[ci] : DEFAULT_COLOR;
 }
 
 // ---- public -----------------------------------------------------------------
@@ -358,12 +354,12 @@ int frij_events_load(frij_event_view_t* out, int max)
     return n;
 }
 
-bool frij_events_next_family(frij_event_view_t* out)
+bool frij_events_next(frij_event_view_t* out)
 {
     reload_raw();
     for (int i = 0; i < s_n; i++) {
         int days = days_until(s_date[i]);
-        if (!s_holiday[i] && !hidden(i, days)) {
+        if (!hidden(i, days)) {
             build_view(i, days, out);
             return true;
         }
@@ -389,7 +385,6 @@ int frij_events_calendars(frij_calendar_t* out, int max)
     for (int i = 0; i < s_cal_n && n < max; i++) {
         snprintf(out[n].name, FRIJ_CAL_NAME, "%s", s_cal_name[i]);
         out[n].color   = s_cal_color[i];
-        out[n].holiday = s_cal_holiday[i];
         out[n].enabled = !cal_hidden(s_cal_name[i]);
         n++;
     }

@@ -2,10 +2,10 @@ name: Calendar → Frij sync
 
 # Mirrors one or more Google Calendar iCal feeds into the Frij store
 # (store:events) for the device's Events app. Read-only: Google → Supabase.
-# Each calendar is a GCALENDAR_* secret (value = url,name,color[,holiday]);
-# configure them (+ the Supabase secrets shared with the Keep sync) in:
-# Settings → Secrets and variables → Actions. Secrets can't be enumerated in
-# YAML, so map one env line per calendar secret below.
+# Each calendar is a GCALENDAR_* secret (value = url,name,color); configure them
+# (+ the Supabase secrets shared with the Keep sync) in: Settings → Secrets and
+# variables → Actions. The "Collect calendars" step below discovers EVERY
+# GCALENDAR_* secret automatically — adding a calendar needs no edit here.
 
 on:
   schedule:
@@ -21,13 +21,30 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r src/packages/bridge/requirements.txt
+
+      # Discover every GCALENDAR_* secret without listing each by name. The full
+      # secrets map is only exposed to THIS step; we forward just the GCALENDAR_*
+      # ones into $GITHUB_ENV for the sync step (their values are single-line
+      # iCal URLs, and GitHub masks secret values in logs).
+      - name: Collect calendars
+        env:
+          ALL_SECRETS: ${{ toJSON(secrets) }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          secrets = json.loads(os.environ["ALL_SECRETS"])
+          with open(os.environ["GITHUB_ENV"], "a") as env:
+              n = 0
+              for key, value in secrets.items():
+                  if key.startswith("GCALENDAR_") and value:
+                      env.write(f"{key}={value}\n")
+                      n += 1
+          print(f"forwarded {n} GCALENDAR_* calendar secret(s)")
+          PY
+
       - run: python src/packages/bridge/calendar_to_frij.py
         env:
-          # One line per calendar secret (value = url,name,color[,holiday]).
-          # The script picks up every GCALENDAR_* env var; add/remove lines here
-          # to match your secrets. An unset secret becomes empty and is skipped.
-          GCALENDAR_FAMILY: ${{ secrets.GCALENDAR_FAMILY }}
-          GCALENDAR_HOLIDAYS: ${{ secrets.GCALENDAR_HOLIDAYS }}
+          # GCALENDAR_* come from the "Collect calendars" step above.
           # Home timezone for clock times. The calendar's own X-WR-TIMEZONE is
           # UTC, so the feed can't tell us; without this, 12:00 shows as 04:00.
           FRIJ_TZ: Asia/Kuala_Lumpur

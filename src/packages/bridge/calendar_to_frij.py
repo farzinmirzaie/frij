@@ -2,20 +2,20 @@
 """One-way sync: one or more Google Calendars -> the Frij store.
 
 Each calendar is declared in the environment as a `GCALENDAR_*` variable whose
-value is comma-separated `url,name,color[,holiday]`:
+value is comma-separated `url,name,color`:
 
     GCALENDAR_FAMILY=https://calendar.google.com/calendar/ical/.../basic.ics,Family,F472B6
     GCALENDAR_WORK=https://.../basic.ics,Work,38BDF8
-    GCALENDAR_HOLIDAYS=https://.../public/basic.ics,Holidays,6B6B74,holiday
+    GCALENDAR_HOLIDAYS=https://.../public/basic.ics,Holidays,6B6B74
 
-  - url     the calendar's **secret iCal URL** (Google Calendar > Settings >
-            "Integrate calendar" > Secret address in iCal format) — a plain
-            .ics feed, so no OAuth/API project is needed. Treat it like a
-            password. (URLs never contain commas, so the split is unambiguous.)
-  - name    short display name; also the per-event tag the device filters on.
-  - color   6-hex RRGGBB (leading "#" optional) — the calendar's badge color.
-  - holiday optional 4th token ("holiday"/"h"/"1"); marks the calendar neutral
-            (gray on the device) instead of carrying its own accent.
+  - url    the calendar's **secret iCal URL** (Google Calendar > Settings >
+           "Integrate calendar" > Secret address in iCal format) — a plain .ics
+           feed, so no OAuth/API project is needed. Treat it like a password.
+           (URLs never contain commas, so the split is unambiguous.)
+  - name   short display name; also the per-event tag the device filters on.
+  - color  6-hex RRGGBB (leading "#" optional) — the calendar's badge color.
+           (A "holidays" calendar is just one given a gray color, e.g. 6B6B74 —
+           there's no special holiday handling; every calendar is treated alike.)
 
 Recurring events (RRULEs like "every 6 months") are expanded to concrete
 occurrences with `recurring-ical-events`. The payload lands in Supabase
@@ -23,18 +23,17 @@ occurrences with `recurring-ical-events`. The payload lands in Supabase
 
     {"at": 1765400000,                       # unix epoch of this sync
      "cal": [{"n": "Family", "c": "F472B6"},  # every declared calendar, so the
-             {"n": "Holidays", "c": "6B6B74", "h": true}],   # device can list +
-                                                              # toggle each one
+             {"n": "Holidays", "c": "6B6B74"}],   # device can list + toggle each
      "ev": [{"t": "Dentist", "d": "2026-06-14", "tm": "09:30", "te": "10:30",
              "l": "Qualiteeth", "c": "Family"},
-            {"t": "Hari Raya", "d": "...", "c": "Holidays", "h": true}, ...]}
+            {"t": "Hari Raya", "d": "...", "c": "Holidays"}, ...]}
 
 ("tm"/"te" = start/end clock, omitted for all-day events; "de" = inclusive end
-date for multi-day all-day events; "l" = location; "c" = calendar name;
-"h" = holiday). Times are rendered in FRIJ_TZ (or the calendar's own
-X-WR-TIMEZONE) — Google's feed stores them as UTC instants, which would
-otherwise be hours off. The device's Events app renders countdowns and lets the
-user toggle calendars on/off; it never talks to Google.
+date for multi-day all-day events; "l" = location; "c" = calendar name). Times
+are rendered in FRIJ_TZ (or the calendar's own X-WR-TIMEZONE) — Google's feed
+stores them as UTC instants, which would otherwise be hours off. The device's
+Events app renders countdowns and lets the user toggle calendars on/off; it
+never talks to Google.
 
 A single broken/unreachable feed is non-fatal: its calendar is still listed (so
 its toggle persists) but contributes no events until the next run.
@@ -75,12 +74,13 @@ def parse_color(raw):
 
 
 def parse_calendars():
-    """Read every GCALENDAR_* env var into [{name, color, holiday, url}], in
-    sorted env-key order (stable across runs). Exits if none are set."""
+    """Read every GCALENDAR_* env var into [{name, color, url}], in sorted
+    env-key order (stable across runs). Exits if none are set."""
     cals = []
     for key in sorted(os.environ):
         if not key.startswith("GCALENDAR_"):
             continue
+        # split into at most 3 fields; any extra trailing token is ignored
         parts = [p.strip() for p in os.environ[key].split(",", 3)]
         url = parts[0] if parts else ""
         if not url:
@@ -88,8 +88,7 @@ def parse_calendars():
             continue
         name = (parts[1] if len(parts) > 1 and parts[1] else key[len("GCALENDAR_"):].title())
         color = parse_color(parts[2] if len(parts) > 2 else "")
-        holiday = len(parts) > 3 and parts[3].lower() in ("holiday", "h", "1", "true")
-        cals.append({"name": name[:TEXT_MAX], "color": color, "holiday": holiday, "url": url})
+        cals.append({"name": name[:TEXT_MAX], "color": color, "url": url})
     if not cals:
         sys.exit("error: no GCALENDAR_* calendars configured (see bridge/README.md)")
     if len(cals) > MAX_CALS:
@@ -115,7 +114,7 @@ def calendar_tz(cal):
         return None
 
 
-def to_events_json(ics_bytes, today, name, holiday=False):
+def to_events_json(ics_bytes, today, name):
     """Expand one calendar feed into device items tagged with `name`: every
     occurrence inside the window, soonest first (uncapped — merge_events applies
     the device cap)."""
@@ -162,8 +161,6 @@ def to_events_json(ics_bytes, today, name, holiday=False):
         if location:
             item["l"] = location[:TEXT_MAX]
         item["c"] = name        # the calendar this event belongs to (device filter + color)
-        if holiday:
-            item["h"] = True
         out.append(item)
     # soonest first; all-day events sort before timed ones on the same day
     out.sort(key=lambda e: (e["d"], e.get("tm", "")))
@@ -181,12 +178,9 @@ def merge_events(*lists):
 
 
 def payload(events, cals, at):
-    """The store value: the calendars (name/color/holiday, for the device's
-    toggle screen), the events, and the sync time ("Updated Xm ago")."""
-    cal_meta = [
-        {"n": c["name"], "c": c["color"], **({"h": True} if c["holiday"] else {})}
-        for c in cals
-    ]
+    """The store value: the calendars (name/color, for the device's toggle
+    screen), the events, and the sync time ("Updated Xm ago")."""
+    cal_meta = [{"n": c["name"], "c": c["color"]} for c in cals]
     return {"at": int(at), "cal": cal_meta, "ev": events}
 
 
@@ -201,7 +195,7 @@ def main():
     per_feed = []
     for c in cals:
         try:
-            per_feed.append(to_events_json(fetch_ics(c["url"]), today, c["name"], c["holiday"]))
+            per_feed.append(to_events_json(fetch_ics(c["url"]), today, c["name"]))
         except Exception as e:  # noqa: BLE001 — one feed must not block the rest
             print(f"warning: calendar '{c['name']}' failed ({e}); skipping it this run",
                   file=sys.stderr)

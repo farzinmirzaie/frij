@@ -105,22 +105,22 @@ and upserts the next 10 upcoming events as
 
 ```json
 {"at": 1765400000,
- "cal": [{"n": "Family", "c": "F472B6"}, {"n": "Holidays", "c": "6B6B74", "h": true}],
+ "cal": [{"n": "Family", "c": "F472B6"}, {"n": "Holidays", "c": "6B6B74"}],
  "ev": [{"t": "Dentist", "d": "2026-06-14", "tm": "09:30", "te": "10:30",
          "l": "Qualiteeth", "c": "Family"},
-        {"t": "Hari Raya", "d": "...", "c": "Holidays", "h": true}, ...]}
+        {"t": "Hari Raya", "d": "...", "c": "Holidays"}, ...]}
 ```
 
 (`at` = sync epoch; `cal` = every declared calendar so the device can list +
 toggle each; `tm`/`te` = start/end clock, omitted for all-day events; `de` =
 inclusive end date for multi-day all-day events; `l` = location; `c` = calendar
-name; `h` = holiday; emoji are stripped like the todos.) Clock times are
-rendered in **`FRIJ_TZ`** (IANA name, e.g. `Asia/Kuala_Lumpur`, hardcoded in the
-workflow). Without it a calendar set to UTC would show 12:00 as 04:00.
+name; emoji are stripped like the todos.) Clock times are rendered in
+**`FRIJ_TZ`** (IANA name, e.g. `Asia/Kuala_Lumpur`, hardcoded in the workflow).
+Without it a calendar set to UTC would show 12:00 as 04:00.
 
 ### What you need to provide
 
-Each calendar is one `GCALENDAR_*` variable, value `url,name,color[,holiday]`:
+Each calendar is one `GCALENDAR_*` variable, value `url,name,color`:
 
 - **url** — Google Calendar (web) → ⚙ Settings → the calendar → **Integrate
   calendar** → **"Secret address in iCal format"**. (URLs have no commas, so the
@@ -129,20 +129,21 @@ Each calendar is one `GCALENDAR_*` variable, value `url,name,color[,holiday]`:
 - **name** — short display name; also the per-event tag the device filters and
   colors on.
 - **color** — 6-hex `RRGGBB` (leading `#` optional), the calendar's badge color.
-- **holiday** — optional 4th token (`holiday`); renders the calendar gray.
 
-Add as many as you like (the device shows up to 8); each is toggleable on the
-device's Events ▸ Calendars screen. Put them where the bridge runs:
+Every calendar is treated alike; a "holidays" feed is just one given a gray
+color (e.g. `6B6B74`). Add as many as you like (the device shows up to 8); each
+is toggleable on the device's Events ▸ Calendars screen. Put them where the
+bridge runs:
 
 - **GitHub Actions** (default): repo → Settings → Secrets and variables →
-  Actions → add a `GCALENDAR_<ID>` secret per calendar, then map each one in
-  [`calendar-sync.yml`](../../../.github/workflows/calendar-sync.yml)'s `env:`
-  (secrets can't be enumerated in YAML). Supabase secrets are shared with the
-  Keep sync.
+  Actions → add a `GCALENDAR_<ID>` secret per calendar. That's it — the workflow
+  ([`calendar-sync.yml`](../../../.github/workflows/calendar-sync.yml)) discovers
+  every `GCALENDAR_*` secret automatically, so no YAML edit is needed. Supabase
+  secrets are shared with the Keep sync.
 - **Local run**: append the `GCALENDAR_*` lines to the repo-root `.env`:
   ```
   GCALENDAR_FAMILY=https://calendar.google.com/.../basic.ics,Family,F472B6
-  GCALENDAR_HOLIDAYS=https://.../public/basic.ics,Holidays,6B6B74,holiday
+  GCALENDAR_HOLIDAYS=https://.../public/basic.ics,Holidays,6B6B74
   ```
 
 A single broken/unreachable feed is non-fatal: its calendar still appears (so

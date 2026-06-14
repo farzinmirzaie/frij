@@ -16,9 +16,10 @@
  * store + core/datetime.
  *
  * Events come from one or more calendars (declared off-device as GCALENDAR_*;
- * see packages/bridge). Each event carries the color of its calendar, and the
- * user can hide a whole calendar from the Calendars screen — the hidden set
- * persists in store:events_off and applies to the list, glance, and countdown.
+ * see packages/bridge), all treated alike. Each event carries the color of its
+ * calendar, and the user can hide a whole calendar from the Calendars screen —
+ * the hidden set persists in store:events_off and applies to the list, glance,
+ * and countdown.
  */
 
 #ifdef __cplusplus
@@ -40,14 +41,12 @@ typedef struct {
     char     loc[FRIJ_EVENT_LOC];      // "" if none
     uint32_t color;                    // the event's calendar color (0xRRGGBB)
     int      days;                     // 0 = today … (section bucket + pulse + countdown)
-    bool     holiday;                  // neutral/gray treatment instead of the calendar color
 } frij_event_view_t;
 
 // One calendar, for the Calendars toggle screen.
 typedef struct {
     char     name[FRIJ_CAL_NAME];
     uint32_t color;                    // 0xRRGGBB
-    bool     holiday;                  // a holidays-style feed (gray)
     bool     enabled;                  // user's show/hide toggle (default on)
 } frij_calendar_t;
 
@@ -58,8 +57,8 @@ void frij_events_sync(void);
 // calendar dropped), soonest first, capped to `max`. Returns the count.
 int frij_events_load(frij_event_view_t* out, int max);
 
-// The next family (non-holiday, visible) event, for the countdown. False if none.
-bool frij_events_next_family(frij_event_view_t* out);
+// The next visible upcoming event, for the countdown. False if none.
+bool frij_events_next(frij_event_view_t* out);
 
 // "Updated 5m ago" into `buf`; false if the sync time is unknown.
 bool frij_events_synced_ago(char* buf, size_t n);

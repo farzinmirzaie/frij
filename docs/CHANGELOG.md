@@ -2,6 +2,19 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-14 — events: app-accent everywhere but the list; drop holiday case
+
+- Per-calendar color now used **only on the event-list badges**. The glance,
+  countdown, and the Calendars toggle switches use the app accent (pink).
+- Removed the holiday special-case end to end: the device no longer treats a
+  holiday calendar differently (gray is just its color), and the countdown/next-
+  event screen no longer excludes it. Bridge drops the `holiday` token and the
+  `h` flag (`url,name,color` only; a trailing legacy token is ignored).
+  `frij_events_next_family` → `frij_events_next`. Tests/docs updated.
+- CI: `calendar-sync.yml` now discovers every `GCALENDAR_*` secret via
+  `toJSON(secrets)` (a "Collect calendars" step forwards them to `$GITHUB_ENV`),
+  so adding a calendar needs only a new secret — no workflow edit.
+
 ## 2026-06-14 — events: multiple calendars (colors + on/off toggles)
 
 - Bridge (`calendar_to_frij.py`) now reads **any number of `GCALENDAR_*`** env

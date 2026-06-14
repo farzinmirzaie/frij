@@ -70,7 +70,8 @@ def test_color_normalizes():
 
 
 def test_parse_calendars(monkeyenv=None):
-    # Only GCALENDAR_* keys, in sorted order; name/color/holiday parsed; URL kept.
+    # Only GCALENDAR_* keys, in sorted order; name/color parsed; URL kept; any
+    # extra trailing token (a legacy ",holiday") is ignored, color stays intact.
     saved = dict(os.environ)
     try:
         for k in list(os.environ):
@@ -81,9 +82,9 @@ def test_parse_calendars(monkeyenv=None):
         os.environ["GCALENDAR_NONAME"] = "https://z/basic.ics"      # name defaults from key
         cals = parse_calendars()
         assert cals == [
-            {"name": "Family", "color": "F472B6", "holiday": False, "url": "https://x/basic.ics"},
-            {"name": "Holidays", "color": "6B6B74", "holiday": True, "url": "https://y/public.ics"},
-            {"name": "Noname", "color": "F472B6", "holiday": False, "url": "https://z/basic.ics"},
+            {"name": "Family", "color": "F472B6", "url": "https://x/basic.ics"},
+            {"name": "Holidays", "color": "6B6B74", "url": "https://y/public.ics"},
+            {"name": "Noname", "color": "F472B6", "url": "https://z/basic.ics"},
         ], cals
     finally:
         os.environ.clear()
@@ -106,12 +107,12 @@ def test_mapping():
     ], out
 
 
-def test_holidays_merge():
+def test_multi_calendar_merge():
     family = to_events_json(ICS.encode(), TODAY, "Family")
-    holidays = to_events_json(HOLIDAYS_ICS.encode(), TODAY, "Holidays", holiday=True)
-    # holiday flagged with "h", tagged with its calendar, slots into date order
+    holidays = to_events_json(HOLIDAYS_ICS.encode(), TODAY, "Holidays")
+    # a "holidays" feed is just another calendar — tagged with its name, no flag
     assert holidays == [{"t": "Hari Raya Haji", "d": "2026-06-16",
-                         "c": "Holidays", "h": True}], holidays
+                         "c": "Holidays"}], holidays
     merged = merge_events(family, holidays)
     titles = [e["t"] for e in merged]
     assert titles == ["Gym class", "Dentist", "Hari Raya Haji", "Gym class",
@@ -119,13 +120,13 @@ def test_holidays_merge():
 
 
 def test_payload_shape():
-    cals = [{"name": "Family", "color": "F472B6", "holiday": False, "url": "u"},
-            {"name": "Holidays", "color": "6B6B74", "holiday": True, "url": "v"}]
+    cals = [{"name": "Family", "color": "F472B6", "url": "u"},
+            {"name": "Holidays", "color": "6B6B74", "url": "v"}]
     value = payload([{"t": "X", "d": "2026-06-12", "c": "Family"}], cals, at=1765400000.7)
     assert value == {
         "at": 1765400000,
         "cal": [{"n": "Family", "c": "F472B6"},
-                {"n": "Holidays", "c": "6B6B74", "h": True}],
+                {"n": "Holidays", "c": "6B6B74"}],
         "ev": [{"t": "X", "d": "2026-06-12", "c": "Family"}],
     }, value
 
@@ -142,7 +143,7 @@ if __name__ == "__main__":
     test_color_normalizes()
     test_parse_calendars()
     test_mapping()
-    test_holidays_merge()
+    test_multi_calendar_merge()
     test_payload_shape()
     test_caps_to_device_limit()
     print("all calendar tests passed")
