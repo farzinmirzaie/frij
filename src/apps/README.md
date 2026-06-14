@@ -83,12 +83,16 @@ every app shares the look but has its own scheme.
 - `todo/` — Keep-synced checklist (single screen: tap a row to toggle, with an
   "Updated Xm ago" footer; header ↻ pulls). Glance shows a random open item +
   count. Amber.
-- `events/` — countdowns to the family calendar's upcoming events (read-only;
-  the `bridge/calendar_to_frij.py` cron mirrors the Google Calendar iCal feeds
-  into `store:events`; an optional holidays feed merges in gray). 2 screens:
-  list (Today/This week/Later sections, day-count badges — accent = family,
-  gray = holiday, "Updated Xm ago" footer) / big-number countdown to the next
-  family event. Glance shows the nearest event + how soon. Pink.
+- `events/` — countdowns to upcoming events across one or more calendars
+  (read-only; the `bridge/calendar_to_frij.py` cron mirrors each `GCALENDAR_*`
+  iCal feed into `store:events`). All calendars are treated alike — a holidays
+  feed is just one given a gray color. 3 screens: list (Today/This week/Later
+  sections, a day-count badge in each calendar's color, "Updated Xm ago" footer) /
+  big-number countdown to the next event / Calendars (toggle each calendar on/off
+  — persists to `store:events_off`, applies to list + glance + countdown). Glance
+  + countdown show the calendar name in its color. App accent pink; per-calendar
+  colors appear only on the list badges. All store/JSON logic lives in the data
+  seam `packages/data/events`, so the app is pure UI. Pink.
 - `stopwatch/` — MM:SS.cs stopwatch with Start/Stop, laps, and reset; timing
   lives in module state so it keeps running off-screen. Green.
 - `scoreboard/` — two-player score keeper (game-night companion). Full-bleed

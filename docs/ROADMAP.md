@@ -11,8 +11,8 @@ target whatever board we run on (see [HARDWARE.md](HARDWARE.md)).
 - **Todos** — quick check-off list.
 - **Stopwatch** — count-up timer with laps (shipped; on-brand for the dev kit).
 - **Scoreboard** — two-player, cloud-synced score keeper for game nights (shipped).
-- **Events** — countdowns to the family Google Calendar's events, via the
-  iCal bridge (shipped).
+- **Events** — countdowns across one or more Google Calendars (per-calendar
+  colors, on-device show/hide), via the iCal bridge (shipped).
 - **Reminders** — time/day-based nudges.
 - **Grocery list** — add/remove items, clear bought.
 - **Photos** — slideshow of family pics.

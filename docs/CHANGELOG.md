@@ -2,6 +2,13 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-14 — events: doc audit (multi-calendar) + data/ README
+
+- Refreshed stale docs to match the multi-calendar app: `apps/README.md` events
+  entry (3 screens, per-calendar colors, Calendars toggle, no holiday special
+  case), the ROADMAP Events bullet, and the list empty-state string ("family" →
+  generic). Added the missing `packages/data/README.md` (the app⇄services seam).
+
 ## 2026-06-14 — events: 10-point cleanup (perf / structure / naming)
 
 Behavior-preserving refactor of the Events app + data layer:

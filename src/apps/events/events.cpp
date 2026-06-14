@@ -114,7 +114,7 @@ static void populate_list(lv_obj_t* col)
     int                      n = frij_events_load(views, FRIJ_EVENTS_MAX);
 
     if (n == 0) {
-        frij_empty_state(col, "No upcoming events", "Add events in the family\nGoogle Calendar");
+        frij_empty_state(col, "No upcoming events", "Add events in your\nGoogle Calendar");
         return;
     }
 
