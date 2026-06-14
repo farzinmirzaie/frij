@@ -45,11 +45,13 @@ def clean_text(text):
 
 
 def load_dotenv():
-    """Load the repo's .env (Supabase creds, reused from the device) and an
-    optional bridge/.env (the GKEEP_* values), without adding a dependency.
-    Real environment variables (e.g. GitHub Actions secrets) always win."""
+    """Load the repo-root .env (Supabase creds, reused from the device) and an
+    optional bridge-local .env (GKEEP_*/GCALENDAR_* values), without adding a
+    dependency. Real environment variables (e.g. GitHub Actions secrets) win.
+    This file lives at src/packages/bridge/, so the repo root is three up."""
     here = os.path.dirname(os.path.abspath(__file__))
-    for path in (os.path.join(here, "..", ".env"), os.path.join(here, ".env")):
+    root = os.path.abspath(os.path.join(here, "..", "..", ".."))
+    for path in (os.path.join(root, ".env"), os.path.join(here, ".env")):
         try:
             with open(path) as f:
                 for line in f:

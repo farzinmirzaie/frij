@@ -216,7 +216,8 @@ static void build_calendars(lv_obj_t* parent)
     frij_section_label(col, "Show calendars");
     for (int i = 0; i < n; i++) {
         lv_snprintf(s_cal_names[i], FRIJ_CAL_NAME, "%s", cals[i].name);
-        lv_obj_t* sw = frij_toggle_row(col, cals[i].name, cals[i].enabled, ACCENT);
+        // leading dot in the calendar's color; the switch stays the app accent
+        lv_obj_t* sw = frij_toggle_row_dot(col, cals[i].color, cals[i].name, cals[i].enabled, ACCENT);
         lv_obj_add_event_cb(sw, on_cal_toggle, LV_EVENT_VALUE_CHANGED, s_cal_names[i]);
     }
     frij_stagger_in(col, 45);

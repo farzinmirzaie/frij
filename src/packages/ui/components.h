@@ -128,6 +128,11 @@ lv_obj_t* frij_toggle(lv_obj_t* parent, bool on, uint32_t accent);
 // Returns the switch — attach your LV_EVENT_VALUE_CHANGED handler to that.
 lv_obj_t* frij_toggle_row(lv_obj_t* parent, const char* label, bool on, uint32_t accent);
 
+// Like frij_toggle_row, but with a leading colored dot (e.g. a calendar's color)
+// before the label. The switch still uses `accent`. Returns the switch.
+lv_obj_t* frij_toggle_row_dot(lv_obj_t* parent, uint32_t dot_color, const char* label,
+                              bool on, uint32_t accent);
+
 // A tappable card row: label + right chevron. Attach via the returned row's
 // LV_EVENT_CLICKED. Use for actions like "Sync now" / "Reset".
 lv_obj_t* frij_action_row(lv_obj_t* parent, const char* label, lv_event_cb_t on_click);

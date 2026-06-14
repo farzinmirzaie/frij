@@ -2,6 +2,16 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-14 — events: calendar color dots, feed UA fix, dotenv path fix
+
+- Calendars screen: each row now shows a **leading dot in the calendar's color**
+  before the name (switch stays the app accent). New reusable
+  `frij_toggle_row_dot` in `packages/ui/components`.
+- Bridge `fetch_ics` sends a real `User-Agent` — feeds that 403 the default
+  `Python-urllib` agent (e.g. BambooHR company-holidays) now return 200.
+- Fixed `load_dotenv` after the `src/packages/` move: it now finds the repo-root
+  `.env` (three levels up) again, so local bridge runs load Supabase creds.
+
 ## 2026-06-14 — events: app-accent everywhere but the list; drop holiday case
 
 - Per-calendar color now used **only on the event-list badges**. The glance,

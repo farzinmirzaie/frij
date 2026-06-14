@@ -848,6 +848,28 @@ lv_obj_t* frij_toggle_row(lv_obj_t* parent, const char* label, bool on, uint32_t
     return sw;
 }
 
+lv_obj_t* frij_toggle_row_dot(lv_obj_t* parent, uint32_t dot_color, const char* label,
+                              bool on, uint32_t accent)
+{
+    lv_obj_t* row = frij_surface_row(parent);
+
+    lv_obj_t* dot = lv_obj_create(row);  // leading color chip
+    lv_obj_remove_style_all(dot);
+    lv_obj_set_size(dot, 14, 14);
+    lv_obj_set_style_radius(dot, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(dot, lv_color_hex(dot_color), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(dot, LV_OPA_COVER, LV_PART_MAIN);
+
+    lv_obj_t* l = frij_label(row, label, FRIJ_FONT_BODY, FRIJ_TEXT);
+    lv_obj_set_flex_grow(l, 1);
+    lv_label_set_long_mode(l, LV_LABEL_LONG_DOT);  // names can be long; ellipsize
+
+    lv_obj_t* sw = frij_toggle(row, on, accent);
+    lv_obj_remove_flag(sw, LV_OBJ_FLAG_CLICKABLE);  // the row drives it (still last child)
+    lv_obj_add_event_cb(row, toggle_row_click_cb, LV_EVENT_CLICKED, NULL);
+    return sw;
+}
+
 // loose coupling: the launcher provides this; we don't include launcher.h
 extern void frij_back(void);
 

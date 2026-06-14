@@ -97,7 +97,10 @@ def parse_calendars():
 
 
 def fetch_ics(url):
-    with urllib.request.urlopen(url, timeout=30) as resp:
+    # Send a real User-Agent: some feeds (e.g. BambooHR) 403 the default
+    # "Python-urllib/x.y" agent. A plain browser-ish string gets a 200.
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (compatible; FrijBridge/1.0)"})
+    with urllib.request.urlopen(req, timeout=30) as resp:
         return resp.read()
 
 
