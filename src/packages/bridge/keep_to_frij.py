@@ -1,7 +1,16 @@
 #!/usr/bin/env python3
-"""Two-way sync between a shared Google Keep checklist and the Frij store.
+"""Two-way sync between shared Google Keep checklists and the Frij store.
 
-Keep owns the list *structure* (which items exist + their text — the watch can
+Each note is declared as a `GKEEP_NOTE_*` env var, value `storeKey,noteTitle`
+(split on the first comma, so titles may contain commas):
+
+    GKEEP_NOTE_TODO=todo,Todos
+    GKEEP_NOTE_GROCERIES=groceries,Groceries
+
+The bridge syncs each Keep note titled `noteTitle` to `store:<storeKey>`, so
+different device apps can hook into different keys (todo→`todo`, …).
+
+Keep owns each list's *structure* (which items exist + their text — the watch can
 only toggle, not add/remove). The done-state syncs **both ways**: a 3-way merge
 against a saved base (`<key>_base`) decides per item which side changed since the
 last sync; if both changed differently, *checked wins*. Watch toggles are written
@@ -10,6 +19,7 @@ back to Keep; the merged list (`<key>`) is what the device reads.
 Keep has no official consumer API, so this uses the unofficial `gkeepapi`
 (reverse-engineered) — see bridge/README.md for setup + the master-token steps.
 It's meant to run on the GitHub Actions cron (~10 min) — sync is not realtime.
+A missing/failed note warns and is skipped; the others still sync.
 
 Usage:
     python3 keep_to_frij.py            # 2-way sync (merge + write back)
@@ -71,8 +81,28 @@ def env(name, default=None, required=False):
     return value
 
 
-def fetch_keep_note(email, master_token, title):
-    """Return (keep, note) for the Keep list titled `title` (note = a gkeepapi List)."""
+def parse_notes():
+    """Read every GKEEP_NOTE_* env var into [{key, title}], sorted by env-key name
+    (stable across runs). Value is `storeKey,noteTitle` (split on the first comma,
+    so titles may contain commas). Exits if none are configured."""
+    notes = []
+    for env_key in sorted(os.environ):
+        if not env_key.startswith("GKEEP_NOTE_"):
+            continue
+        parts = os.environ[env_key].split(",", 1)
+        key = parts[0].strip()
+        title = parts[1].strip() if len(parts) > 1 else ""
+        if not key or not title:
+            print(f"warning: {env_key} must be 'storeKey,noteTitle', skipping", file=sys.stderr)
+            continue
+        notes.append({"key": key, "title": title})
+    if not notes:
+        sys.exit("error: no GKEEP_NOTE_* notes configured (see bridge/README.md)")
+    return notes
+
+
+def keep_login(email, master_token):
+    """Authenticate once and return the gkeepapi.Keep client."""
     import gkeepapi  # lazy: keeps to_todo_json() importable without the dep
 
     keep = gkeepapi.Keep()
@@ -80,6 +110,12 @@ def fetch_keep_note(email, master_token, title):
     # (email, master_token). Prefer authenticate to avoid the rename deprecation warning.
     auth = getattr(keep, "authenticate", None) or keep.resume
     auth(email, master_token)
+    return keep
+
+
+def find_note(keep, title):
+    """The visible Keep list titled `title` (a gkeepapi List), or None."""
+    import gkeepapi
 
     def is_target(note):
         return (
@@ -89,10 +125,7 @@ def fetch_keep_note(email, master_token, title):
             and not note.archived
         )
 
-    note = next((n for n in keep.find(func=is_target)), None)
-    if note is None:
-        sys.exit(f'error: no Keep list titled "{title}" visible to {email}')
-    return keep, note
+    return next((n for n in keep.find(func=is_target)), None)
 
 
 def item_key(text):
@@ -153,28 +186,17 @@ def read_supabase_value(url, anon_key, table, key):
     return []
 
 
-def run_sync(write=True):
-    """Two-way sync of the done-state between Keep and the device.
+def sync_note(note, key, url, anon, table, write=True):
+    """Two-way sync of one Keep note's done-state with store:<key>.
 
     Keep owns the *structure* (which items exist, their text — the watch can only
     toggle, not add/remove). For each item's done-state we 3-way merge against a
     saved base (last sync): the side that changed since the base wins; if both
-    changed differently, *checked wins*. Changes the watch made are written back
-    to Keep; the merged list + a fresh base are written to Supabase.
-
-    Returns (merged_list, table, store_key, keep_changed).
+    changed differently, *checked wins*. Toggles the watch made are written onto
+    `note` (the caller batches one keep.sync()); the merged list + a fresh base
+    are written to Supabase. Returns (merged_list, keep_changed).
     """
-    keep, note = fetch_keep_note(
-        env("GKEEP_EMAIL", required=True),
-        env("GKEEP_MASTER_TOKEN", required=True),
-        env("GKEEP_LIST_TITLE", required=True),
-    )
-    url = env("SUPABASE_URL", required=True)
-    anon = env("SUPABASE_ANON_KEY", required=True)
-    table = env("SUPABASE_TABLE") or "store"
-    key = env("FRIJ_STORE_KEY") or "todo"
     base_key = key + "_base"
-
     device = {it["t"]: bool(it["d"]) for it in read_supabase_value(url, anon, table, key) if "t" in it}
     base = {it["t"]: bool(it["d"]) for it in read_supabase_value(url, anon, table, base_key) if "t" in it}
 
@@ -207,25 +229,37 @@ def run_sync(write=True):
         merged = merged[:MAX_ITEMS]
 
     if write:
-        if keep_changed:
-            keep.sync()  # push the toggles to Keep
         upsert_supabase(url, anon, table, key, merged)        # device-facing list
         upsert_supabase(url, anon, table, base_key, merged)   # new merge base
-    return merged, table, key, keep_changed
+    return merged, keep_changed
 
 
 def main():
     load_dotenv()
     write = "--dry-run" not in sys.argv
 
-    merged, table, key, keep_changed = run_sync(write=write)
-    print(json.dumps(merged, ensure_ascii=False))
-    if not write:
-        print(f"dry-run: would sync {len(merged)} items; Keep write-back: {keep_changed}",
+    notes = parse_notes()
+    url = env("SUPABASE_URL", required=True)
+    anon = env("SUPABASE_ANON_KEY", required=True)
+    table = env("SUPABASE_TABLE") or "store"
+    keep = keep_login(env("GKEEP_EMAIL", required=True), env("GKEEP_MASTER_TOKEN", required=True))
+
+    any_keep_changed = False
+    for n in notes:
+        note = find_note(keep, n["title"])
+        if note is None:  # one missing note must not block the rest
+            print(f'warning: no Keep list titled "{n["title"]}" (key {n["key"]}); skipping',
+                  file=sys.stderr)
+            continue
+        merged, keep_changed = sync_note(note, n["key"], url, anon, table, write=write)
+        any_keep_changed = any_keep_changed or keep_changed
+        print(json.dumps({"key": n["key"], "items": merged}, ensure_ascii=False))
+        verb = "would sync" if not write else "synced"
+        print(f"{verb} {len(merged)} item(s) <-> {table}:{n['key']}; Keep change: {keep_changed}",
               file=sys.stderr)
-    else:
-        print(f"synced {len(merged)} item(s) <-> {table}:{key}; Keep updated: {keep_changed}",
-              file=sys.stderr)
+
+    if write and any_keep_changed:
+        keep.sync()  # push every note's write-backs in one round
 
 
 if __name__ == "__main__":

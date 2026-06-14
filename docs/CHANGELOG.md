@@ -2,6 +2,20 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-14 — keep bridge: multiple notes (GKEEP_NOTE_*)
+
+- `keep_to_frij.py` now syncs **any number of Keep notes** instead of one: each
+  `GKEEP_NOTE_<ID>=<storeKey>,<noteTitle>` maps a note to `store:<storeKey>`
+  (+ `store:<storeKey>_base`). Mirrors the calendar `GCALENDAR_*` design. Auth
+  happens once, notes loop, Keep write-backs batch into one `keep.sync()`; a
+  missing note warns and is skipped. Dropped `GKEEP_LIST_TITLE`/`FRIJ_STORE_KEY`.
+- `keep-sync.yml` discovers every `GKEEP_NOTE_*` secret via `toJSON(secrets)`
+  (a "Collect notes" step), so adding a note needs only a new secret.
+- Device unchanged: the todo app reads `store:todo` and `user_app` pulls `"todo"`,
+  so `GKEEP_NOTE_TODO=todo,<title>` keeps it working as-is.
+- Tests (`test_mapping.py` parse_notes) + docs (`.env.example`, bridge README,
+  STORAGE) updated.
+
 ## 2026-06-14 — events: doc audit (multi-calendar) + data/ README
 
 - Refreshed stale docs to match the multi-calendar app: `apps/README.md` events

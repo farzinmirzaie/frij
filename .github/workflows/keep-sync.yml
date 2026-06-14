@@ -1,8 +1,10 @@
 name: Keep → Frij sync
 
-# Mirrors the shared Google Keep list into the Frij store (read-only: Keep →
-# Supabase). The device pulls the same row, so no firmware change is needed.
-# Configure the secrets below in: Settings → Secrets and variables → Actions.
+# Two-way syncs shared Google Keep notes with the Frij store. Each note is a
+# GKEEP_NOTE_* secret (value = storeKey,noteTitle); configure them (+ GKEEP_EMAIL,
+# GKEEP_MASTER_TOKEN, and the Supabase secrets) in: Settings → Secrets and
+# variables → Actions. The "Collect notes" step discovers EVERY GKEEP_NOTE_*
+# secret automatically — adding a note needs no edit here.
 
 on:
   schedule:
@@ -18,11 +20,32 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r src/packages/bridge/requirements.txt
+
+      # Discover every GKEEP_NOTE_* secret without listing each by name. The full
+      # secrets map is only exposed to THIS step; we forward just the GKEEP_NOTE_*
+      # ones into $GITHUB_ENV for the sync step (values are single-line
+      # "storeKey,noteTitle"; GitHub masks secret values in logs).
+      - name: Collect notes
+        env:
+          ALL_SECRETS: ${{ toJSON(secrets) }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          secrets = json.loads(os.environ["ALL_SECRETS"])
+          with open(os.environ["GITHUB_ENV"], "a") as env:
+              n = 0
+              for key, value in secrets.items():
+                  if key.startswith("GKEEP_NOTE_") and value:
+                      env.write(f"{key}={value}\n")
+                      n += 1
+          print(f"forwarded {n} GKEEP_NOTE_* note secret(s)")
+          PY
+
       - run: python src/packages/bridge/keep_to_frij.py
         env:
+          # GKEEP_NOTE_* come from the "Collect notes" step above.
           GKEEP_EMAIL: ${{ secrets.GKEEP_EMAIL }}
           GKEEP_MASTER_TOKEN: ${{ secrets.GKEEP_MASTER_TOKEN }}
-          GKEEP_LIST_TITLE: ${{ secrets.GKEEP_LIST_TITLE }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           # SUPABASE_TABLE defaults to "store" in the script; add the secret only

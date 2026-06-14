@@ -1,32 +1,45 @@
-# bridge/ — off-device sync (Google Keep ↔ todos, Google Calendar → events)
+# bridge/ — off-device sync (Google Keep ↔ checklists, Google Calendar → events)
 
 Two small Python scripts that run on GitHub Actions crons against the same
 Supabase rows the device reads:
 
-- `keep_to_frij.py` — **shared Google Keep checklist ⇄ `store:todo`** (below).
-- `calendar_to_frij.py` — **family Google Calendar → `store:events`** (see
-  [Calendar → events](#calendar--events) at the bottom).
+- `keep_to_frij.py` — **shared Google Keep notes ⇄ `store:<key>`** (one per
+  `GKEEP_NOTE_*`; below).
+- `calendar_to_frij.py` — **Google Calendars → `store:events`** (one per
+  `GCALENDAR_*`; see [Calendar → events](#calendar--events) at the bottom).
 
-## Keep ↔ todos
+## Keep ↔ checklists
 
-Keeps a **shared Google Keep checklist** and Frij's todo list in sync.
+Keeps **one or more shared Google Keep notes** and Frij's lists in sync. Each
+note is declared as a `GKEEP_NOTE_*` variable, value `storeKey,noteTitle`:
+
+```
+GKEEP_NOTE_TODO=todo,Todos
+GKEEP_NOTE_GROCERIES=groceries,Groceries
+```
+
+The bridge syncs the Keep note titled `noteTitle` to `store:<storeKey>`, so
+different device apps hook into different keys (the todo app reads `store:todo`).
+Add as many notes as you like; a missing/failed note warns and is skipped while
+the rest still sync.
 
 Keep has no official consumer API, so this uses the unofficial
 [`gkeepapi`](https://github.com/kiwiz/gkeepapi). It runs **off-device** (GitHub
-Actions cron) against the same Supabase row the device reads/writes.
+Actions cron) against the same Supabase rows the device reads/writes.
 
 ```
-Google Keep  ⇄ (gkeepapi)  keep_to_frij.py  ⇄ (REST)  Supabase store:todo  ⇄  Frij device
+Google Keep  ⇄ (gkeepapi)  keep_to_frij.py  ⇄ (REST)  Supabase store:<key>  ⇄  Frij device
 ```
 
-**Two-way, done-state only.** Keep owns the structure — which items exist and
-their text — because the watch can only *toggle* (no on-device add/remove yet;
-voice-add is planned). Checking/unchecking syncs **both directions**:
+**Two-way, done-state only.** Keep owns each note's structure — which items
+exist and their text — because the watch can only *toggle* (no on-device
+add/remove yet; voice-add is planned). Checking/unchecking syncs **both
+directions**, per note:
 
-- A 3-way merge against a saved base row (`store:todo_base`) decides, per item,
+- A 3-way merge against a saved base row (`store:<key>_base`) decides, per item,
   which side moved since the last sync. If both moved differently, **checked
   wins**. Watch toggles are written back to Keep; the merged list lands in
-  `store:todo` for the device.
+  `store:<key>` for the device.
 - Items are matched by their cleaned/capped text (same transform the device
   stores), so toggles map back to the right Keep item.
 
@@ -38,18 +51,20 @@ cycle + the device's next pull). Add/remove still happen in the Keep app.
 1. **Supabase** — already configured in the repo-root `.env` (the device uses
    it); the bridge **reuses those values automatically**. Just make sure the
    `store` table exists (SQL in [`../docs/STORAGE.md`](../docs/STORAGE.md)).
-2. The **exact title** of your shared Keep list note (e.g. `Todos`).
-3. A Google **master token** for the account that can see the list (below).
+2. A `GKEEP_NOTE_*` entry per note (`storeKey,noteTitle`) — the title is the
+   **exact** Keep note title (e.g. `Todos`).
+3. A Google **master token** for the account that can see the notes (below).
 4. Put the Keep values where the bridge runs:
    - **Local run**: append to the repo-root `.env` (Supabase is read from there):
      ```
      GKEEP_EMAIL=you@gmail.com
      GKEEP_MASTER_TOKEN=...        # from get_master_token.py
-     GKEEP_LIST_TITLE=Todos
+     GKEEP_NOTE_TODO=todo,Todos
      ```
    - **GitHub Actions** (default): repo → Settings → Secrets and variables →
-     Actions → add `GKEEP_EMAIL`, `GKEEP_MASTER_TOKEN`, `GKEEP_LIST_TITLE`,
-     `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_TABLE` (CI has no `.env`).
+     Actions → add `GKEEP_EMAIL`, `GKEEP_MASTER_TOKEN`, the Supabase secrets, and
+     one `GKEEP_NOTE_<ID>` secret per note. The workflow discovers every
+     `GKEEP_NOTE_*` secret automatically, so adding a note needs no YAML edit.
 
 ## Get the master token (one time)
 
@@ -72,7 +87,7 @@ it.) **The master token is as sensitive as the account password; never commit it
 
 ```bash
 python3 keep_to_frij.py --dry-run   # read Keep, print the JSON, write nothing
-python3 keep_to_frij.py             # read Keep, upsert Supabase store:todo
+python3 keep_to_frij.py             # sync every GKEEP_NOTE_* into store:<key>
 ```
 
 The GitHub Actions workflow ([`../.github/workflows/keep-sync.yml`](../.github/workflows/keep-sync.yml))
