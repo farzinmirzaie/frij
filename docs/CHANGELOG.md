@@ -2,6 +2,33 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-14 — restructure: src/packages layout + events decoupled (pilot)
+
+- Monorepo-style layout: shared code moved under `src/packages/` (ui, core,
+  store, system, launcher, platform[was utility], data, bridge, supabase).
+  Apps stay in `src/apps/`. Includes resolve via `-I src/packages` so most
+  `#include` lines are unchanged; `utility/`→`platform/` and build_src_filter
+  updated. Off-device bridge/supabase now live under packages (CI paths +
+  supabase CLI `--workdir` noted).
+- New layering rule: apps are PURE UI — may include only `ui`, `core`, `data`.
+- Events pilot: new `packages/data/events.{h,cpp}` owns the store read, the
+  {at,ev} parse, day math, badge units and time formatting, returning
+  display-ready view structs. `apps/events/events.cpp` is now pure UI (no
+  store/time/JSON). Behavior unchanged (verified by snapshots).
+- Fix: Todo "Updated Xm ago" footer no longer always says "Just now" — the
+  sync time is stamped at the real sync points (boot/auto-sync/manual ↻), not
+  on every screen open.
+
+## 2026-06-12 — events badge units, todo footer + single screen, Wi-Fi action
+
+- Events badges scale their unit: hours for today's timed events ("3h"), then
+  "3d" / "2w" / "5m" / "1y" instead of capping at "99+".
+- Todo list gains an "Updated Xm ago" footer (matches Events); the progress
+  ring and add-by-voice screens are gone — Todo is now a single screen
+  (snapshot keys todo_progress/todo_add removed).
+- The Network header's rescan (↻) hides while Wi-Fi is off (new
+  frij_launcher_refresh_action re-queries the action live on toggle).
+
 ## 2026-06-12 — 10-improvement round (AI polish, events, haptics)
 
 - Frij AI: tap a Recent row to re-read that answer; long answers scroll; the

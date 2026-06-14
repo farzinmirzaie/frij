@@ -162,10 +162,6 @@ int main(int, char**)
     const char* scr = getenv("FRIJ_SNAP");
     if (scr && strcmp(scr, "todo") == 0) {
         build_app_screen(todo_app(), 0);
-    } else if (scr && strcmp(scr, "todo_progress") == 0) {
-        build_app_screen(todo_app(), 1);
-    } else if (scr && strcmp(scr, "todo_add") == 0) {
-        build_app_screen(todo_app(), 2);
     } else if (scr && strcmp(scr, "todo_glance") == 0) {
         build_glance_view(todo_app());
     } else if (scr && strcmp(scr, "events") == 0) {
@@ -237,7 +233,7 @@ int main(int, char**)
                            NULL);
     } else {
         if (scr && scr[0]) {  // typo'd key would silently render the launcher
-            printf("unknown FRIJ_SNAP '%s' — valid: todo todo_progress todo_add todo_glance "
+            printf("unknown FRIJ_SNAP '%s' — valid: todo todo_glance "
                    "events events_glance events_countdown assistant assistant_glance ai_listen "
                    "ai_answer ai_error ai_thinking counter stopwatch stopwatch_glance scoreboard "
                    "scoreboard_glance settings network netoff sheet confirm keyboard result "

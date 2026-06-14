@@ -2,25 +2,24 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <time.h>
 
 #include <ArduinoJson.h>
 
+#include "core/datetime.h"
 #include "store/store.h"
-#include "system/haptics.h"
 #include "ui/anim.h"
 #include "ui/components.h"
 #include "ui/theme.h"
 
 /*
- * Todo — a checklist backed by the shared store (key "todo"). The list can be
- * fed from a shared Google Keep list via the off-device bridge (see bridge/),
- * so today the device is effectively read-only; editing happens in Keep.
+ * Todo — a checklist backed by the shared store (key "todo"). The list is fed
+ * from a shared Google Keep list via the off-device bridge (see bridge/), so
+ * the device can only toggle; add/remove happen in Keep.
  *
  * Data: a JSON array under the key "todo": [{"t":"Milk","d":false}, ...].
- *   glance   : "up next" — the next unchecked item, big, + count remaining
- *   screen 0 : the checklist (tap a row to toggle; animated)
- *   screen 1 : progress (big ring + %)
- *   screen 2 : add by voice (placeholder UI — no STT yet)
+ *   glance   : a random unchecked item, big, + count remaining
+ *   screen 0 : the checklist (tap a row to toggle; "Updated Xm ago" footer)
  */
 
 #define MAX_ITEMS 16
@@ -83,11 +82,6 @@ static int done_count(void)
     return c;
 }
 
-static int done_pct(void)
-{
-    return s_n > 0 ? ((done_count() * 100 + s_n / 2) / s_n) : 0;  // rounded, not truncated
-}
-
 // ---- the checklist screen --------------------------------------------------
 
 static void on_toggle(lv_event_t* e)
@@ -141,6 +135,16 @@ static void populate_list(lv_obj_t* col)
             lv_obj_set_style_text_decor(label, LV_TEXT_DECOR_STRIKETHROUGH, LV_PART_MAIN);
         }
     }
+
+    // tiny "Updated Xm ago" footer (when the list last pulled from the cloud),
+    // matching the Events list.
+    int synced = frij_store_load_int("todo_synced", 0);
+    if (synced > 0) {
+        char ago[24], upd[40];
+        frij_format_relative(ago, sizeof(ago), (time_t)synced);
+        lv_snprintf(upd, sizeof(upd), "Updated %s", ago);
+        frij_label(col, upd, FRIJ_FONT_SMALL, FRIJ_TEXT_3);
+    }
     frij_stagger_in(col, 45);  // staggered fade + rise (shared helper)
 }
 
@@ -192,106 +196,12 @@ static void glance(lv_obj_t* parent)
     }
 }
 
-// Progress screen: a large ring with the % in the middle.
-static void build_progress(lv_obj_t* parent)
-{
-    load_todo();
-    lv_obj_t* col = frij_page(parent);
-
-    int       sz  = frij_screen_min() * 60 / 100;  // big, on-brand
-    lv_obj_t* arc = frij_progress_ring(col, sz, done_pct(), ACCENT);
-    lv_obj_set_style_arc_width(arc, 12, LV_PART_MAIN);
-    lv_obj_set_style_arc_width(arc, 12, LV_PART_INDICATOR);
-
-    // sweep the fill from 0 to the value on open (skipped under reduce-motion;
-    // the ring is already drawn at done_pct() by frij_progress_ring)
-    if (frij_anim_enabled()) {
-        lv_anim_t sweep;
-        lv_anim_init(&sweep);
-        lv_anim_set_var(&sweep, arc);
-        lv_anim_set_exec_cb(&sweep, frij_anim_exec_arc);
-        lv_anim_set_values(&sweep, 0, done_pct());
-        lv_anim_set_duration(&sweep, FRIJ_ANIM_MS * 2);
-        lv_anim_set_path_cb(&sweep, lv_anim_path_ease_out);
-        lv_anim_start(&sweep);
-    }
-
-    lv_obj_t* inner = frij_col(arc, 2);  // stacked, centered inside the ring
-    lv_obj_center(inner);
-    frij_anim_enter(inner, FRIJ_ANIM_MS / 2);  // fade/rise in as the ring sweeps
-    lv_obj_t* pct = frij_label(inner, "", FRIJ_FONT_DISPLAY, FRIJ_TEXT);
-    lv_obj_t* sub = frij_label(inner, "", FRIJ_FONT_BODY, FRIJ_TEXT_2);
-
-    if (s_n == 0) {
-        lv_label_set_text(pct, "—");
-        lv_label_set_text(sub, "No todos");
-    } else if (done_count() == s_n) {
-        lv_label_set_text(pct, "100%");
-        lv_label_set_text(sub, "All done!");
-        // celebrate: a gentle one-shot pulse of the ring + a success buzz
-        if (frij_anim_enabled()) {
-            lv_obj_set_style_transform_pivot_x(arc, lv_pct(50), LV_PART_MAIN);
-            lv_obj_set_style_transform_pivot_y(arc, lv_pct(50), LV_PART_MAIN);
-            lv_anim_t pulse;
-            lv_anim_init(&pulse);
-            lv_anim_set_var(&pulse, arc);
-            lv_anim_set_exec_cb(&pulse, frij_anim_exec_scale);
-            lv_anim_set_values(&pulse, 256, 280);
-            lv_anim_set_duration(&pulse, 260);
-            lv_anim_set_playback_duration(&pulse, 260);
-            lv_anim_set_delay(&pulse, FRIJ_ANIM_MS);  // after the fill sweep
-            lv_anim_set_path_cb(&pulse, lv_anim_path_ease_in_out);
-            lv_anim_start(&pulse);
-        }
-        frij_haptic(FRIJ_HAPTIC_SUCCESS);
-    } else {
-        lv_label_set_text_fmt(pct, "%d%%", done_pct());
-        lv_label_set_text_fmt(sub, "%d of %d done", done_count(), s_n);
-    }
-}
-
-// Add-by-voice screen: a big mic-style button. Placeholder — no STT yet.
-static void on_add_voice(lv_event_t* e)
-{
-    (void)e;
-    frij_toast("Voice add — coming soon");
-}
-
-static void build_add(lv_obj_t* parent)
-{
-    lv_obj_t* col = frij_page(parent);
-
-    // big accent circle with a dark "+" (amber accent reads better with dark text)
-    lv_obj_t* mic = frij_circle_button(col, 104, ACCENT, "+", FRIJ_FONT_DISPLAY, 0x101216,
-                                       on_add_voice);
-    if (frij_anim_enabled()) {  // gentle breathing — invites the tap
-        lv_anim_t breathe;
-        lv_anim_init(&breathe);
-        lv_anim_set_var(&breathe, mic);
-        lv_anim_set_exec_cb(&breathe, frij_anim_exec_scale);
-        lv_anim_set_values(&breathe, 250, 262);
-        lv_anim_set_duration(&breathe, 900);
-        lv_anim_set_playback_duration(&breathe, 900);
-        lv_anim_set_repeat_count(&breathe, LV_ANIM_REPEAT_INFINITE);
-        lv_anim_set_path_cb(&breathe, lv_anim_path_ease_in_out);
-        lv_anim_start(&breathe);
-    }
-
-    frij_label(col, "Add by voice", FRIJ_FONT_TITLE, FRIJ_TEXT);
-    frij_label(col, "Tap to speak", FRIJ_FONT_BODY, FRIJ_TEXT_2);
-}
-
 static void screen(lv_obj_t* parent, int index)
 {
-    if (index == 0) {
-        frij_store_pull_async(STORE_KEY);
-        load_todo();
-        build_list(parent);
-    } else if (index == 1) {
-        build_progress(parent);
-    } else {
-        build_add(parent);
-    }
+    (void)index;  // single screen: the checklist
+    frij_store_pull_async(STORE_KEY);  // "todo_synced" is stamped by the sync, not here
+    load_todo();
+    build_list(parent);
 }
 
 // Header action: a refresh button on the list screen — pulls the latest from the
@@ -324,6 +234,7 @@ static void td_on_action(int index)
     // Non-blocking: pull in the background (a blocking pull froze gestures and
     // animations for the whole fetch), then rebuild once it has likely landed.
     frij_store_pull_async(STORE_KEY);
+    frij_store_save_int("todo_synced", (int)time(NULL));
     frij_toast("Syncing...");
     lv_timer_t* t = lv_timer_create(td_refresh_cb, 1500, NULL);
     lv_timer_set_repeat_count(t, 1);  // auto-deletes after firing
@@ -331,6 +242,6 @@ static void td_on_action(int index)
 
 const frij_app_t* todo_app(void)
 {
-    static const frij_app_t app = {"Todo", ACCENT, glance, 3, screen, td_action, td_on_action};
+    static const frij_app_t app = {"Todo", ACCENT, glance, 1, screen, td_action, td_on_action};
     return &app;
 }

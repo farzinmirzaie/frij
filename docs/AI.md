@@ -8,17 +8,17 @@ hold Key B ──► system/ai ──HTTPS──► Supabase Edge Function "ask"
   for the mic)                                                       add_todo/add_point
 ```
 
-- **Function**: [`supabase/functions/ask/index.ts`](../supabase/functions/ask/index.ts),
+- **Function**: [`src/packages/supabase/functions/ask/index.ts`](../src/packages/supabase/functions/ask/index.ts),
   deployed to the same project as the store. Accepts `{"q": "<text>"}` now and
   `{"audio": "<base64>", "mime": ...}` for the device's mic later (Gemini takes
   audio natively — no separate STT step).
 - **Tools** the model can call: read events/todos, queue a new todo in
   `store:todo_inbox` (the Keep bridge owns list structure, so adds go through
   an inbox; bridge pickup is a follow-up), bump the scoreboard.
-- **Emulator side**: `src/system/ai.*` — worker-thread text POST (libcurl,
+- **Emulator side**: `src/packages/system/ai.*` — worker-thread text POST (libcurl,
   reusing the store's `.env` config). A random sample question stands in for
   the mic. No cloud → canned answers.
-- **Device side**: `src/system/ai.*` (the `#else` branch) — hold Key B (blue)
+- **Device side**: `src/packages/system/ai.*` (the `#else` branch) — hold Key B (blue)
   to record from the ES8311 mic (M5.Mic, 16 kHz mono, ≤12s) on a FreeRTOS
   task; release wraps it as a WAV, base64-encodes it (PSRAM), and POSTs it to
   the same `ask` function over `WiFiClientSecure` (Gemini transcribes +

@@ -22,4 +22,8 @@ void frij_back(void);
 // wherever the user is. The "take me home" escape hatch.
 void frij_home(void);
 
+// Re-evaluate the open app's header action symbol (show/hide) without a screen
+// change — call when an app's action availability changes (e.g. Wi-Fi off).
+void frij_launcher_refresh_action(void);
+
 #endif  // FRIJ_LAUNCHER_H

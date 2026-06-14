@@ -193,6 +193,16 @@ static void layer_change_cb(int index, void* user)
     frij_header_set_action(s_layer_header, sym);
 }
 
+// Re-query the current screen's action symbol — for when an app's action
+// availability changes without a screen change (e.g. Wi-Fi toggled off hides
+// the rescan button).
+void frij_launcher_refresh_action(void)
+{
+    if (s_active) {
+        layer_change_cb(frij_carousel_index(s_active), NULL);
+    }
+}
+
 // Add the shared header above a layer's content carousel. The header zone stays
 // the dark base color; a small fade strip below it dissolves scrolling rows
 // instead of hard-clipping them; title + icons take the app accent.

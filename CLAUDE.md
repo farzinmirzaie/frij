@@ -4,7 +4,7 @@ A launcher with mini-apps (todos, reminders, lists, photos…) for a **round
 touch display**. Built on LVGL v9 + M5GFX.
 
 **Target-agnostic by design.** Apps are pure LVGL and don't know the board;
-only `src/utility/` is board-specific, so the same apps compile for different
+only `src/packages/platform/` is board-specific, so the same apps compile for different
 hardware. Board details: [docs/HARDWARE.md](docs/HARDWARE.md).
 
 > Favor simple, readable code with comments that explain *why*. No premature
@@ -28,16 +28,23 @@ If `pio` is not on PATH, it ships with the VS Code PlatformIO extension at
 | `src/main.cpp` | Boot: init display + LVGL, call `user_app()` |
 | `src/user_app.cpp` | Entry: register apps + start launcher (thin wiring) |
 | `src/app.h` | App contract (`frij_app_t`: glance + screens) — all a mini-app needs |
-| `src/launcher/` | Nav (4-way finger-follow), registry, Back input — see its README |
-| `src/apps/` | Mini-apps + settings; `apps.cpp` registers them — see its README |
-| `src/ui/` | Shared app-agnostic widgets + motion (`components`, `carousel`, `anim`, `theme`) |
-| `src/core/` | App-agnostic **non-UI** helpers (e.g. `datetime`) — see its README |
-| `src/store/` | Shared key→JSON store (file + Supabase, async) — see its README |
-| `src/system/` | Neutral board-service interfaces (e.g. brightness) — see its README |
-| `src/utility/` | The only board-specific code (LVGL↔M5GFX bridge) — see its README |
-| `bridge/` | Off-device Python sync (Google Keep ⇄ `store:todo`, Google Calendar → `store:events`) + GitHub Actions crons — see its README |
+| `src/apps/` | Mini-apps + settings (**pure UI**); `apps.cpp` registers them — see its README |
+| `src/packages/ui/` | Shared app-agnostic widgets + motion (`components`, `overlays`, `carousel`, `anim`, `theme`, fonts) |
+| `src/packages/data/` | The seam: per-app data/view providers (e.g. `events`) — read store/system, hand apps plain structs |
+| `src/packages/core/` | App-agnostic **non-UI** helpers (e.g. `datetime`) — pure, zero deps |
+| `src/packages/store/` | Shared key→JSON store (file + Supabase, async) — see its README |
+| `src/packages/system/` | Board services (battery, wifi, brightness, haptics, audio, sleep, motion, display, ai) |
+| `src/packages/launcher/` | Nav (4-way finger-follow), registry, Back input — see its README |
+| `src/packages/platform/` | The only board-specific code (LVGL↔M5GFX port, SDL/snapshot mains) |
+| `src/packages/bridge/` | Off-device Python sync (Google Keep ⇄ `store:todo`, Calendar → `store:events`) + GitHub crons |
+| `src/packages/supabase/` | Off-device edge functions (the AI `ask`). NOT compiled into firmware. CLI: `--workdir src/packages/supabase` |
 
-Each `src/*` folder has its own `README.md` with the details.
+**Layering rule:** `apps/` may include `app.h`, `packages/ui`, `packages/core`,
+`packages/data` only — **never** `store`, `system`, `platform`, or the
+off-device packages. The `data/` layer is the seam that talks to services and
+returns plain structs. (Pilot: the Events app + `packages/data/events.*`.)
+
+Each package folder has its own `README.md` with the details.
 | `include/lv_conf.h` | LVGL v9 config (LVGL's `lv_conf.h` template, trimmed) |
 | `support/sdl2_build_extra.py` | SDL2 build helper for the emulator |
 | `platformio.ini` | envs: `emulator_StopWatch` (466 round, LVGL-SDL, default), `device` (WIP) |
@@ -49,8 +56,8 @@ Each `src/*` folder has its own `README.md` with the details.
 - Use LVGL v9 API (`lv_screen_active()`, `lv_color_hex()`, etc.).
 - Round screen: keep key content centered.
 - **Adding an app:** see [src/apps/README.md](src/apps/README.md). Apps include
-  only `app.h`, never launcher code. Shared widgets go in `src/ui/`.
-- **Any new UI pattern must be a reusable `src/ui/` component** (keypad, result
+  only `app.h`, never launcher code. Shared widgets go in `packages/ui/`.
+- **Any new UI pattern must be a reusable `packages/ui/` component** (keypad, result
   screen, icons, logo…), never app-local widget code — other apps will need it.
 
 ## Docs (read + UPDATE these every session)
@@ -61,7 +68,7 @@ Each `src/*` folder has its own `README.md` with the details.
 - [docs/TESTING.md](docs/TESTING.md) — **how to build + visually verify changes (snapshot tool).**
 - [docs/STORAGE.md](docs/STORAGE.md) — cloud setup (Supabase table, env, keys).
 - [docs/AI.md](docs/AI.md) — the assistant pipeline (edge function, Gemini, setup).
-- Per-package detail lives in `src/*/README.md` (launcher, apps, ui, store, utility).
+- Per-package detail lives in each `src/packages/*/README.md` + `src/apps/README.md`.
 - [docs/HARDWARE.md](docs/HARDWARE.md) — board targets + how to add a new one.
 - [docs/SKILLS.md](docs/SKILLS.md) — Claude skills/tools worth using on this stack.
 

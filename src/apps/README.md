@@ -80,8 +80,8 @@ every app shares the look but has its own scheme.
 ## Examples
 
 - `home/` — watch face (time + date), registered first so it's the landing tile. Purple.
-- `todo/` — Keep-synced checklist. 3 screens: list (tap to toggle) / progress
-  (big ring) / add-by-voice (placeholder UI). Glance shows the next item +
+- `todo/` — Keep-synced checklist (single screen: tap a row to toggle, with an
+  "Updated Xm ago" footer; header ↻ pulls). Glance shows a random open item +
   count. Amber.
 - `events/` — countdowns to the family calendar's upcoming events (read-only;
   the `bridge/calendar_to_frij.py` cron mirrors the Google Calendar iCal feeds

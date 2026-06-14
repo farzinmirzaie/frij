@@ -15,6 +15,9 @@
 #include "ui/components.h"
 #include "ui/theme.h"
 
+// loose coupling: the launcher provides this; we don't include launcher.h
+extern void frij_launcher_refresh_action(void);
+
 static void build_about(lv_obj_t* col);  // forward (used by Sync now's refresh)
 static lv_obj_t* s_about_col = NULL;     // the About page, for in-place refresh
 
@@ -340,6 +343,7 @@ static void wifi_master_cb(lv_event_t* e)
     frij_wifi_set_enabled(on);
     frij_store_save_bool("wifi_on", on);  // restored at boot (user_app)
     net_refresh(true);  // radio state changed — scan fresh
+    frij_launcher_refresh_action();  // show/hide the header rescan button
 }
 
 static void build_network(lv_obj_t* col, bool rescan)
@@ -508,10 +512,11 @@ static void screen(lv_obj_t* parent, int index)
     }
 }
 
-// Header action: a rescan button on the Network screen.
+// Header action: a rescan button on the Network screen — but only while Wi-Fi
+// is on (nothing to scan when the radio is off).
 static const char* st_action(int index)
 {
-    return index == 1 ? LV_SYMBOL_REFRESH : NULL;
+    return (index == 1 && frij_wifi_enabled()) ? LV_SYMBOL_REFRESH : NULL;
 }
 
 static void st_on_action(int index)

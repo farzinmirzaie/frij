@@ -18,8 +18,8 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-      - run: pip install -r bridge/requirements.txt
-      - run: python bridge/calendar_to_frij.py
+      - run: pip install -r src/packages/bridge/requirements.txt
+      - run: python src/packages/bridge/calendar_to_frij.py
         env:
           FRIJ_ICS_URL: ${{ secrets.FRIJ_ICS_URL }}
           # Optional public-holidays feed (e.g. Google's Malaysia holidays

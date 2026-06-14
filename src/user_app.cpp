@@ -14,7 +14,7 @@
 #include "system/sleep.h"
 #include "system/wifi.h"
 #include "ui/anim.h"
-#include "utility/lvgl_port_m5stack.hpp"
+#include "platform/lvgl_port_m5stack.hpp"
 
 // The cloud-synced keys: pulled at boot and on the periodic auto-sync tick.
 static void pull_synced_keys(void)
@@ -24,6 +24,10 @@ static void pull_synced_keys(void)
     frij_store_pull_async("counter");
     frij_store_pull_async("sb_a");
     frij_store_pull_async("sb_b");
+    // Stamp when the todo list was last synced, for its "Updated Xm ago"
+    // footer. Done here (the real sync points) not on screen-open, so the
+    // footer actually ages instead of always reading "just now".
+    frij_store_save_int("todo_synced", (int)time(NULL));
 }
 
 // Auto-sync: periodically pull the cloud-synced keys while the setting is on

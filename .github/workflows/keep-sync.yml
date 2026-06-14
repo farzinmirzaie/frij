@@ -17,8 +17,8 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-      - run: pip install -r bridge/requirements.txt
-      - run: python bridge/keep_to_frij.py
+      - run: pip install -r src/packages/bridge/requirements.txt
+      - run: python src/packages/bridge/keep_to_frij.py
         env:
           GKEEP_EMAIL: ${{ secrets.GKEEP_EMAIL }}
           GKEEP_MASTER_TOKEN: ${{ secrets.GKEEP_MASTER_TOKEN }}
