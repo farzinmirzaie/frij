@@ -13,4 +13,9 @@ void frij_sleep_init(void);
 // screen must stay on. Counts as activity, so the dim warning resets too.
 void frij_sleep_inhibit(bool on);
 
+// True while the panel is asleep (the black shade is up). The button handler
+// uses this to wake-only: a press while asleep wakes the screen instead of
+// firing its action.
+bool frij_sleep_active(void);
+
 #endif  // FRIJ_SLEEP_H

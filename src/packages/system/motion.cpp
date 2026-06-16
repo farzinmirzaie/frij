@@ -31,7 +31,16 @@ void frij_motion_init(void)
 
 void frij_motion_update(void)
 {
-    if (!frij_store_load_bool("raisewake", true)) {
+    // The "raisewake" setting is cached and re-read at most once a second — this
+    // runs every ~5ms loop, so reading the file each call would hammer LittleFS.
+    static bool     enabled   = true;
+    static uint32_t last_read = 0;
+    uint32_t        now       = lv_tick_get();
+    if (last_read == 0 || now - last_read >= 1000) {
+        enabled   = frij_store_load_bool("raisewake", true);
+        last_read = now ? now : 1;
+    }
+    if (!enabled) {
         s_face_up = true;  // disabled: don't fire when re-enabled until next rise
         return;
     }

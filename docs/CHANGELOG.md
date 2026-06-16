@@ -2,6 +2,16 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-16 — Wake: raise-to-wake fix + G1/G2 button wake
+
+- **Raise-to-wake now runs on device.** The loop returned before
+  `frij_motion_update()` in the iso path, so the IMU was never polled — moved the
+  poll above that branch. The `raisewake` setting is now cached (re-read ≤1×/s)
+  instead of read from the filesystem every ~5 ms loop.
+- **G1/G2 wake the panel.** A Key A/B press while asleep wakes the screen and is
+  swallowed (it doesn't also fire Back/PTT); once both buttons are up the next
+  press acts normally. (Touch already woke via LVGL's inactivity timer.)
+
 ## 2026-06-16 — Reduce-motion: overlays snap when Animations off
 
 - The "Animations" setting now also covers overlay open/close. A dialog's

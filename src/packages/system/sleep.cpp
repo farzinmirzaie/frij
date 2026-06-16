@@ -39,6 +39,11 @@ void frij_sleep_inhibit(bool on)
     s_inhibit = on;
 }
 
+bool frij_sleep_active(void)
+{
+    return s_asleep;
+}
+
 static void wake_ramp_exec(void* o, int32_t v)
 {
     (void)o;
