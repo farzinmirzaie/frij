@@ -2,6 +2,16 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-16 — Device store cache on LittleFS (Events/Todo sync)
+
+- The device store backend now caches each key in a **LittleFS** file (`/<key>`)
+  instead of NVS. NVS's ~20 KB partition caps a value at ~4 KB, so the ~3 KB
+  events blob failed to write (`NOT_ENOUGH_SPACE`) and Events stayed empty;
+  LittleFS uses the 3.5 MB data partition with no per-blob ceiling.
+- Supabase GET/upsert run on one serialized worker task (TLS off the UI thread,
+  never two sessions at once); the cache is guarded by a mutex since the worker
+  and UI both touch the filesystem.
+
 ## 2026-06-16 — Buttons + audio wiring, debug overlay
 
 On-hardware bring-up (M5Stack StopWatch):

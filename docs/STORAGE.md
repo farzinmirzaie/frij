@@ -64,8 +64,8 @@ realtime: it rides the ~10-min cron.
 1. **Local store:** API + emulator file backend. ✅
 2. **Emulator ↔ Supabase:** libcurl backend, `.env` config, file cache. ✅
    (Requires the `store` table — see Setup.)
-3. **Device + cloud:** Supabase over `WiFiClientSecure`, NVS/LittleFS cache,
-   async + offline queue.
+3. **Device + cloud:** Supabase over `WiFiClientSecure`, LittleFS file cache, on
+   a serialized background worker. ✅ (Offline replay queue still TODO — below.)
 4. **Web app:** reads/writes the same rows via the Supabase JS client.
 
 ## Things to get right later (device phase)

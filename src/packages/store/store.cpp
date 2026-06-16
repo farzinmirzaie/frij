@@ -267,45 +267,263 @@ bool frij_store_cloud_config(char* url, size_t url_n, char* key, size_t key_n)
 
 #else
 // ============================================================================
-// Device backend: TODO — Supabase over WiFiClientSecure + NVS/LittleFS cache,
-// the network calls dispatched to a FreeRTOS task (same "never block UI" rule).
+// Device backend: LittleFS file cache + Supabase over WiFiClientSecure.
+//
+//   load() : reads the file cache (fast, no network)
+//   save() : writes the cache, then queues a cloud upsert
+//   pull_async() : queues a cloud GET that refreshes the cache
+//
+// All network runs on ONE serialized worker task (a queue of ops), so TLS never
+// touches the LVGL thread and there's never two TLS sessions (RAM) at once.
+//
+// Why a filesystem, not NVS: NVS lives in a tiny 20 KB partition and caps a
+// single value at ~4 KB — the 3 KB events blob blew it up (NOT_ENOUGH_SPACE),
+// so events never cached. LittleFS uses the 3.5 MB data partition and has no
+// per-blob ceiling, mirroring the emulator's file backend.
 // ============================================================================
-void frij_store_init(void) {}
+#include <Arduino.h>
+#include <HTTPClient.h>
+#include <LittleFS.h>
+#include <WiFi.h>
+#include <WiFiClientSecure.h>
+#include <ArduinoJson.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/queue.h>
+#include <freertos/semphr.h>
+#include <freertos/task.h>
+
+#define STORE_TABLE "store"  // Supabase table (matches the bridge default)
+
+static QueueHandle_t     s_q      = NULL;
+// LittleFS is NOT reentrant: the network worker writes the cache while the LVGL
+// thread reads/writes it. Serialize every filesystem touch through this mutex.
+static SemaphoreHandle_t s_fs_mtx = NULL;
+
+// Cache file path for a key: "/<key>" in LittleFS (keys are short slugs).
+static void store_path(const char* key, char* out, size_t n)
+{
+    snprintf(out, n, "/%s", key);
+}
+
+// Write text to the cache file. Caller MUST hold s_fs_mtx.
+static bool fs_write(const char* key, const char* text, size_t len)
+{
+    char path[64];
+    store_path(key, path, sizeof(path));
+    File f = LittleFS.open(path, "w");
+    if (!f) {
+        return false;
+    }
+    size_t w = f.write((const uint8_t*)text, len);
+    f.close();
+    return w == len;
+}
+
+// A queued network op: a pull (json == NULL) or a push (json = heap-owned body).
+typedef struct {
+    bool  push;
+    char  key[24];
+    char* json;
+} store_op_t;
+
+// Worker-thread only (TLS is stack/heap heavy + blocks). GET the row, write the
+// value text into the file cache.
+static bool fetch_to_cache(const char* key)
+{
+    if (WiFi.status() != WL_CONNECTED) {
+        log_d("[store] fetch %s: not connected (status=%d)", key, WiFi.status());
+        return false;
+    }
+    char url[160], anon[512];
+    if (!frij_store_cloud_config(url, sizeof(url), anon, sizeof(anon))) {
+        log_d("[store] fetch %s: no cloud config (creds not baked)", key);
+        return false;
+    }
+    WiFiClientSecure client;
+    client.setInsecure();  // TODO: pin the Supabase cert
+    HTTPClient https;
+    String full = String(url) + "/rest/v1/" STORE_TABLE "?key=eq." + key + "&select=value";
+    if (!https.begin(client, full)) {
+        log_d("[store] fetch %s: https.begin failed (%s)", key, full.c_str());
+        return false;
+    }
+    https.addHeader("apikey", anon);
+    https.addHeader("Authorization", String("Bearer ") + anon);
+    int code = https.GET();
+    if (code != 200) {
+        log_d("[store] fetch %s: HTTP %d", key, code);
+        https.end();
+        return false;
+    }
+    String payload = https.getString();
+    https.end();
+    log_d("[store] fetch %s: HTTP 200, %d bytes", key, (int)payload.length());
+
+    JsonDocument doc;
+    DeserializationError jerr = deserializeJson(doc, payload);
+    if (jerr != DeserializationError::Ok) {
+        log_d("[store] fetch %s: JSON parse failed (%s)", key, jerr.c_str());
+        return false;
+    }
+    if (!doc.is<JsonArray>() || doc.size() == 0) {
+        log_d("[store] fetch %s: empty/!array (size=%d)", key, (int)doc.size());
+        return false;
+    }
+    JsonVariant v = doc[0]["value"];
+    if (v.isNull()) {
+        log_d("[store] fetch %s: value null", key);
+        return false;
+    }
+    String text;
+    serializeJson(v, text);
+
+    if (s_fs_mtx) {
+        xSemaphoreTake(s_fs_mtx, portMAX_DELAY);
+    }
+    bool ok = fs_write(key, text.c_str(), text.length());
+    if (s_fs_mtx) {
+        xSemaphoreGive(s_fs_mtx);
+    }
+    log_d("[store] fetch %s: cached %d bytes to LittleFS (%s)", key, (int)text.length(),
+          ok ? "ok" : "WRITE FAILED");
+    return ok;
+}
+
+// Worker-thread only. Upsert the row.
+static void push_body(const char* key, const char* json)
+{
+    if (WiFi.status() != WL_CONNECTED) {
+        return;
+    }
+    char url[160], anon[512];
+    if (!frij_store_cloud_config(url, sizeof(url), anon, sizeof(anon))) {
+        return;
+    }
+    WiFiClientSecure client;
+    client.setInsecure();
+    HTTPClient https;
+    String full = String(url) + "/rest/v1/" STORE_TABLE "?on_conflict=key";
+    if (!https.begin(client, full)) {
+        return;
+    }
+    https.addHeader("apikey", anon);
+    https.addHeader("Authorization", String("Bearer ") + anon);
+    https.addHeader("Content-Type", "application/json");
+    https.addHeader("Prefer", "resolution=merge-duplicates,return=minimal");
+    String body = String("{\"key\":\"") + key + "\",\"value\":" + json + "}";
+    https.POST(body);
+    https.end();
+}
+
+static void store_worker(void* arg)
+{
+    (void)arg;
+    store_op_t* op = NULL;
+    for (;;) {
+        if (xQueueReceive(s_q, &op, portMAX_DELAY) == pdTRUE && op) {
+            if (op->push) {
+                push_body(op->key, op->json ? op->json : "null");
+            } else {
+                fetch_to_cache(op->key);
+            }
+            free(op->json);
+            free(op);
+            // Breathe between ops. Each TLS handshake briefly spikes internal
+            // DMA-capable RAM; back-to-back ops (the 5-key boot pull) once
+            // collided with a panel flush and starved getDMABuffer -> crash.
+            // A gap lets the render task grab its DMA buffer between sessions.
+            vTaskDelay(pdMS_TO_TICKS(150));
+        }
+    }
+}
+
+static void enqueue(bool push, const char* key, char* json)
+{
+    if (!s_q) {
+        free(json);
+        return;
+    }
+    store_op_t* op = (store_op_t*)malloc(sizeof(store_op_t));
+    if (!op) {
+        free(json);
+        return;
+    }
+    op->push = push;
+    strncpy(op->key, key, sizeof(op->key) - 1);
+    op->key[sizeof(op->key) - 1] = '\0';
+    op->json = json;
+    if (xQueueSend(s_q, &op, 0) != pdTRUE) {  // queue full -> drop the op
+        free(op->json);
+        free(op);
+    }
+}
+
+void frij_store_init(void)
+{
+    s_fs_mtx = xSemaphoreCreateMutex();
+    LittleFS.begin(/*formatOnFail=*/true);  // mounts the data partition; formats once on first boot
+    s_q = xQueueCreate(8, sizeof(store_op_t*));
+    // 12 KB stack: WiFiClientSecure's TLS handshake is stack-hungry.
+    xTaskCreate(store_worker, "frijstore", 12288, NULL, 1, NULL);
+}
 
 bool frij_store_load(const char* key, char* buf, size_t buf_size)
 {
-    (void)key;
-    (void)buf;
-    (void)buf_size;
-    return false;
+    if (s_fs_mtx) {
+        xSemaphoreTake(s_fs_mtx, portMAX_DELAY);
+    }
+    char path[64];
+    store_path(key, path, sizeof(path));
+    size_t n = 0;
+    File   f = LittleFS.open(path, "r");
+    if (f) {
+        n      = f.readBytes(buf, buf_size - 1);
+        buf[n] = '\0';
+        f.close();
+    }
+    if (s_fs_mtx) {
+        xSemaphoreGive(s_fs_mtx);
+    }
+    return n > 0;
 }
 
 bool frij_store_save(const char* key, const char* json)
 {
-    (void)key;
-    (void)json;
-    return false;
+    if (s_fs_mtx) {
+        xSemaphoreTake(s_fs_mtx, portMAX_DELAY);
+    }
+    bool ok = fs_write(key, json, strlen(json));
+    if (s_fs_mtx) {
+        xSemaphoreGive(s_fs_mtx);
+    }
+    enqueue(true, key, strdup(json));  // best-effort cloud upsert
+    return ok;
 }
 
 bool frij_store_pull(const char* key)
 {
-    (void)key;
-    return false;
+    return fetch_to_cache(key);  // blocking — callers use pull_async on the UI
 }
 
 void frij_store_pull_async(const char* key)
 {
-    (void)key;
+    enqueue(false, key, NULL);
 }
 
-void frij_store_clear(void) {}  // device: TODO — erase NVS/LittleFS namespace
+void frij_store_clear(void)
+{
+    if (s_fs_mtx) {
+        xSemaphoreTake(s_fs_mtx, portMAX_DELAY);
+    }
+    LittleFS.format();  // wipe the whole cache (erase-all-data); FS stays mounted
+    if (s_fs_mtx) {
+        xSemaphoreGive(s_fs_mtx);
+    }
+}
 
 bool frij_store_cloud_config(char* url, size_t url_n, char* key, size_t key_n)
 {
-    // The store backend itself is still a device TODO, but the Supabase
-    // project + anon key can be baked in at build time (platformio device env
-    // pulls them from the environment) so the AI service can reach the cloud.
-    // Defined => return them; undefined => unavailable (AI falls back to mock).
+    // Baked in at build time (platformio device env pulls them from the shell).
 #if defined(FRIJ_SUPABASE_URL) && defined(FRIJ_SUPABASE_ANON_KEY)
     snprintf(url, url_n, "%s", FRIJ_SUPABASE_URL);
     snprintf(key, key_n, "%s", FRIJ_SUPABASE_ANON_KEY);

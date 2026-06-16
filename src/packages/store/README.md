@@ -25,8 +25,10 @@ Key = app name; one JSON blob per app. Apps choose their own serialization
 
 - **Emulator:** local files `.frij_store/<key>.json` **and** Supabase over HTTPS
   (libcurl). Config is read from `.env`.
-- **Device:** TODO — Supabase over `WiFiClientSecure`, an NVS/LittleFS cache,
-  async + an offline queue.
+- **Device:** Supabase over `WiFiClientSecure` (TLS) with a **LittleFS** file
+  cache (`/<key>`), driven by a single serialized worker task so TLS never runs
+  on the UI thread or overlaps another session. (NVS was too small — its ~20 KB
+  partition caps a value at ~4 KB, which the events blob overflowed.)
 
 ## Notes
 
