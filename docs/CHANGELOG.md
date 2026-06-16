@@ -2,6 +2,13 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-16 — Reduce-motion: overlays snap when Animations off
+
+- The "Animations" setting now also covers overlay open/close. A dialog's
+  close fade and a toast's fade in/out snap instantly when Animations is off
+  (the entrance + rise were already gated). Done by zeroing the fade duration,
+  so the cleanup/dismiss callbacks still fire.
+
 ## 2026-06-16 — Device store cache on LittleFS (Events/Todo sync)
 
 - The device store backend now caches each key in a **LittleFS** file (`/<key>`)
