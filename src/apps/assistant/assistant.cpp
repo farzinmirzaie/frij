@@ -359,7 +359,7 @@ static void glance(lv_obj_t* parent)
     lv_obj_set_style_margin_top(title, FRIJ_SP_M, LV_PART_MAIN);
     // honest hint: if the cloud isn't set up, point at Settings instead of
     // promising an answer the button can't give
-    frij_label(col, frij_ai_available() ? "Hold the blue button to ask"
+    frij_label(col, frij_ai_available() ? "Hold the yellow button to ask"
                                         : "Set up Frij AI in Settings",
                FRIJ_FONT_BODY, FRIJ_TEXT_2);
 }
@@ -386,7 +386,7 @@ static void on_history_tap(lv_event_t* e)
 static void build_history(lv_obj_t* col)
 {
     if (s_hist_n == 0) {
-        frij_empty_state(col, "No questions yet", "Hold the blue button\nto ask something");
+        frij_empty_state(col, "No questions yet", "Hold the yellow button\nto ask something");
         return;
     }
     frij_section_label(col, "Recent");

@@ -333,7 +333,9 @@ static void capture_task(void*)
         s_pcm_n += chunk;
     }
     M5.Mic.end();
-    M5.Speaker.begin();  // hand the bus back for click/tone feedback
+    // Leave the speaker OFF (it hisses when idle); frij_audio_* re-begins it
+    // on demand for a tone. Re-begin here would resume the white noise.
+    M5.Speaker.end();
 
     if (s_cancelled.load()) {
         // backed out — drop the clip, don't call the cloud

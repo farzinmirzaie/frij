@@ -15,6 +15,11 @@ int frij_screen_min(void);
 // below). One source of truth for the launcher and the snapshot harness.
 int frij_header_zone(void);
 
+// Show/hide LVGL's built-in FPS/CPU performance overlay (the Settings "debug"
+// toggle). No-op if the perf monitor isn't compiled in.
+void frij_debug_overlay_set(bool on);
+bool frij_debug_overlay_get(void);  // current overlay state (live, not the store)
+
 // Give any object a light haptic tap when pressed (used by the components;
 // apps can call it on their own custom widgets).
 void frij_haptic_attach(lv_obj_t* obj);

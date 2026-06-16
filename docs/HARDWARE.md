@@ -27,7 +27,7 @@ ESP32-S3 round-display dev kit. Source: M5Stack docs
 - **Buttons:** Key A = **G2**, Key B = **G1**, plus a separate power button.
 - **IMU:** BMI270 (I2C 0x68).  **RTC:** RX8130CE (0x32).
 - **Audio:** ES8311 codec + AW8737A amp (I2S G18/G17/G16/G15/G21). Mic input
-  drives **Frij AI** push-to-talk (`M5.Mic` → `system/ai`, hold Key B).
+  drives **Frij AI** push-to-talk (`M5.Mic` → `system/ai`, hold Key A / G2).
 - **Power:** 450mAh battery, M5PM1 PMIC (I2C), USB-C.
 - Shared I2C bus (G47/G48): touch, IMU, RTC, PMIC, IO expander.
 
@@ -56,7 +56,7 @@ lib_deps =
 - Init the M5IOE1 expander and release the panel reset before/around `gfx.init()`
   (M5Unified's board init handles this — easiest path is to let M5Unified bring
   the board up, then hand the display to our LVGL port).
-- Map Back to **G2** (Key A); the second button (G1) is free for later.
+- Map AI push-to-talk to **G2** (Key A); Back to **G1** (Key B).
 - Buttons + IMU come from M5Unified (`M5.update()`, `M5.BtnA`, `M5.Imu`).
 
 ## Map of which buttons/keys Frij uses
@@ -64,14 +64,12 @@ lib_deps =
 The board has three buttons: **Key A (G2)**, **Key B (G1)**, and the **power
 button**.
 
-- **Back** → Key A (G2, **yellow**): short press = back one layer; **hold
-  (600ms) = jump to the watch face**. Emulator: Backspace or Esc
-  (`src/launcher/input.*`); device bring-up maps this to `M5.BtnA`
-  (`wasReleased` short / `pressedFor(600)` hold).
-- **Key B (G1, blue)** — **push-to-talk for Frij AI**, hold-gated: held 350ms =
-  listening overlay, release = ask; a stray tap does nothing. Emulator: Space.
-  Device bring-up: `M5.BtnB.pressedFor(350)` -> `frij_assistant_ptt(true)`,
-  release -> `frij_assistant_ptt(false)`.
+- **Key A (G2, yellow)** — **push-to-talk for Frij AI**: hold to record, release
+  to ask; a stray tap does nothing. Emulator: Space. Device: `M5.BtnA` →
+  `frij_assistant_ptt(true)` on press, `(false)` on release.
+- **Back** → Key B (G1, **blue**): short press = back one layer; **hold (600ms) =
+  jump to the watch face**. Emulator: Backspace or Esc (`src/launcher/input.*`);
+  device maps this to `M5.BtnB` (`wasReleased` short / `wasHold` = home).
 - **Power button** — wired to the M5PM1 PMIC, works **out of the box** in
   hardware: short press = power on/reset, **double press = power off** (per the
   official docs). No firmware needed. (Later, firmware *can* subscribe to

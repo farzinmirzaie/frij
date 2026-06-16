@@ -122,6 +122,15 @@ static void on_touch_sfx(lv_event_t* e)
     frij_store_save_bool("touchsfx", on);
 }
 
+// Debug overlay: toggles LVGL's built-in FPS/CPU performance monitor (centered).
+static void on_debug(lv_event_t* e)
+{
+    lv_obj_t* sw = (lv_obj_t*)lv_event_get_target(e);
+    bool      on = lv_obj_has_state(sw, LV_STATE_CHECKED);
+    frij_store_save_bool("debug", on);
+    frij_debug_overlay_set(on);
+}
+
 static void on_sync_now(lv_event_t* e)
 {
     (void)e;
@@ -557,6 +566,12 @@ static void build_about(lv_obj_t* col)
     lv_obj_set_flex_grow(slbl, 1);
     frij_label(srow, sbuf, FRIJ_FONT_BODY, FRIJ_TEXT_2);
     lv_obj_add_event_cb(srow, on_sync_now, LV_EVENT_CLICKED, NULL);
+
+    frij_section_label(col, "Debug");
+    // Build from the LIVE overlay state, not the store: the device store doesn't
+    // persist yet, so reading it showed the toggle off while the overlay was on.
+    lv_obj_t* dsw = frij_toggle_row(col, "Performance overlay", frij_debug_overlay_get(), ACCENT);
+    lv_obj_add_event_cb(dsw, on_debug, LV_EVENT_VALUE_CHANGED, NULL);
 
     frij_action_row(col, "Reset settings", on_reset);
     frij_action_row(col, "Erase all data", on_erase);

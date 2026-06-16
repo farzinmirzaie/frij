@@ -7,7 +7,7 @@
 #include "system/haptics.h"
 #include "theme.h"
 
-static void on_press_haptic(lv_event_t* e)
+static void on_tap_feedback(lv_event_t* e)
 {
     (void)e;
     frij_haptic(FRIJ_HAPTIC_TAP);
@@ -49,6 +49,28 @@ int frij_header_zone(void)
     return frij_screen_min() * 19 / 100;
 }
 
+static bool s_debug_overlay = false;
+
+void frij_debug_overlay_set(bool on)
+{
+    s_debug_overlay = on;
+#if LV_USE_PERF_MONITOR
+    lv_display_t* d = lv_display_get_default();
+    if (on) {
+        lv_sysmon_show_performance(d);
+    } else {
+        lv_sysmon_hide_performance(d);
+    }
+#else
+    (void)on;
+#endif
+}
+
+bool frij_debug_overlay_get(void)
+{
+    return s_debug_overlay;
+}
+
 void frij_apply_bg(lv_obj_t* obj)
 {
     // pure black, no gradient: pixels switch fully off on the AMOLED panel and
@@ -84,7 +106,10 @@ lv_obj_t* frij_round_mask(lv_obj_t* parent, uint32_t color)
 
 void frij_haptic_attach(lv_obj_t* obj)
 {
-    lv_obj_add_event_cb(obj, on_press_haptic, LV_EVENT_PRESSED, NULL);
+    // CLICKED, not PRESSED: fire on touch-UP of a real tap. LVGL suppresses
+    // CLICKED when the press turns into a scroll, so dragging a list no longer
+    // buzzes/clicks on every row it touches.
+    lv_obj_add_event_cb(obj, on_tap_feedback, LV_EVENT_CLICKED, NULL);
 }
 
 static void bar_h_exec(void* o, int32_t v)

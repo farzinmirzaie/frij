@@ -2,6 +2,23 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-16 — Buttons + audio wiring, debug overlay
+
+On-hardware bring-up (M5Stack StopWatch):
+
+- **Physical buttons.** Key A (G2, yellow) = Frij AI push-to-talk; Key B (G1,
+  blue) = Back (tap) / home (hold). Both echo on-screen tap feedback — haptic on
+  press, plus the click tone on Back (Key A hands the I2S bus to the mic, so no
+  tone there).
+- **Speaker idle hiss fixed.** The ES8311 amp is powered down at boot and after
+  recording; tones re-begin on demand (`main.cpp`, `audio.cpp`, `ai.cpp`).
+- **Touch feedback** fires on `LV_EVENT_CLICKED` (tap-up), not `PRESSED`, so
+  scrolling a list no longer buzzes on every row.
+- **Panel DMA** turned on — M5GFX leaves the StopWatch QSPI bus with DMA off, so
+  full-screen redraws were a CPU byte-bang (`main.cpp`).
+- **Debug performance overlay** — a Settings ▸ About ▸ Debug toggle shows LVGL's
+  FPS/CPU monitor (centered for the round screen).
+
 ## 2026-06-16 — Battery + Storage: accurate device readings
 
 - **Battery charge flag debounced.** The PMIC flag flickers near a full charge; a
