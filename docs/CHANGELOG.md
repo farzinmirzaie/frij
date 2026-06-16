@@ -2,6 +2,22 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-16 — Wi-Fi: stay connected across scans, auto-connect, off-thread
+
+On-hardware fixes (M5Stack StopWatch):
+
+- **Scan no longer drops the connection.** `frij_wifi_scan` used to call
+  `WiFi.disconnect()` before every scan; re-opening the Network screen (which
+  rescans) tore down the live link. The ESP32 scans fine while connected, so the
+  disconnect is gone — the connection now survives navigating around.
+- **Auto-connect + auto-reconnect.** Enabling Wi-Fi (incl. at boot) joins the
+  saved network fire-and-forget and sets `setAutoReconnect(true)`, so a dropped
+  link comes back on its own. The emulator mock auto-connects to a known network.
+- **Async scan/connect.** Both run on a short-lived worker task off the LVGL
+  thread (`scan_start`/`scan_poll`, `connect_start`/`connect_poll`); the Network
+  screen shows a "Scanning…/Connecting…" state and a poll timer reflects the
+  result, so a join no longer freezes the UI for seconds.
+
 ## 2026-06-14 — keep bridge: multiple notes (GKEEP_NOTE_*)
 
 - `keep_to_frij.py` now syncs **any number of Keep notes** instead of one: each

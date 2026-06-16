@@ -217,6 +217,14 @@ typedef enum { NET_NEW, NET_SAVED, NET_CONNECTED } net_kind_t;
 static char       s_sel[FRIJ_WIFI_SSID_MAX];  // the network the action sheet acts on
 static net_kind_t s_sel_kind = NET_NEW;
 
+// Async Wi-Fi state: scan + connect run off the LVGL thread (they used to block
+// it for seconds), and a poll timer reflects the result when ready.
+static bool        s_net_scanning = false;
+static bool        s_connecting   = false;
+static bool        s_conn_via_pw  = false;  // connect started from the password keypad
+static char        s_conn_ssid_ui[FRIJ_WIFI_SSID_MAX];
+static lv_timer_t* s_net_poll = NULL;
+
 static void build_network(lv_obj_t* col, bool rescan);
 
 // Clear the cached Network page pointer when its page is destroyed.
@@ -224,6 +232,14 @@ static void on_net_deleted(lv_event_t* e)
 {
     if (s_net_col == lv_event_get_target(e)) {
         s_net_col = NULL;
+        // Leaving the screen: stop polling. Any in-flight connect still finishes
+        // in the background; we just won't pop a result over another screen.
+        s_net_scanning = false;
+        s_connecting   = false;
+        if (s_net_poll) {
+            lv_timer_delete(s_net_poll);
+            s_net_poll = NULL;
+        }
     }
 }
 
@@ -262,6 +278,60 @@ static void scan_mark_connected(const char* ssid)  // NULL = nothing connected
     }
 }
 
+// Poll the async scan/connect and reflect results when ready. Self-stops when
+// nothing is pending.
+static void net_poll_cb(lv_timer_t* t)
+{
+    if (s_net_scanning) {
+        int n = frij_wifi_scan_poll(s_scan, (int)(sizeof(s_scan) / sizeof(s_scan[0])));
+        if (n >= 0) {  // scan finished
+            s_scan_n       = n;
+            s_net_scanning = false;
+            net_refresh(false);  // swap the spinner for the list
+        }
+    }
+    if (s_connecting) {
+        frij_wifi_state_t st = frij_wifi_connect_poll();
+        if (st != FRIJ_WIFI_CONNECTING) {
+            s_connecting = false;
+            bool ok      = (st == FRIJ_WIFI_CONNECTED);
+            if (ok) {
+                scan_mark_connected(s_conn_ssid_ui);
+            }
+            frij_haptic(ok ? FRIJ_HAPTIC_SUCCESS : FRIJ_HAPTIC_TAP);
+            net_refresh(false);
+            if (s_conn_via_pw) {
+                frij_result_screen(ok, ok ? "Connected" : "Couldn't connect", s_conn_ssid_ui,
+                                   ok ? "Done" : "Close");
+            } else {
+                char msg[64];
+                lv_snprintf(msg, sizeof(msg), ok ? "Connected to %s" : "Couldn't connect",
+                            s_conn_ssid_ui);
+                frij_toast_status(msg, ok);
+            }
+        }
+    }
+    if (!s_net_scanning && !s_connecting) {
+        lv_timer_delete(t);
+        s_net_poll = NULL;
+    }
+}
+
+static void net_poll_ensure(void)
+{
+    if (!s_net_poll) {
+        s_net_poll = lv_timer_create(net_poll_cb, 150, NULL);
+    }
+}
+
+// Kick a background scan (non-blocking) and show the spinner until it lands.
+static void net_scan_start(void)
+{
+    frij_wifi_scan_start();
+    s_net_scanning = true;
+    net_poll_ensure();
+}
+
 static void net_action_cb(int opt, void* user)
 {
     (void)user;
@@ -280,12 +350,16 @@ static void net_action_cb(int opt, void* user)
         frij_wifi_disconnect();
         scan_mark_connected(NULL);
         lv_snprintf(msg, sizeof(msg), "Disconnected");
-    } else {  // Connect with saved/no credentials
-        ok = frij_wifi_connect(s_sel, NULL);
-        if (ok) {
-            scan_mark_connected(s_sel);
-        }
-        lv_snprintf(msg, sizeof(msg), ok ? "Connected to %s" : "Couldn't connect", s_sel);
+    } else {  // Connect with saved/no credentials — async, result via the poll
+        strncpy(s_conn_ssid_ui, s_sel, sizeof(s_conn_ssid_ui) - 1);
+        s_conn_ssid_ui[sizeof(s_conn_ssid_ui) - 1] = '\0';
+        s_conn_via_pw = false;
+        frij_wifi_connect_start(s_sel, NULL);
+        s_connecting = true;
+        net_poll_ensure();
+        frij_haptic(FRIJ_HAPTIC_SELECT);
+        frij_toast("Connecting...");
+        return;  // toast with the outcome comes from net_poll_cb
     }
     frij_haptic(FRIJ_HAPTIC_SELECT);
     net_refresh(false);  // statuses updated locally — no blocking radio rescan
@@ -297,13 +371,15 @@ static void net_action_cb(int opt, void* user)
 static void wifi_pw_done(const char* pw, void* user)
 {
     (void)user;
-    bool ok = frij_wifi_connect(s_sel, pw);
-    if (ok) {
-        scan_mark_connected(s_sel);
-    }
-    frij_haptic(ok ? FRIJ_HAPTIC_SUCCESS : FRIJ_HAPTIC_TAP);
-    net_refresh(false);
-    frij_result_screen(ok, ok ? "Connected" : "Couldn't connect", s_sel, ok ? "Done" : "Close");
+    // Async connect — the keypad closes, a "Connecting..." toast shows, and the
+    // poll delivers the full-screen result. (Used to block ~8s and freeze the UI.)
+    strncpy(s_conn_ssid_ui, s_sel, sizeof(s_conn_ssid_ui) - 1);
+    s_conn_ssid_ui[sizeof(s_conn_ssid_ui) - 1] = '\0';
+    s_conn_via_pw = true;
+    frij_wifi_connect_start(s_sel, pw);
+    s_connecting = true;
+    net_poll_ensure();
+    frij_toast("Connecting...");
 }
 
 static void net_row_cb(lv_event_t* e)
@@ -353,6 +429,7 @@ static void build_network(lv_obj_t* col, bool rescan)
     lv_obj_t* sw = frij_toggle_row(col, "Wi-Fi", on, ACCENT);
     lv_obj_add_event_cb(sw, wifi_master_cb, LV_EVENT_VALUE_CHANGED, NULL);
     if (!on) {
+        s_net_scanning = false;  // radio off — nothing to scan
         // radio off: toggle stays pinned at the top; float the hint at the
         // screen's center (FLOATING so it ignores the top-pinned flex flow).
         lv_obj_t* hint = frij_empty_state(col, "Wi-Fi is off",
@@ -365,13 +442,24 @@ static void build_network(lv_obj_t* col, bool rescan)
 
     frij_section_label(col, "Networks");  // grouped-list heading, like Display/Sound
 
-    // Visible networks; tap one for Connect / Disconnect / Forget. Only hit the
-    // radio when asked — row actions reuse the cached scan.
-    if (rescan || s_scan_n == 0) {
-        s_scan_n = frij_wifi_scan(s_scan, (int)(sizeof(s_scan) / sizeof(s_scan[0])));
+    // Kick a background scan when asked (refresh / radio just turned on) or when
+    // we have nothing cached yet. It runs off-thread — no UI freeze.
+    if (rescan || (s_scan_n == 0 && !s_net_scanning)) {
+        net_scan_start();
+    }
+    if (s_net_scanning) {  // scan in flight — spinner until net_poll_cb lands it
+        lv_obj_t* hint = frij_empty_state(col, "Scanning...", "Looking for\nnearby networks");
+        lv_obj_add_flag(hint, LV_OBJ_FLAG_FLOATING);
+        lv_obj_align(hint, LV_ALIGN_CENTER, 0, 60);
+        frij_stagger_in(col, 40);
+        return;
     }
     if (s_scan_n == 0) {
-        frij_empty_state(col, "No networks", "Tap the refresh icon\nto scan again");
+        char diag[48];
+        frij_wifi_diag(diag, sizeof(diag));
+        char sub[80];
+        lv_snprintf(sub, sizeof(sub), "Tap refresh to scan\n%s", diag);
+        frij_empty_state(col, "No networks", sub);
         frij_stagger_in(col, 40);
         return;
     }
