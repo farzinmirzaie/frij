@@ -505,12 +505,13 @@ static void on_about_deleted(lv_event_t* e)
 static void about_battery_cb(lv_observer_t* obs, lv_subject_t* subject)
 {
     (void)subject;
-    lv_obj_t* val      = (lv_obj_t*)lv_observer_get_target(obs);
-    uint8_t   pct      = frij_battery_pct();
-    bool      charging = frij_battery_charging();
-    lv_label_set_text_fmt(val, "%d%%%s", pct, charging ? "  " LV_SYMBOL_CHARGE : "");
-    lv_obj_set_style_text_color(
-        val, lv_color_hex((pct <= 15 && !charging) ? FRIJ_WARNING : FRIJ_TEXT_2), LV_PART_MAIN);
+    lv_obj_t* val = (lv_obj_t*)lv_observer_get_target(obs);
+    // Just the level %, no charge bolt (kept simple). Read the subject, not the
+    // live PMIC call.
+    int pct = lv_subject_get_int(frij_battery_level_subject());
+    lv_label_set_text_fmt(val, "%d%%", pct);
+    lv_obj_set_style_text_color(val, lv_color_hex(pct <= 15 ? FRIJ_WARNING : FRIJ_TEXT_2),
+                                LV_PART_MAIN);
 }
 
 static void build_about(lv_obj_t* col)
@@ -534,10 +535,10 @@ static void build_about(lv_obj_t* col)
     }
     frij_value_row(col, "Uptime", upbuf);
 
+    frij_battery_poll();  // sample now so the percent is right on open
     lv_obj_t* brow = frij_value_row(col, "Battery", "");
     lv_obj_t* bval = lv_obj_get_child(brow, 1);
     lv_subject_add_observer_obj(frij_battery_level_subject(), about_battery_cb, bval, NULL);
-    lv_subject_add_observer_obj(frij_battery_charging_subject(), about_battery_cb, bval, NULL);
 
     char stbuf[24];
     frij_storage_free_str(stbuf, sizeof(stbuf));  // "12.3 MB free" (flash on device)

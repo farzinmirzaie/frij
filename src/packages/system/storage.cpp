@@ -23,12 +23,16 @@ bool frij_storage_kb(uint32_t* used_kb, uint32_t* total_kb)
 
 bool frij_storage_kb(uint32_t* used_kb, uint32_t* total_kb)
 {
-    uint32_t total = ESP.getFlashChipSize();
-    if (total == 0) {
+    // Report the running APP partition (used + free), not the whole flash chip:
+    // the old getFlashChipSize() figure ignored the partition table (two app
+    // slots + NVS + filesystem) and overstated free space by ~14 MB.
+    uint32_t used = ESP.getSketchSize();
+    uint32_t free = ESP.getFreeSketchSpace();
+    if (used + free == 0) {
         return false;
     }
-    *total_kb = total / 1024u;
-    *used_kb  = ESP.getSketchSize() / 1024u;  // installed firmware
+    *total_kb = (used + free) / 1024u;
+    *used_kb  = used / 1024u;
     return true;
 }
 

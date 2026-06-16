@@ -2,6 +2,17 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-16 — Battery + Storage: accurate device readings
+
+- **Battery charge flag debounced.** The PMIC flag flickers near a full charge; a
+  single false read blinked the About bolt. Charging now shows instantly but only
+  clears after ~3 consecutive "not charging" reads (a real unplug). Poll dropped
+  to 2 s (plug detection felt sluggish at 5 s); `frij_battery_poll()` lets a
+  screen sample immediately on open. About shows just the level %.
+- **Storage About reports the real app partition** (used + free of the running
+  slot). Was `getFlashChipSize()`, which ignored the partition table and
+  overstated free space by ~14 MB.
+
 ## 2026-06-16 — Wi-Fi: stay connected across scans, auto-connect, off-thread
 
 On-hardware fixes (M5Stack StopWatch):

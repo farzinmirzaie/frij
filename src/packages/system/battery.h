@@ -15,6 +15,7 @@
  * specific screen or to rebuild. A timer refreshes them periodically.
  */
 void    frij_battery_init(void);      // init the subjects + start the refresh timer
+void    frij_battery_poll(void);      // force an immediate sample (e.g. on About open)
 uint8_t frij_battery_pct(void);       // 0–100
 bool    frij_battery_charging(void);  // true while on external power
 

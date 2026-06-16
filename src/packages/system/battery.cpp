@@ -45,10 +45,24 @@ lv_subject_t* frij_battery_charging_subject(void) { return &s_charging; }
 static void battery_refresh(lv_timer_t* t)
 {
     (void)t;
-    uint8_t pct = frij_battery_pct();
-    bool    chg = frij_battery_charging();
+    uint8_t pct     = frij_battery_pct();
+    bool    chg_raw = frij_battery_charging();
     lv_subject_set_int(&s_level, pct);
-    lv_subject_set_int(&s_charging, chg ? 1 : 0);
+
+    // The PMIC's charge flag flickers — near a full charge it cycles on/off, and
+    // a single false reading made the About bolt blink. Debounce: show charging
+    // the instant we see it, but only HIDE it after several consecutive "not
+    // charging" reads (a real unplug), so brief drops are ignored.
+    static bool shown     = false;
+    static int  false_run = 0;
+    if (chg_raw) {
+        shown     = true;
+        false_run = 0;
+    } else if (++false_run >= 3) {  // ~3 polls (6s) of no charge -> really unplugged
+        shown = false;
+    }
+    lv_subject_set_int(&s_charging, shown ? 1 : 0);
+    bool chg = shown;
 
     // One-shot low warning: a toast at <=15% unplugged. Re-arms once power
     // shows up or the level recovers (so it can't nag every 5 seconds).
@@ -70,5 +84,14 @@ void frij_battery_init(void)
     inited = true;
     lv_subject_init_int(&s_level, frij_battery_pct());
     lv_subject_init_int(&s_charging, frij_battery_charging() ? 1 : 0);
-    lv_timer_create(battery_refresh, 5000, NULL);  // 5s is plenty for a battery
+    // 2s: charge-plug detection felt sluggish at 5s (the About bolt lagged).
+    lv_timer_create(battery_refresh, 2000, NULL);
+}
+
+// Force an immediate sample — screens that show charge state (About) call this
+// on open so the bolt/percent are correct right away instead of waiting for the
+// next poll tick.
+void frij_battery_poll(void)
+{
+    battery_refresh(NULL);
 }
