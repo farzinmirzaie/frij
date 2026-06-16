@@ -2,6 +2,14 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-16 — Network time (SNTP) on device
+
+- The device clock booted unset (near epoch), so the watch face + events showed
+  the wrong time even on Wi-Fi. New `system/timesync` starts SNTP and sets the
+  POSIX timezone once Wi-Fi is up; the clock self-corrects within a second or
+  two. TZ defaults to Malaysia (UTC+8, no DST), overridable with `-DFRIJ_TZ`.
+  Emulator is a no-op (the host clock is already correct).
+
 ## 2026-06-16 — Wake: raise-to-wake fix + G1/G2 button wake
 
 - **Raise-to-wake now runs on device.** The loop returned before

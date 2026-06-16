@@ -12,6 +12,7 @@
 #include "system/haptics.h"
 #include "system/motion.h"
 #include "system/sleep.h"
+#include "system/timesync.h"
 #include "system/wifi.h"
 #include "ui/anim.h"
 #include "platform/lvgl_port_m5stack.hpp"
@@ -76,6 +77,7 @@ void user_app(void)
     // background reconnect to the saved network — no boot stall)
     frij_wifi_init();
     frij_wifi_set_enabled(frij_store_load_bool("wifi_on", true));
+    frij_time_sync_init();  // SNTP: correct the clock once Wi-Fi is up
 
     // when auto-sync is on, pull the apps' latest cloud data in the background
     if (frij_store_load_bool("autosync", true)) {
