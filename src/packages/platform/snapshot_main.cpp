@@ -204,6 +204,8 @@ int main(int, char**)
         build_glance_view(stopwatch_app());
     } else if (scr && strcmp(scr, "scoreboard") == 0) {
         build_app_screen(scoreboard_app(), 0);
+    } else if (scr && strcmp(scr, "scoreboard_reel") == 0) {
+        build_app_screen(scoreboard_app(), 1);  // "who goes first?" slot reel
     } else if (scr && strcmp(scr, "scoreboard_glance") == 0) {
         build_glance_view(scoreboard_app());
     } else if (scr && strcmp(scr, "settings") == 0) {
@@ -238,7 +240,7 @@ int main(int, char**)
             printf("unknown FRIJ_SNAP '%s' — valid: todo todo_glance "
                    "events events_glance events_countdown assistant assistant_glance ai_listen "
                    "ai_answer ai_error ai_thinking counter stopwatch stopwatch_glance scoreboard "
-                   "scoreboard_glance settings network netoff sheet confirm keyboard result "
+                   "scoreboard_reel scoreboard_glance settings network netoff sheet confirm keyboard result "
                    "about\n",
                    scr);
             return 2;  // a typo'd key must fail loudly, not render the launcher

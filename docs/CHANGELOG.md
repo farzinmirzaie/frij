@@ -2,6 +2,20 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-18 — Scoreboard: moved up, swipe fix, "who goes first?" slot reel
+
+- **Moved up.** Scoreboard now sits right after the Events glance (3rd app),
+  ahead of Stopwatch.
+- **VS swipe fixed.** The full-bleed score cards swallowed horizontal drags, so
+  paging between scoreboard screens never fired. The cards now bubble the gesture
+  (`EVENT_BUBBLE`) and carry a small edge inset — a swipe works from anywhere;
+  tap still scores +1, long-press -1.
+- **New "Who goes first?" screen.** A slot reel of the two players' names: tap to
+  spin and it scroll-spins 10+ turns, easing to a stop on a random winner. No box
+  — a 5-slot window with a 3-stop top/bottom gradient (header-style) buries the
+  neighbour names so the centre pick stands alone. Reduce-motion lands instantly.
+  (A pill spinner and a coin flip were trialled first; the reel won.)
+
 ## 2026-06-16 — Network time (SNTP) on device
 
 - The device clock booted unset (near epoch), so the watch face + events showed

@@ -15,6 +15,7 @@
  *   glance   : "Farzin  3 – 2  Farah" + who's leading
  *   screen 0 : full-screen left/right touch halves — tap a half +1, hold it -1;
  *              the header has a reset (confirm) action
+ *   screen 1 : "who goes first?" — tap to spin a slot reel of the two players
  */
 
 static const uint32_t ACCENT    = FRIJ_ACCENT;    // app glow/tint (blue)
@@ -123,6 +124,11 @@ static lv_obj_t* make_card(lv_obj_t* parent, const char* name, uint32_t accent, 
     lv_obj_set_style_border_width(card, 0, LV_PART_MAIN);
     lv_obj_set_style_pad_all(card, FRIJ_SP_S, LV_PART_MAIN);
     lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
+    // Let a horizontal drag that starts on the card bubble up to the launcher so
+    // it can page between scoreboard screens. Without this the card swallows the
+    // gesture (it's a full-height touch zone) and the swipe does nothing. The tap
+    // (+1) / long-press (-1) still fire locally.
+    lv_obj_add_flag(card, LV_OBJ_FLAG_EVENT_BUBBLE);
     lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(card, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     // press flash only (no permanent panel)
@@ -142,9 +148,221 @@ static lv_obj_t* make_card(lv_obj_t* parent, const char* name, uint32_t accent, 
     return card;
 }
 
+// ---- "who goes first?" — slot reel (screen 1) ------------------------------
+// Game-night helper: tap to spin a vertical reel of the two players' names; it
+// scroll-spins for many turns behind a fading window and eases to a stop on a
+// random winner. Cheap on the panel — just a column moved by its y offset.
+
+static const char* const FIRST_NAMES[2]    = {NAME_A, NAME_B};
+static const uint32_t     FIRST_ACCENTS[2] = {A_ACCENT, B_ACCENT};
+
+#define REEL_H    46          // one slot height (a touch under FRIJ_ROW_H so the
+                              // 5-slot window + title + hint all fit on the round)
+#define REEL_VIEW 5           // slots visible (centre = the pick; 2 faded each side)
+#define REEL_ROWS 34          // names in the strip (alternating A/B), long enough
+                              // for a 10+ turn spin without running off the end
+#define REEL_MIN_TRAVEL 20    // rows the reel scrolls per spin (>= 10 A/B cycles)
+
+typedef struct {
+    lv_obj_t* inner;   // the scrolling strip (moved by its y)
+    lv_obj_t* result;
+    int       center;  // strip row currently in the centre slot
+    int       win;     // landed winner (0/1)
+    bool      busy;
+} reel_ctx_t;
+
+static reel_ctx_t* s_reel = NULL;
+
+// Strip y so that row `r` sits in the centre slot of the 3-slot window.
+static int reel_y_for(int r)
+{
+    return (REEL_VIEW / 2 - r) * REEL_H;  // row r in the centre slot
+}
+
+static void reel_move(void* obj, int32_t y)
+{
+    lv_obj_set_y((lv_obj_t*)obj, (lv_coord_t)y);
+}
+
+static void reel_finish(reel_ctx_t* c)
+{
+    frij_haptic(FRIJ_HAPTIC_SUCCESS);
+    lv_label_set_text_fmt(c->result, "%s goes first!", FIRST_NAMES[c->win]);
+    lv_obj_set_style_text_color(c->result, lv_color_hex(FIRST_ACCENTS[c->win]), LV_PART_MAIN);
+    c->busy = false;
+}
+
+static void reel_settle(lv_anim_t* a)
+{
+    if (a->user_data) {
+        reel_finish((reel_ctx_t*)a->user_data);
+    }
+}
+
+static void reel_spin(lv_event_t* e)
+{
+    reel_ctx_t* c = (reel_ctx_t*)lv_event_get_user_data(e);
+    if (c->busy) {
+        return;
+    }
+    c->busy = true;
+
+    // Snap back to a low row that still has neighbours above it and shows the SAME
+    // name as now (no visible jump — the strip repeats every 2 rows), so each spin
+    // starts near the top with a full multi-turn run ahead.
+    int p    = c->center & 1;
+    int base = REEL_VIEW / 2;
+    if ((base & 1) != p) {
+        base++;  // keep the same colour under the centre
+    }
+    int from = reel_y_for(base);
+    lv_obj_set_y(c->inner, from);
+    c->center = base;
+
+    int win  = (int)lv_rand(0, 1);
+    int land = base + REEL_MIN_TRAVEL + (int)lv_rand(0, 4);  // >= 20 rows of travel
+    if ((land & 1) != win) {
+        land++;  // land on the winner's colour
+    }
+    c->center = land;
+    c->win    = win;
+    int to    = reel_y_for(land);
+
+    if (!frij_anim_enabled()) {
+        lv_obj_set_y(c->inner, to);  // reduce-motion: jump straight there
+        reel_finish(c);
+        return;
+    }
+    lv_label_set_text(c->result, "Spinning...");
+    lv_obj_set_style_text_color(c->result, lv_color_hex(FRIJ_TEXT_2), LV_PART_MAIN);
+    lv_anim_t a;
+    lv_anim_init(&a);
+    lv_anim_set_var(&a, c->inner);
+    lv_anim_set_exec_cb(&a, reel_move);
+    lv_anim_set_values(&a, from, to);  // known reset pos, not lv_obj_get_y (stale until refresh)
+    lv_anim_set_duration(&a, 2000);  // long enough that 10+ turns read as a spin
+    lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
+    lv_anim_set_completed_cb(&a, reel_settle);
+    a.user_data = c;
+    lv_anim_start(&a);
+    frij_haptic(FRIJ_HAPTIC_SELECT);
+}
+
+static void reel_delete(lv_event_t* e)
+{
+    reel_ctx_t* c = (reel_ctx_t*)lv_event_get_user_data(e);
+    lv_anim_delete(c->inner, reel_move);
+    if (c == s_reel) {
+        s_reel = NULL;
+    }
+    lv_free(c);
+}
+
+static void reel_grad_free(lv_event_t* e)
+{
+    lv_free(lv_event_get_user_data(e));
+}
+
+// A vertical fade of the page colour, opaque at one edge → clear at the other.
+// Stacked over the window's top/bottom slots so the off-centre names dissolve into
+// the background (same trick as the header), instead of a hard box border.
+static lv_obj_t* reel_fade(lv_obj_t* parent, int y, int h, bool opaque_top)
+{
+    lv_obj_t* g = lv_obj_create(parent);
+    lv_obj_remove_style_all(g);
+    lv_obj_set_size(g, LV_PCT(100), h);
+    lv_obj_set_pos(g, 0, y);
+    lv_obj_add_flag(g, LV_OBJ_FLAG_FLOATING);
+    lv_obj_clear_flag(g, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_clear_flag(g, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_grad_dsc_t* d = (lv_grad_dsc_t*)lv_malloc(sizeof(lv_grad_dsc_t));
+    if (d == NULL) {
+        return g;  // OOM — skip the fade
+    }
+    lv_memzero(d, sizeof(*d));
+    d->dir            = LV_GRAD_DIR_VER;
+    d->stops_count    = 3;
+    d->stops[0].color = lv_color_hex(FRIJ_SURFACE_1);
+    d->stops[1].color = lv_color_hex(FRIJ_SURFACE_1);
+    d->stops[2].color = lv_color_hex(FRIJ_SURFACE_1);
+    // Stay fully opaque across most of the span, clearing only in the third
+    // nearest the centre — so the neighbour names are buried and the centre name
+    // is the clear standout (not just the outermost row faded).
+    if (opaque_top) {  // outer edge = top
+        d->stops[0].frac = 0;   d->stops[0].opa = LV_OPA_COVER;
+        d->stops[1].frac = 170; d->stops[1].opa = LV_OPA_COVER;
+        d->stops[2].frac = 255; d->stops[2].opa = LV_OPA_TRANSP;
+    } else {  // outer edge = bottom
+        d->stops[0].frac = 0;   d->stops[0].opa = LV_OPA_TRANSP;
+        d->stops[1].frac = 85;  d->stops[1].opa = LV_OPA_COVER;
+        d->stops[2].frac = 255; d->stops[2].opa = LV_OPA_COVER;
+    }
+    lv_obj_set_style_bg_grad(g, d, LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(g, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_add_event_cb(g, reel_grad_free, LV_EVENT_DELETE, d);
+    return g;
+}
+
+static void reel_screen(lv_obj_t* parent)
+{
+    reel_ctx_t* c = (reel_ctx_t*)lv_malloc(sizeof(reel_ctx_t));
+    if (c == NULL) {
+        return;
+    }
+    lv_memzero(c, sizeof(*c));
+
+    lv_obj_t* col = frij_page(parent);
+    lv_obj_set_style_pad_row(col, FRIJ_SP_M, LV_PART_MAIN);
+    frij_label(col, "Who goes first?", FRIJ_FONT_BODY, FRIJ_TEXT_2);
+
+    // No box/border: a 5-slot-tall window that just clips the strip; the centre
+    // slot is the pick and the 2 slots above + 2 below fade into the background.
+    lv_obj_t* window = lv_obj_create(col);
+    lv_obj_remove_style_all(window);
+    lv_obj_set_size(window, LV_PCT(80), REEL_H * REEL_VIEW);
+    lv_obj_clear_flag(window, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(window, LV_OBJ_FLAG_CLICKABLE);
+
+    c->inner = lv_obj_create(window);
+    lv_obj_remove_style_all(c->inner);
+    lv_obj_set_width(c->inner, LV_PCT(100));
+    lv_obj_set_height(c->inner, REEL_H * REEL_ROWS);
+    lv_obj_set_pos(c->inner, 0, reel_y_for(REEL_VIEW / 2));  // centre slot populated
+    lv_obj_clear_flag(c->inner, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(c->inner, LV_OBJ_FLAG_CLICKABLE);
+    for (int i = 0; i < REEL_ROWS; i++) {
+        lv_obj_t* row = lv_label_create(c->inner);
+        lv_label_set_text(row, FIRST_NAMES[i & 1]);
+        lv_obj_set_style_text_font(row, FRIJ_FONT_DISPLAY, LV_PART_MAIN);
+        lv_obj_set_style_text_color(row, lv_color_hex(FIRST_ACCENTS[i & 1]), LV_PART_MAIN);
+        lv_obj_set_size(row, LV_PCT(100), REEL_H);
+        lv_obj_set_pos(row, 0, i * REEL_H);
+        lv_obj_set_style_text_align(row, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+        lv_obj_set_style_pad_top(row, (REEL_H - 34) / 2, LV_PART_MAIN);  // ~center the 34px line
+    }
+
+    // Fades sit above the strip (added last): cover the 2 slots above the centre
+    // and the 2 below, so only the middle name is fully visible.
+    reel_fade(window, 0, REEL_H * (REEL_VIEW / 2), true);
+    reel_fade(window, REEL_H * (REEL_VIEW / 2 + 1), REEL_H * (REEL_VIEW / 2), false);
+
+    c->center = REEL_VIEW / 2;
+    c->result = frij_label(col, "Tap to spin", FRIJ_FONT_BODY, FRIJ_TEXT_2);
+    s_reel    = c;
+
+    lv_obj_add_flag(col, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(col, reel_spin, LV_EVENT_CLICKED, c);
+    lv_obj_add_event_cb(col, reel_delete, LV_EVENT_DELETE, c);
+    frij_stagger_in(col, 60);
+}
+
 static void screen(lv_obj_t* parent, int index)
 {
-    (void)index;
+    if (index == 1) {
+        reel_screen(parent);  // "who goes first?" — slot reel
+        return;
+    }
     frij_store_pull_async(KEY_A);  // best-effort cloud refresh
     frij_store_pull_async(KEY_B);
     load_scores();
@@ -162,6 +380,12 @@ static void screen(lv_obj_t* parent, int index)
     lv_obj_t* root = parent;
     frij_page_full_bleed(root);
     lv_obj_set_style_pad_all(root, 0, LV_PART_MAIN);
+    // Edge strips + a center gap so a horizontal swipe has clear margin to start
+    // in (the cards also bubble the gesture — see make_card — so a swipe works
+    // from anywhere, but the inset makes it forgiving). The tap-to-score zones
+    // stay large.
+    lv_obj_set_style_pad_hor(root, FRIJ_SP_L * 2, LV_PART_MAIN);
+    lv_obj_set_style_pad_column(root, FRIJ_SP_M, LV_PART_MAIN);
     lv_obj_clear_flag(root, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_flex_flow(root, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(root, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
@@ -264,6 +488,6 @@ static void sb_on_action(int index)
 
 const frij_app_t* scoreboard_app(void)
 {
-    static const frij_app_t app = {"Scoreboard", ACCENT, glance, 1, screen, sb_action, sb_on_action};
+    static const frij_app_t app = {"Scoreboard", ACCENT, glance, 2, screen, sb_action, sb_on_action};
     return &app;
 }
