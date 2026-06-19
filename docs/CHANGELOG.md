@@ -2,6 +2,17 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-19 — Audio idle-off, Wi-Fi scan keeps connection, drag thresholds
+
+- **White noise fixed** — the ES8311 amp was left powered after a tone (idle hiss);
+  now `frij_audio_idle_tick()` (called each loop) powers it down once nothing's
+  played for ~2s. Click bursts never hit the gap, so they stay crisp.
+- **Wi-Fi scanning keeps the connection visible** — a rescan now shows the active
+  network row + a "Scanning…" footer instead of a blank scanning screen.
+- **Drag-to-open less jumpy** — vertical nav is asymmetric: pull-up (open app)
+  engages at 16px, pull-down (Settings) needs 28px, so an up-drag that starts with
+  a tiny downward settle can't flash Settings.
+
 ## 2026-06-19 — UX: Wi-Fi sort, drag fix, consistent haptics, reel feedback
 
 - **Wi-Fi list sorted** — the connected network first, then strongest → weakest

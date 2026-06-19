@@ -235,13 +235,19 @@ static void iso_input(lv_event_t* e)
         lv_indev_get_point(indev, &p);
         int dx = p.x - s_iso_start.x;
         int dy = p.y - s_iso_start.y;
-        if (s_iso_axis == 0 && (abs(dx) > 8 || abs(dy) > 8)) {
-            s_iso_axis = (abs(dx) >= abs(dy)) ? 1 : 2;
-            if (s_iso_axis == 2) {
-                // Lock the vertical direction for the whole gesture so reversing
-                // past the start can't reveal the opposite layer (which used to
-                // strand a layer half-on-screen). Transition only at the content's
-                // scroll edge, else let LVGL scroll the list.
+        // Horizontal engages at 8px. Vertical is asymmetric on purpose: opening the
+        // app (pull UP) is the frequent gesture, so it engages at 16px; reaching
+        // Settings (pull DOWN) is deliberate, so it needs a firmer 28px. This stops
+        // an up-drag that started with a tiny downward settle from locking "down"
+        // and flashing Settings — the up threshold is crossed first.
+        if (s_iso_axis == 0) {
+            if (abs(dx) > 8 && abs(dx) >= abs(dy)) {
+                s_iso_axis = 1;  // horizontal
+            } else if (dy < -16 || dy > 28) {
+                s_iso_axis = 2;  // vertical
+                // Lock the direction for the whole gesture so reversing past the
+                // start can't reveal the opposite layer. Transition only at the
+                // content's scroll edge, else let LVGL scroll the list.
                 s_v_sign            = (dy >= 0) ? 1 : -1;
                 lv_obj_t* content   = active_inner()->cur;
                 if (s_cur == 0) {

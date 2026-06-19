@@ -27,9 +27,13 @@ void frij_audio_status(bool ok)
     (void)ok;
 }
 
+void frij_audio_idle_tick(void) {}
+
 #else
 
 #include <M5Unified.h>
+
+static uint32_t s_last_sound = 0;  // millis() of the last tone (0 = amp already off)
 
 void frij_set_volume(uint8_t pct)
 {
@@ -49,6 +53,7 @@ void frij_audio_click(void)
     if (s_click_enabled) {
         M5.Speaker.begin();  // the amp is kept off (no idle hiss); wake it for the tone
         M5.Speaker.tone(2500.0f, 6);  // short, quiet UI tick
+        s_last_sound = millis();
     }
 }
 
@@ -63,6 +68,18 @@ void frij_audio_status(bool ok)
         M5.Speaker.tone(2400.0f, 60);
     } else {  // single low buzz = failed
         M5.Speaker.tone(600.0f, 120);
+    }
+    s_last_sound = millis();
+}
+
+// Idle amp cleanup: once nothing has played for ~2s (and no tone is mid-flight),
+// power the ES8311 down — leaving it begun hisses (white noise). Called every
+// loop. 2s is long enough that normal click bursts never cycle the amp.
+void frij_audio_idle_tick(void)
+{
+    if (s_last_sound && millis() - s_last_sound > 2000 && !M5.Speaker.isPlaying()) {
+        M5.Speaker.end();
+        s_last_sound = 0;
     }
 }
 

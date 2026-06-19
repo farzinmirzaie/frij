@@ -21,4 +21,8 @@ void frij_audio_click(void);
 // failure. Gated by the same touch-sounds switch as the click.
 void frij_audio_status(bool ok);
 
+// Call once per main-loop iteration: powers the ES8311 amp down a beat after the
+// last tone so it doesn't sit on and hiss (white noise). No-op on the emulator.
+void frij_audio_idle_tick(void);
+
 #endif  // FRIJ_AUDIO_H

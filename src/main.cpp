@@ -81,6 +81,7 @@ void loop(void)
     M5.update();  // refresh IMU + buttons
 
     frij_motion_update();      // raise-to-wake (no-op when the setting is off)
+    frij_audio_idle_tick();    // power the speaker amp down after a tone (kills idle hiss)
     bool waking = buttons_wake_only();  // G1/G2 wake the panel; suppress their action
 
 #ifdef FRIJ_NEW_LAUNCHER

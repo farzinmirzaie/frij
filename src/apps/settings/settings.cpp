@@ -473,10 +473,23 @@ static void build_network(lv_obj_t* col, bool rescan)
     if (rescan || (s_scan_n == 0 && !s_net_scanning)) {
         net_scan_start();
     }
-    if (s_net_scanning) {  // scan in flight — spinner until net_poll_cb lands it
-        lv_obj_t* hint = frij_empty_state(col, "Scanning...", "Looking for\nnearby networks");
-        lv_obj_add_flag(hint, LV_OBJ_FLAG_FLOATING);
-        lv_obj_align(hint, LV_ALIGN_CENTER, 0, 60);
+    if (s_net_scanning) {  // scan in flight — keep the connection visible meanwhile
+        const char* cur = frij_wifi_connected();
+        if (cur && cur[0]) {
+            // Show the active network (not a blank "scanning" screen) so it's clear
+            // something's connected; not tappable mid-scan (no s_scan entry yet).
+            lv_obj_t* r    = frij_surface_row(col);
+            frij_label(r, LV_SYMBOL_OK, FRIJ_FONT_SYMBOL, ACCENT);
+            lv_obj_t* name = frij_label(r, cur, FRIJ_FONT_BODY, ACCENT);
+            lv_obj_set_flex_grow(name, 1);
+            lv_label_set_long_mode(name, LV_LABEL_LONG_DOT);
+            frij_label(r, LV_SYMBOL_WIFI, FRIJ_FONT_SYMBOL, FRIJ_TEXT);
+            frij_label(col, "Scanning...", FRIJ_FONT_SMALL, FRIJ_TEXT_2);  // footer hint
+        } else {
+            lv_obj_t* hint = frij_empty_state(col, "Scanning...", "Looking for\nnearby networks");
+            lv_obj_add_flag(hint, LV_OBJ_FLAG_FLOATING);
+            lv_obj_align(hint, LV_ALIGN_CENTER, 0, 60);
+        }
         frij_stagger_in(col, 40);
         return;
     }
