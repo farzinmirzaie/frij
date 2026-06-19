@@ -29,7 +29,8 @@
  */
 
 static const uint32_t ACCENT = FRIJ_PINK;
-static const char*    KEY     = "couples_fights";
+static const char*    KEY     = "couples_fights";    // logged fight days
+static const char*    RKEY    = "couples_resolved";  // subset of KEY marked "made up"
 #define MAX_DAYS 200            // ~6 months of logged days; oldest drop off
 #define JSON_BUF 2048           // 200 day-ints + brackets/commas fits easily
 
@@ -46,11 +47,11 @@ static int today_index(void)
     return (int)(mktime(&lt) / 86400);
 }
 
-// Load the logged day indices into `out` (ascending order kept on save).
-static int load_days(int* out, int max)
+// Load a JSON array of day indices from `key` into `out` (ascending on save).
+static int load_arr(const char* key, int* out, int max)
 {
     char buf[JSON_BUF];
-    if (!frij_store_load(KEY, buf, sizeof(buf))) {
+    if (!frij_store_load(key, buf, sizeof(buf))) {
         return 0;
     }
     JsonDocument doc;
@@ -66,7 +67,7 @@ static int load_days(int* out, int max)
     return n;
 }
 
-static void save_days(const int* days, int count)
+static void save_arr(const char* key, const int* days, int count)
 {
     JsonDocument doc;
     JsonArray    arr = doc.to<JsonArray>();
@@ -75,8 +76,13 @@ static void save_days(const int* days, int count)
     }
     char out[JSON_BUF];
     serializeJson(doc, out, sizeof(out));
-    frij_store_save(KEY, out);
+    frij_store_save(key, out);
 }
+
+static int  load_days(int* out, int max) { return load_arr(KEY, out, max); }
+static void save_days(const int* d, int n) { save_arr(KEY, d, n); }
+
+static void set_resolved_today(bool on);  // defined with the resolved helpers below
 
 static bool has_day(const int* days, int n, int day)
 {
@@ -126,6 +132,7 @@ static void unlog_today(void)
         }
     }
     save_days(days, w);
+    set_resolved_today(false);  // an undone fight can't be "made up"
 }
 
 // Count logged days within the last `span` calendar days (today inclusive).
@@ -155,6 +162,99 @@ static int peace_streak(const int* days, int n)
         }
     }
     return today_index() - latest;
+}
+
+// Longest run of consecutive peaceful days we can observe — the gaps between
+// logged fights, plus the current run (last fight → today). -1 if none logged.
+// (We can't know peace before the first ever log, so that span is ignored.)
+static int best_streak(const int* days, int n)
+{
+    if (n == 0) {
+        return -1;
+    }
+    int s[MAX_DAYS];  // sort a copy ascending (n is small)
+    for (int i = 0; i < n; i++) {
+        s[i] = days[i];
+    }
+    for (int i = 1; i < n; i++) {
+        int v = s[i], j = i - 1;
+        while (j >= 0 && s[j] > v) {
+            s[j + 1] = s[j];
+            j--;
+        }
+        s[j + 1] = v;
+    }
+    int best = today_index() - s[n - 1];  // current streak
+    for (int i = 1; i < n; i++) {
+        int gap = s[i] - s[i - 1] - 1;  // peaceful days strictly between two fights
+        if (gap > best) {
+            best = gap;
+        }
+    }
+    return best;
+}
+
+// Count logged days in the inclusive day-index range [from, to].
+static int count_range(const int* days, int n, int from, int to)
+{
+    int c = 0;
+    for (int i = 0; i < n; i++) {
+        if (days[i] >= from && days[i] <= to) {
+            c++;
+        }
+    }
+    return c;
+}
+
+// ---- resolved ("made up") set ----------------------------------------------
+
+static bool resolved_today(void)
+{
+    int r[MAX_DAYS];
+    int n = load_arr(RKEY, r, MAX_DAYS);
+    return has_day(r, n, today_index());
+}
+
+static void set_resolved_today(bool on)
+{
+    int  r    = today_index();
+    int  set[MAX_DAYS];
+    int  n    = load_arr(RKEY, set, MAX_DAYS);
+    bool have = has_day(set, n, r);
+    if (on && !have) {
+        if (n == MAX_DAYS) {  // make room: drop the oldest
+            for (int i = 1; i < n; i++) {
+                set[i - 1] = set[i];
+            }
+            n--;
+        }
+        set[n++] = r;
+    } else if (!on && have) {
+        int w = 0;
+        for (int i = 0; i < n; i++) {
+            if (set[i] != r) {
+                set[w++] = set[i];
+            }
+        }
+        n = w;
+    } else {
+        return;  // already in the wanted state
+    }
+    save_arr(RKEY, set, n);
+}
+
+// How many of the logged fights were marked "made up".
+static int resolved_count(const int* days, int n)
+{
+    int r[MAX_DAYS];
+    int rn = load_arr(RKEY, r, MAX_DAYS);
+    int c  = 0;
+    for (int i = 0; i < n; i++) {
+        if (has_day(r, rn, days[i])) {
+            c++;
+        }
+    }
+    return c;
 }
 
 // ---- glance ----------------------------------------------------------------
@@ -236,6 +336,13 @@ static void on_undo(lv_event_t* e)
     build_choice();  // back to the question
 }
 
+static void on_resolved(lv_event_t* e)
+{
+    lv_obj_t* sw = (lv_obj_t*)lv_event_get_target(e);
+    set_resolved_today(lv_obj_has_state(sw, LV_STATE_CHECKED));
+    frij_haptic(FRIJ_HAPTIC_SELECT);
+}
+
 // (Re)fill the screen-0 body for the current state. Called on open and after a
 // log/undo so the screen reflects today without leaving + reopening.
 static void build_choice(void)
@@ -250,9 +357,11 @@ static void build_choice(void)
         frij_circle_button(s_choice, 72, ACCENT, LV_SYMBOL_OK, FRIJ_FONT_SYMBOL_L, 0xFFFFFF, NULL);
         lv_obj_t* t = frij_label(s_choice, "Logged for today", FRIJ_FONT_TITLE, FRIJ_TEXT);
         lv_obj_set_style_margin_top(t, FRIJ_SP_S, LV_PART_MAIN);
-        frij_label(s_choice, "Take a breath together", FRIJ_FONT_BODY, FRIJ_TEXT_2);
+        // Did you make up? A resolved-same-day flag (feeds the stats rate).
+        lv_obj_t* sw = frij_toggle_row(s_choice, "Made up", resolved_today(), ACCENT);
+        lv_obj_add_event_cb(sw, on_resolved, LV_EVENT_VALUE_CHANGED, NULL);
         lv_obj_t* undo = pill(s_choice, "Undo", FRIJ_SURFACE_2, FRIJ_TEXT, on_undo);
-        lv_obj_set_style_margin_top(undo, FRIJ_SP_M, LV_PART_MAIN);
+        lv_obj_set_style_margin_top(undo, FRIJ_SP_S, LV_PART_MAIN);
     } else {
         frij_label(s_choice, "Did we fight today?", FRIJ_FONT_TITLE, FRIJ_TEXT);
         lv_obj_t* gap = frij_label(s_choice, "Only a yes is recorded", FRIJ_FONT_SMALL, FRIJ_TEXT_3);
@@ -341,7 +450,29 @@ static void stats_screen(lv_obj_t* parent)
 
     count_row(col, "This week", count_window(days, n, 7));
     count_row(col, "This month", count_window(days, n, 30));
+
+    if (n > 0) {
+        char v[16];
+        int  best = best_streak(days, n);
+        lv_snprintf(v, sizeof(v), "%d %s", best, best == 1 ? "day" : "days");
+        frij_value_row(col, "Best streak", v);
+
+        lv_snprintf(v, sizeof(v), "%d of %d", resolved_count(days, n), n);
+        frij_value_row(col, "Made up", v);
+    }
     count_row(col, "Total logged", n);
+
+    // Month-over-month recap: this 30-day window vs the previous one.
+    int today = today_index();
+    int now30 = count_range(days, n, today - 29, today);
+    int prev30 = count_range(days, n, today - 59, today - 30);
+    if (now30 + prev30 > 0) {
+        const char* trend = now30 < prev30  ? "Fewer fights than last month"
+                            : now30 > prev30 ? "More fights than last month"
+                                             : "Same as last month";
+        lv_obj_t* r = frij_label(col, trend, FRIJ_FONT_SMALL, FRIJ_TEXT_3);
+        lv_obj_set_style_margin_top(r, FRIJ_SP_S, LV_PART_MAIN);
+    }
 
     frij_page_settle(col);
     frij_stagger_in(col, 40);
@@ -352,7 +483,8 @@ static void stats_screen(lv_obj_t* parent)
 static void do_clear(lv_event_t* e)
 {
     (void)e;
-    save_days(NULL, 0);  // empty array
+    save_days(NULL, 0);          // empty the fight log
+    save_arr(RKEY, NULL, 0);     // and the made-up set
     frij_haptic(FRIJ_HAPTIC_SUCCESS);
     frij_toast_status("History cleared", true);
 }

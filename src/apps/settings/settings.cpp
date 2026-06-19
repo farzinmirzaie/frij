@@ -138,6 +138,7 @@ static void on_sync_now(lv_event_t* e)
     frij_store_pull_async("sb_a");
     frij_store_pull_async("sb_b");
     frij_store_pull_async("couples_fights");
+    frij_store_pull_async("couples_resolved");
     frij_store_save_int("last_sync", (int)time(NULL));
     frij_haptic(FRIJ_HAPTIC_SUCCESS);
     about_refresh();  // reflect the new "Last sync" immediately

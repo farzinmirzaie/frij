@@ -468,6 +468,7 @@ static void pull_synced_keys(void)
     frij_store_pull_async("sb_a");
     frij_store_pull_async("sb_b");
     frij_store_pull_async("couples_fights");
+    frij_store_pull_async("couples_resolved");
     // Stamp when the todo list was last synced, for its "Updated Xm ago"
     // footer. Done here (the real sync points) not on screen-open, so the
     // footer actually ages instead of always reading "just now".

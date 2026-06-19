@@ -2,6 +2,16 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-19 — Couples: made-up flag, best streak, recap
+
+- **"Made up" toggle** — the logged state now has a resolved-same-day switch; the
+  made-up days live in a separate `couples_resolved` set (subset of the fight
+  days — no migration of the existing log). Undo clears today's flag; clear-
+  history wipes both; both sync.
+- **Stats deepened** — added Best streak (longest observed run of peaceful days),
+  a "Made up X of Y" rate, and a month-over-month recap line ("Fewer/More fights
+  than last month").
+
 ## 2026-06-19 — New Couples app + doc audit
 
 - **Couples app (fight tracker)** — a gentle daily check-in. Screen 0 asks
