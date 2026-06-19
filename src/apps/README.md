@@ -106,6 +106,12 @@ every app shares the look but has its own scheme.
   canned answers only when the cloud is unconfigured). Overlay driven by the
   input layer (`frij_assistant_ptt`): listening (voice bars + pulse rings) /
   thinking (dots) / answer; screen 0 lists the last 5 questions + answers. Violet.
+- `couples/` — a gentle "fight tracker" for two. Screen 0 asks "Did we fight
+  today?" — No does nothing, Yes logs the day (then flips to a logged state with
+  Undo). Screen 1 is stats: a peace-streak hero, a 7-day dot strip, and this
+  week / this month / total counts; the header clears history (confirm). Glance
+  shows days since the last fight. One entry per logged day (a local-midnight day
+  index) in a JSON array under `couples_fights`; persists + syncs. Pink.
 - `settings/` — 3 screens: General (Display: brightness/sleep/raise-to-wake;
   Sound: volume/touch-sounds; Preferences: 24-hour/vibration/animations/auto-sync), Network
   (Wi-Fi list + connect/disconnect/forget), About (battery, last sync, sync now,

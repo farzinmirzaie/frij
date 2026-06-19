@@ -2,6 +2,22 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-19 — New Couples app + doc audit
+
+- **Couples app (fight tracker)** — a gentle daily check-in. Screen 0 asks
+  "Did we fight today?" (No is a no-op; Yes logs the day, then flips to a logged
+  state with Undo). Screen 1 stats: a peace-streak hero, a 7-day pink/peace dot
+  strip, this-week / this-month / total counts, and a clear-history header
+  action (confirm). Glance shows days since the last fight. One entry per logged
+  day (local-midnight day index) in a JSON array under `couples_fights`;
+  persists + cloud-syncs like the others; capped at ~6 months. Pink accent.
+  Carousel: home → todo → events → scoreboard → assistant → stopwatch → couples.
+- **Doc audit** — corrected stale docs after recent rounds: AI.md now says the
+  PTT button is Key A (yellow, not B/blue) and the device voice path is verified
+  (chunked POST), not compile-only; ROADMAP + CLAUDE.md note `device_new` is
+  flashed + verified on hardware; CLAUDE.md env list mentions `device_new` /
+  `snapshot`; assistant README no longer mentions the removed listening glow.
+
 ## 2026-06-19 — Drop the Counter app
 
 - **Counter app removed** — it was an early test app with no real use. Deleted

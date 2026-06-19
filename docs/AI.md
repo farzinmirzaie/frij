@@ -18,21 +18,24 @@ hold Key B ──► system/ai ──HTTPS──► Supabase Edge Function "ask"
 - **Emulator side**: `src/packages/system/ai.*` — worker-thread text POST (libcurl,
   reusing the store's `.env` config). A random sample question stands in for
   the mic. No cloud → canned answers.
-- **Device side**: `src/packages/system/ai.*` (the `#else` branch) — hold Key B (blue)
-  to record from the ES8311 mic (M5.Mic, 16 kHz mono, ≤12s) on a FreeRTOS
-  task; release wraps it as a WAV, base64-encodes it (PSRAM), and POSTs it to
-  the same `ask` function over `WiFiClientSecure` (Gemini transcribes +
-  answers — no separate STT). Cloud config is baked in at build time (below).
-  Compile-only so far — verify on flash.
+- **Device side**: `src/packages/system/ai.*` (the `#else` branch) — hold Key A
+  (G2, yellow) to record from the ES8311 mic (M5.Mic, 16 kHz mono, ≤12s) on a
+  FreeRTOS task; release wraps it as a WAV, base64-encodes it (PSRAM), and
+  streams it to the same `ask` function over `WiFiClientSecure` in small chunks
+  (one giant TLS write fails with "Failed to send chunk" — see `BodyStream` in
+  `ai.cpp`). Gemini transcribes + answers — no separate STT. Cloud config is
+  baked in at build time (below). Verified on `device_new`: capture → POST →
+  HTTP 200 (a quota'd key just shows its error message on screen).
 
 ## Device build config
 
-The on-device AI needs the Supabase project URL + anon key. The `device` env
-pulls them from the shell at build time (same values as the repo `.env`):
+The on-device AI needs the Supabase project URL + anon key. The device envs
+pull them from the shell at build time (same values as the repo `.env`). The
+push-to-talk button is wired in the carousel launcher, so use `device_new`:
 
 ```bash
-set -a; source .env; set +a        # exports SUPABASE_URL + SUPABASE_ANON_KEY
-pio run -e device                   # bakes them into FRIJ_SUPABASE_* macros
+set -a; source .env; set +a              # exports SUPABASE_URL + SUPABASE_ANON_KEY
+pio run -e device_new                     # bakes them into FRIJ_SUPABASE_* macros
 ```
 
 Unset → builds without cloud and the assistant falls back to the mock. The

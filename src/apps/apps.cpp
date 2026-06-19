@@ -2,6 +2,7 @@
 
 #include "launcher/registry.h"
 #include "assistant/assistant.h"
+#include "couples/couples.h"
 #include "events/events.h"
 #include "home/home.h"
 #include "scoreboard/scoreboard.h"
@@ -20,5 +21,6 @@ void frij_register_apps(void)
     frij_registry_add(scoreboard_app());
     frij_registry_add(assistant_app());
     frij_registry_add(stopwatch_app());
+    frij_registry_add(couples_app());
     frij_registry_set_settings(settings_app());
 }

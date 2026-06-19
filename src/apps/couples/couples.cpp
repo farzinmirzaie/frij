@@ -1,0 +1,390 @@
+#include "couples.h"
+
+#include <time.h>
+
+#include <ArduinoJson.h>
+
+#include "store/store.h"
+#include "system/haptics.h"
+#include "ui/anim.h"
+#include "ui/components.h"
+#include "ui/theme.h"
+
+/*
+ * Couples — a gentle "fight tracker" for two people sharing the display. Once a
+ * day you answer "Did we fight today?": tapping No changes nothing (it just
+ * acknowledges a calm day), tapping Yes logs the day. The framing stays positive
+ * — the hero number is the *peace streak* (days since the last fight), not a
+ * blame counter — and a logged day can be undone in case of a mis-tap.
+ *
+ *   glance   : peace streak ("12 days since last fight") / calm empty state
+ *   screen 0 : "Did we fight today?" — No / Yes pills; Yes flips to a logged
+ *              state with an Undo
+ *   screen 1 : stats — this week / this month / since last + a 7-day dot strip;
+ *              the header has a clear-history (confirm) action
+ *
+ * Data: one entry per logged day, stored as a local-midnight *day index*
+ * (epoch/86400 — small ints, no 2038 overflow) in a JSON array under `couples_
+ * fights`, deduped per day and capped. Persists + cloud-syncs like the others.
+ */
+
+static const uint32_t ACCENT = FRIJ_PINK;
+static const char*    KEY     = "couples_fights";
+#define MAX_DAYS 200            // ~6 months of logged days; oldest drop off
+#define JSON_BUF 2048           // 200 day-ints + brackets/commas fits easily
+
+// ---- data ------------------------------------------------------------------
+
+// Local-midnight day index for "now" (days since the epoch in local time).
+static int today_index(void)
+{
+    time_t    t  = time(NULL);
+    struct tm lt = *localtime(&t);
+    lt.tm_hour = 0;
+    lt.tm_min  = 0;
+    lt.tm_sec  = 0;
+    return (int)(mktime(&lt) / 86400);
+}
+
+// Load the logged day indices into `out` (ascending order kept on save).
+static int load_days(int* out, int max)
+{
+    char buf[JSON_BUF];
+    if (!frij_store_load(KEY, buf, sizeof(buf))) {
+        return 0;
+    }
+    JsonDocument doc;
+    if (deserializeJson(doc, buf) != DeserializationError::Ok || !doc.is<JsonArray>()) {
+        return 0;
+    }
+    int n = 0;
+    for (JsonVariant v : doc.as<JsonArray>()) {
+        if (n < max) {
+            out[n++] = v.as<int>();
+        }
+    }
+    return n;
+}
+
+static void save_days(const int* days, int count)
+{
+    JsonDocument doc;
+    JsonArray    arr = doc.to<JsonArray>();
+    for (int i = 0; i < count; i++) {
+        arr.add(days[i]);
+    }
+    char out[JSON_BUF];
+    serializeJson(doc, out, sizeof(out));
+    frij_store_save(KEY, out);
+}
+
+static bool has_day(const int* days, int n, int day)
+{
+    for (int i = 0; i < n; i++) {
+        if (days[i] == day) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool logged_today(void)
+{
+    int days[MAX_DAYS];
+    int n = load_days(days, MAX_DAYS);
+    return has_day(days, n, today_index());
+}
+
+// Log today (idempotent — one entry per day). Drops the oldest day if capped.
+static void log_today(void)
+{
+    int days[MAX_DAYS];
+    int n   = load_days(days, MAX_DAYS);
+    int day = today_index();
+    if (has_day(days, n, day)) {
+        return;
+    }
+    if (n == MAX_DAYS) {  // make room: drop the oldest (first) entry
+        for (int i = 1; i < n; i++) {
+            days[i - 1] = days[i];
+        }
+        n--;
+    }
+    days[n++] = day;  // today is the newest, stays at the end (ascending)
+    save_days(days, n);
+}
+
+static void unlog_today(void)
+{
+    int days[MAX_DAYS];
+    int n   = load_days(days, MAX_DAYS);
+    int day = today_index();
+    int w   = 0;
+    for (int i = 0; i < n; i++) {
+        if (days[i] != day) {
+            days[w++] = days[i];
+        }
+    }
+    save_days(days, w);
+}
+
+// Count logged days within the last `span` calendar days (today inclusive).
+static int count_window(const int* days, int n, int span)
+{
+    int today  = today_index();
+    int oldest = today - (span - 1);
+    int c      = 0;
+    for (int i = 0; i < n; i++) {
+        if (days[i] >= oldest && days[i] <= today) {
+            c++;
+        }
+    }
+    return c;
+}
+
+// Days since the most recent fight: 0 if logged today, -1 if never logged.
+static int peace_streak(const int* days, int n)
+{
+    if (n == 0) {
+        return -1;
+    }
+    int latest = days[0];
+    for (int i = 1; i < n; i++) {
+        if (days[i] > latest) {
+            latest = days[i];
+        }
+    }
+    return today_index() - latest;
+}
+
+// ---- glance ----------------------------------------------------------------
+
+static void glance(lv_obj_t* parent)
+{
+    int days[MAX_DAYS];
+    int n      = load_days(days, MAX_DAYS);
+    int streak = peace_streak(days, n);
+
+    lv_obj_t* col = frij_page(parent);
+    frij_label(col, "Couples", FRIJ_FONT_BODY, FRIJ_TEXT_2);
+
+    if (n == 0) {  // nothing logged yet — calm, no number
+        frij_label(col, "All good", FRIJ_FONT_DISPLAY, ACCENT);
+        frij_label(col, "No fights logged", FRIJ_FONT_BODY, FRIJ_TEXT_2);
+    } else if (streak == 0) {  // logged today
+        frij_label(col, "Today", FRIJ_FONT_DISPLAY, ACCENT);
+        frij_label(col, "Fight logged for today", FRIJ_FONT_BODY, FRIJ_TEXT_2);
+    } else {
+        lv_obj_t* big = frij_label(col, "", FRIJ_FONT_CLOCK, ACCENT);
+        lv_label_set_text_fmt(big, "%d", streak);
+        char sub[40];
+        lv_snprintf(sub, sizeof(sub), "%s since last fight", streak == 1 ? "day" : "days");
+        frij_label(col, sub, FRIJ_FONT_BODY, FRIJ_TEXT_2);
+    }
+}
+
+// ---- screen 0: "Did we fight today?" ---------------------------------------
+
+static lv_obj_t* s_choice = NULL;  // the screen-0 body, rebuilt in place on log/undo
+static void build_choice(void);
+
+// A full-width tappable pill with a centered label and press feedback + haptic.
+static lv_obj_t* pill(lv_obj_t* parent, const char* text, uint32_t bg, uint32_t fg,
+                      lv_event_cb_t cb)
+{
+    lv_obj_t* b = lv_obj_create(parent);
+    lv_obj_remove_style_all(b);
+    lv_obj_set_size(b, LV_PCT(74), 64);
+    lv_obj_set_style_radius(b, FRIJ_RADIUS_L, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(b, lv_color_hex(bg), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(b, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(b, LV_OPA_80, LV_PART_MAIN | LV_STATE_PRESSED);  // press dim
+    lv_obj_clear_flag(b, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(b, LV_OBJ_FLAG_CLICKABLE);
+
+    lv_obj_t* l = frij_label(b, text, FRIJ_FONT_TITLE, fg);
+    lv_obj_center(l);
+
+    frij_haptic_attach(b);
+    if (cb) {
+        lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, NULL);
+    }
+    return b;
+}
+
+static void on_no(lv_event_t* e)
+{
+    (void)e;
+    frij_toast("Another peaceful day");  // No has no side effect — just acknowledge
+}
+
+static void on_yes(lv_event_t* e)
+{
+    (void)e;
+    log_today();
+    frij_haptic(FRIJ_HAPTIC_SUCCESS);
+    frij_toast("Logged. Be kind to each other");
+    build_choice();  // flip to the logged state
+}
+
+static void on_undo(lv_event_t* e)
+{
+    (void)e;
+    unlog_today();
+    frij_haptic(FRIJ_HAPTIC_SELECT);
+    frij_toast("Undone");
+    build_choice();  // back to the question
+}
+
+// (Re)fill the screen-0 body for the current state. Called on open and after a
+// log/undo so the screen reflects today without leaving + reopening.
+static void build_choice(void)
+{
+    if (!s_choice) {
+        return;
+    }
+    lv_obj_clean(s_choice);
+
+    if (logged_today()) {
+        // Calm "done for today" state with a way back out.
+        frij_circle_button(s_choice, 72, ACCENT, LV_SYMBOL_OK, FRIJ_FONT_SYMBOL_L, 0xFFFFFF, NULL);
+        lv_obj_t* t = frij_label(s_choice, "Logged for today", FRIJ_FONT_TITLE, FRIJ_TEXT);
+        lv_obj_set_style_margin_top(t, FRIJ_SP_S, LV_PART_MAIN);
+        frij_label(s_choice, "Take a breath together", FRIJ_FONT_BODY, FRIJ_TEXT_2);
+        lv_obj_t* undo = pill(s_choice, "Undo", FRIJ_SURFACE_2, FRIJ_TEXT, on_undo);
+        lv_obj_set_style_margin_top(undo, FRIJ_SP_M, LV_PART_MAIN);
+    } else {
+        frij_label(s_choice, "Did we fight today?", FRIJ_FONT_TITLE, FRIJ_TEXT);
+        lv_obj_t* gap = frij_label(s_choice, "Only a yes is recorded", FRIJ_FONT_SMALL, FRIJ_TEXT_3);
+        lv_obj_set_style_margin_bottom(gap, FRIJ_SP_S, LV_PART_MAIN);
+        pill(s_choice, "No", FRIJ_SURFACE_2, FRIJ_TEXT, on_no);
+        pill(s_choice, "Yes", ACCENT, 0xFFFFFF, on_yes);
+    }
+    frij_page_settle(s_choice);  // re-center after a state change (log/undo)
+    frij_stagger_in(s_choice, 60);
+}
+
+static void on_choice_delete(lv_event_t* e)
+{
+    (void)e;
+    s_choice = NULL;  // the body is being torn down; drop the dangling pointer
+}
+
+static void choice_screen(lv_obj_t* parent)
+{
+    frij_store_pull_async(KEY);  // best-effort cloud refresh (visible next read)
+
+    lv_obj_t* col = frij_page(parent);
+    lv_obj_set_style_pad_row(col, FRIJ_SP_M, LV_PART_MAIN);
+    s_choice = col;
+    lv_obj_add_event_cb(col, on_choice_delete, LV_EVENT_DELETE, NULL);
+    build_choice();
+    frij_page_settle(col);
+}
+
+// ---- screen 1: stats -------------------------------------------------------
+
+// A row of 7 dots for the last week: pink = fight, muted = peace, today ringed.
+static void week_strip(lv_obj_t* parent, const int* days, int n)
+{
+    int today = today_index();
+    lv_obj_t* row = frij_col(parent, 0);
+    lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
+    lv_obj_set_style_pad_column(row, FRIJ_SP_S, LV_PART_MAIN);
+    for (int i = 6; i >= 0; i--) {
+        int       day = today - i;
+        bool      fought = has_day(days, n, day);
+        lv_obj_t* dot = lv_obj_create(row);
+        lv_obj_remove_style_all(dot);
+        lv_obj_set_size(dot, 18, 18);
+        lv_obj_set_style_radius(dot, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+        lv_obj_set_style_bg_color(dot, lv_color_hex(fought ? ACCENT : FRIJ_SURFACE_3),
+                                  LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(dot, LV_OPA_COVER, LV_PART_MAIN);
+        if (day == today) {  // mark today with an accent ring
+            lv_obj_set_style_border_width(dot, 2, LV_PART_MAIN);
+            lv_obj_set_style_border_color(dot, lv_color_hex(ACCENT), LV_PART_MAIN);
+        }
+    }
+}
+
+static void count_row(lv_obj_t* col, const char* label, int count)
+{
+    char v[16];
+    lv_snprintf(v, sizeof(v), "%d", count);
+    frij_value_row(col, label, v);
+}
+
+static void stats_screen(lv_obj_t* parent)
+{
+    int days[MAX_DAYS];
+    int n      = load_days(days, MAX_DAYS);
+    int streak = peace_streak(days, n);
+
+    lv_obj_t* col = frij_page(parent);
+    lv_obj_set_style_pad_row(col, FRIJ_SP_S, LV_PART_MAIN);
+
+    // Hero: the peace streak (positive framing), or a calm empty line.
+    if (n == 0) {
+        frij_label(col, "All good", FRIJ_FONT_DISPLAY, ACCENT);
+        frij_label(col, "No fights logged yet", FRIJ_FONT_BODY, FRIJ_TEXT_2);
+    } else {
+        lv_obj_t* big = frij_label(col, "", FRIJ_FONT_DISPLAY, ACCENT);
+        lv_label_set_text_fmt(big, "%d", streak < 0 ? 0 : streak);
+        frij_label(col, streak == 0 ? "fight logged today" : "days since last fight",
+                   FRIJ_FONT_SMALL, FRIJ_TEXT_2);
+    }
+
+    week_strip(col, days, n);
+    lv_obj_t* cap = frij_label(col, "Last 7 days", FRIJ_FONT_SMALL, FRIJ_TEXT_3);
+    lv_obj_set_style_margin_bottom(cap, FRIJ_SP_S, LV_PART_MAIN);
+
+    count_row(col, "This week", count_window(days, n, 7));
+    count_row(col, "This month", count_window(days, n, 30));
+    count_row(col, "Total logged", n);
+
+    frij_page_settle(col);
+    frij_stagger_in(col, 40);
+}
+
+// ---- clear history (header action on stats) --------------------------------
+
+static void do_clear(lv_event_t* e)
+{
+    (void)e;
+    save_days(NULL, 0);  // empty array
+    frij_haptic(FRIJ_HAPTIC_SUCCESS);
+    frij_toast_status("History cleared", true);
+}
+
+static const char* couples_action(int index)
+{
+    return index == 1 ? LV_SYMBOL_TRASH : NULL;  // clear only on the stats screen
+}
+
+static void couples_on_action(int index)
+{
+    if (index != 1) {
+        return;
+    }
+    frij_prompt_screen(LV_SYMBOL_TRASH, FRIJ_DANGER, "Clear history?",
+                       "Forget every logged day. Can't be undone.", "Clear", "Cancel", do_clear);
+}
+
+// ---- app contract ----------------------------------------------------------
+
+static void screen(lv_obj_t* parent, int index)
+{
+    if (index == 1) {
+        stats_screen(parent);
+    } else {
+        choice_screen(parent);
+    }
+}
+
+const frij_app_t* couples_app(void)
+{
+    static const frij_app_t app = {"Couples",        ACCENT, glance, 2, screen,
+                                   couples_action, couples_on_action};
+    return &app;
+}

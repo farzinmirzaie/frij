@@ -47,7 +47,7 @@ returns plain structs. (Pilot: the Events app + `packages/data/events.*`.)
 Each package folder has its own `README.md` with the details.
 | `include/lv_conf.h` | LVGL v9 config (LVGL's `lv_conf.h` template, trimmed) |
 | `support/sdl2_build_extra.py` | SDL2 build helper for the emulator |
-| `platformio.ini` | envs: `emulator_StopWatch` (466 round, LVGL-SDL, default), `device` (WIP) |
+| `platformio.ini` | envs: `emulator_StopWatch` (466 round, LVGL-SDL, default), `device_new` (carousel launcher, flashed + verified), `device` (old launcher, compile-only), `snapshot` |
 | `docs/` | Living project docs — see below |
 
 ## Key patterns
@@ -99,8 +99,9 @@ seen in the emulator. Keep it short and checkable — not a changelog dump.
 
 ## Gotchas
 
-- The `device` env compiles (M5Unified bring-up code is written) but has **never
-  been flashed/verified on hardware**. Emulator is the daily driver; device
-  builds are compile-only checks (~15 min first time).
+- The `device_new` env (carousel launcher) **has been flashed and runs on the
+  M5Stack StopWatch** — panel, touch, both buttons, Wi-Fi, and the AI voice path
+  are verified on hardware. Emulator is still the daily driver; the plain
+  `device` env (old launcher) stays compile-only. First device build ~15 min.
 - Dev machine is an **Apple Silicon Mac** only (emulator builds with `-arch arm64`).
 - This is a trimmed fork of `m5stack/lv_m5_emulator`; M5GFX is the rendering lib.

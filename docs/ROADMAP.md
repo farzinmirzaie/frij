@@ -13,15 +13,17 @@ target whatever board we run on (see [HARDWARE.md](HARDWARE.md)).
 - **Scoreboard** — two-player, cloud-synced score keeper for game nights (shipped).
 - **Events** — countdowns across one or more Google Calendars (per-calendar
   colors, on-device show/hide), via the iCal bridge (shipped).
+- **Couples** — a gentle daily "fight tracker": "did we fight today?" (only Yes
+  logs), with a peace-streak + week/month stats. Cloud-synced (shipped).
 - **Reminders** — time/day-based nudges.
 - **Grocery list** — add/remove items, clear bought.
 - **Photos** — slideshow of family pics.
 - **Clock / weather** — ambient home-screen widgets (nice-to-have).
 - **Frij AI** — voice assistant. UI shell + backend shipped (push-to-talk
   overlay; Supabase Edge Function "ask" -> Gemini with store tools — see
-  [AI.md](AI.md)) — incl. device mic capture (M5.Mic -> audio POST,
-  compile-only, verify on flash). Next: bridge pickup of `todo_inbox`, then
-  flash + tune the mic path on hardware.
+  [AI.md](AI.md)). Device mic capture (M5.Mic -> chunked audio POST) is
+  verified on `device_new`: capture → POST → HTTP 200. Next: bridge pickup of
+  `todo_inbox`.
 
 ## Phases
 

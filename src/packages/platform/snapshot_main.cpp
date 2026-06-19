@@ -18,6 +18,7 @@
 #include "lvgl.h"
 
 #include "apps/assistant/assistant.h"
+#include "apps/couples/couples.h"
 #include "apps/home/home.h"
 #include "apps/events/events.h"
 #include "apps/scoreboard/scoreboard.h"
@@ -208,6 +209,12 @@ int main(int, char**)
         build_app_screen(scoreboard_app(), 1);  // "who goes first?" slot reel
     } else if (scr && strcmp(scr, "scoreboard_glance") == 0) {
         build_glance_view(scoreboard_app());
+    } else if (scr && strcmp(scr, "couples") == 0) {
+        build_app_screen(couples_app(), 0);  // "did we fight today?"
+    } else if (scr && strcmp(scr, "couples_stats") == 0) {
+        build_app_screen(couples_app(), 1);
+    } else if (scr && strcmp(scr, "couples_glance") == 0) {
+        build_glance_view(couples_app());
     } else if (scr && strcmp(scr, "settings") == 0) {
         build_app_screen(settings_app(), 0);
     } else if (scr && strcmp(scr, "network") == 0) {
@@ -240,8 +247,8 @@ int main(int, char**)
             printf("unknown FRIJ_SNAP '%s' — valid: todo todo_glance "
                    "events events_glance events_countdown assistant assistant_glance ai_listen "
                    "ai_answer ai_error ai_thinking stopwatch stopwatch_glance scoreboard "
-                   "scoreboard_reel scoreboard_glance settings network netoff sheet confirm keyboard result "
-                   "about\n",
+                   "scoreboard_reel scoreboard_glance couples couples_stats couples_glance "
+                   "settings network netoff sheet confirm keyboard result about\n",
                    scr);
             return 2;  // a typo'd key must fail loudly, not render the launcher
         }
