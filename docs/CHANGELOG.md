@@ -6,7 +6,9 @@ Newest first. One short entry per change.
 
 - **New screen 2** — "Together since" shows elapsed **years / months / days**
   (calendar-correct, with month/year borrow) since two milestone dates: the
-  relationship start and the marriage. Pink, wraps on the round screen.
+  relationship start and the marriage. The label is the hero (big + pink) with
+  the duration muted beneath it, and the two blocks are spaced apart. Wraps on
+  the round screen.
 - **Env-driven dates** — `FRIJ_TOGETHER_SINCE` / `FRIJ_MARRIED_SINCE` (YYYY-MM-DD)
   bake into the firmware from the shell/`.env` at build time (shared
   `platformio.ini` `[env]` flags; added to `.env.example` + `.env`). Unset →

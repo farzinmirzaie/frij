@@ -577,29 +577,32 @@ static void fmt_elapsed(char* buf, size_t n, int y, int m, int d)
     lv_snprintf(buf + off, n - off, "%d %s", d, d == 1 ? "day" : "days");
 }
 
-static void milestone(lv_obj_t* col, const char* label, const char* iso)
+static void milestone(lv_obj_t* col, const char* label, const char* iso, bool first)
 {
-    frij_label(col, label, FRIJ_FONT_BODY, FRIJ_TEXT_2);
+    // The name is the hero (big + pink); the elapsed duration sits muted below it.
+    lv_obj_t* title = frij_label(col, label, FRIJ_FONT_DISPLAY, ACCENT);
+    if (!first) {  // breathing room between the two milestone blocks
+        lv_obj_set_style_margin_top(title, FRIJ_SP_XXL, LV_PART_MAIN);
+    }
     int  y, m, d;
     char dur[48];
     bool ok = elapsed_since(iso, &y, &m, &d);
     if (ok) {
         fmt_elapsed(dur, sizeof(dur), y, m, d);
     }
-    lv_obj_t* v = frij_label(col, ok ? dur : "Not set", FRIJ_FONT_TITLE,
-                             ok ? ACCENT : FRIJ_TEXT_3);
+    lv_obj_t* v = frij_label(col, ok ? dur : "Not set", FRIJ_FONT_BODY,
+                             ok ? FRIJ_TEXT_2 : FRIJ_TEXT_3);
     lv_obj_set_width(v, LV_PCT(90));
     lv_label_set_long_mode(v, LV_LABEL_LONG_WRAP);
     lv_obj_set_style_text_align(v, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
-    lv_obj_set_style_margin_bottom(v, FRIJ_SP_L, LV_PART_MAIN);
 }
 
 static void since_screen(lv_obj_t* parent)
 {
     lv_obj_t* col = frij_page(parent);
     lv_obj_set_style_pad_row(col, FRIJ_SP_XS, LV_PART_MAIN);
-    milestone(col, "Together", FRIJ_TOGETHER_SINCE);
-    milestone(col, "Married", FRIJ_MARRIED_SINCE);
+    milestone(col, "Together", FRIJ_TOGETHER_SINCE, true);
+    milestone(col, "Married", FRIJ_MARRIED_SINCE, false);
     frij_page_settle(col);
     frij_stagger_in(col, 60);
 }
