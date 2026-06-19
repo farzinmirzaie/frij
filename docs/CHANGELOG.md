@@ -2,6 +2,14 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-19 — Show the real AI error on screen
+
+- **Actual cloud error shown** — the device parsed the response only inside the
+  `code == 200 &&` guard, so on a non-200 (e.g. quota 502) the body was never
+  parsed and the screen always showed the generic "Couldn't reach Frij AI". Now
+  the response is parsed unconditionally: `out["error"]` (e.g. "hit today's free
+  limit") is shown when present, generic only when there's nothing usable.
+
 ## 2026-06-19 — Scoreboard re-roll hint, Frij AI moved + cleaned up
 
 - **Reel "Tap to spin again"** — once a name lands ("X goes first!"), a small hint

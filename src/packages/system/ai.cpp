@@ -373,14 +373,17 @@ static void post_audio(void)
     free(b64);  // held until now — BodyStream points into it
     log_d("[ai] HTTP %d, %d bytes resp", code, (int)resp.length());
 
+    // Parse first, unconditionally — on a non-200 the body still carries the real
+    // error (e.g. {"error":"...quota..."}); only fall back to generic when there's
+    // nothing usable to show.
     JsonDocument out;
-    if (code == 200 && deserializeJson(out, resp.c_str()) == DeserializationError::Ok &&
-        out["a"].is<const char*>()) {
+    bool parsed = deserializeJson(out, resp.c_str()) == DeserializationError::Ok;
+    if (code == 200 && parsed && out["a"].is<const char*>()) {
         snprintf(s_res_q, sizeof(s_res_q), "%s", out["q"] | "");
         snprintf(s_res_a, sizeof(s_res_a), "%s", (const char*)out["a"]);
         s_state = FRIJ_AI_DONE;
     } else {
-        const char* err = out["error"] | "";
+        const char* err = parsed ? (out["error"] | "") : "";
         log_d("[ai] fail: HTTP %d, err='%s', resp='%.120s'", code, err, resp.c_str());
         fail(err[0] ? err : "Couldn't reach Frij AI. Check the connection.");
     }
