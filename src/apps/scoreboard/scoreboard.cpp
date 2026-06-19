@@ -168,6 +168,7 @@ static const uint32_t     FIRST_ACCENTS[2] = {A_ACCENT, B_ACCENT};
 typedef struct {
     lv_obj_t* inner;   // the scrolling strip (moved by its y)
     lv_obj_t* result;
+    lv_obj_t* hint;    // "Tap to spin again" — shown only once a name has landed
     int       center;  // strip row currently in the centre slot
     int       win;     // landed winner (0/1)
     int       tick_y;  // last y a spin tick fired at (for the fast->slow haptic)
@@ -206,6 +207,7 @@ static void reel_finish(reel_ctx_t* c)
     frij_haptic(FRIJ_HAPTIC_SUCCESS);
     lv_label_set_text_fmt(c->result, "%s goes first!", FIRST_NAMES[c->win]);
     lv_obj_set_style_text_color(c->result, lv_color_hex(FIRST_ACCENTS[c->win]), LV_PART_MAIN);
+    lv_label_set_text(c->hint, "Tap to spin again");  // invite a re-roll
     c->busy = false;
 }
 
@@ -223,6 +225,7 @@ static void reel_spin(lv_event_t* e)
         return;
     }
     c->busy = true;
+    lv_label_set_text(c->hint, "");  // hide the re-roll hint while spinning
 
     // Snap back to a low row that still has neighbours above it and shows the SAME
     // name as now (no visible jump — the strip repeats every 2 rows), so each spin
@@ -367,6 +370,7 @@ static void reel_screen(lv_obj_t* parent)
 
     c->center = REEL_VIEW / 2;
     c->result = frij_label(col, "Tap to spin", FRIJ_FONT_BODY, FRIJ_TEXT_2);
+    c->hint   = frij_label(col, "", FRIJ_FONT_SMALL, FRIJ_TEXT_3);  // re-roll hint, set on landing
     s_reel    = c;
 
     lv_obj_add_flag(col, LV_OBJ_FLAG_CLICKABLE);

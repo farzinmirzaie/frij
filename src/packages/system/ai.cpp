@@ -251,6 +251,75 @@ static void fail(const char* msg)
     s_state = FRIJ_AI_ERROR;
 }
 
+// Feeds the JSON request body to HTTPClient in small reads, straight from the
+// PSRAM base64 blob — no multi-hundred-KB std::string in internal RAM, and no
+// single giant TLS write (that fails with "Failed to send chunk"). Three spans:
+// the {"audio":" prefix, the base64 audio (PSRAM), the closing "...} suffix.
+class BodyStream : public Stream
+{
+    const uint8_t* span_[3];
+    size_t         len_[3];
+    int            i_   = 0;  // current span
+    size_t         off_ = 0;  // offset within current span
+
+public:
+    BodyStream(const char* pre, const char* b64, size_t b64n, const char* suf)
+    {
+        span_[0] = (const uint8_t*)pre;  len_[0] = strlen(pre);
+        span_[1] = (const uint8_t*)b64;  len_[1] = b64n;
+        span_[2] = (const uint8_t*)suf;  len_[2] = strlen(suf);
+    }
+    size_t total() const { return len_[0] + len_[1] + len_[2]; }
+
+    int available() override
+    {
+        size_t rem = 0;
+        for (int s = i_; s < 3; s++) {
+            rem += len_[s];
+        }
+        return (int)(rem - off_);
+    }
+    // HTTPClient pulls the payload through this.
+    size_t readBytes(char* buf, size_t n) override
+    {
+        size_t got = 0;
+        while (got < n) {
+            while (i_ < 3 && off_ >= len_[i_]) {
+                i_++;
+                off_ = 0;
+            }
+            if (i_ >= 3) {
+                break;
+            }
+            size_t take = len_[i_] - off_;
+            if (take > n - got) {
+                take = n - got;
+            }
+            memcpy(buf + got, span_[i_] + off_, take);
+            off_ += take;
+            got  += take;
+        }
+        return got;
+    }
+    int read() override
+    {
+        char c;
+        return readBytes(&c, 1) == 1 ? (uint8_t)c : -1;
+    }
+    int peek() override
+    {
+        int s = i_;
+        size_t o = off_;
+        while (s < 3 && o >= len_[s]) {
+            s++;
+            o = 0;
+        }
+        return s < 3 ? span_[s][o] : -1;
+    }
+    void   flush() override {}
+    size_t write(uint8_t) override { return 0; }
+};
+
 static void post_audio(void)
 {
     char url[256], key[512];
@@ -280,14 +349,12 @@ static void post_audio(void)
     }
     memcpy(wav, hdr, 44);
     memcpy(wav + 44, s_pcm, data_bytes);
-    base64_into(wav, wav_bytes, b64);
+    size_t b64_len = base64_into(wav, wav_bytes, b64);
     free(wav);
 
-    // request body {"audio": "<b64>", "mime": "audio/wav"}
-    std::string body = "{\"audio\":\"";
-    body += b64;
-    body += "\",\"mime\":\"audio/wav\"}";
-    free(b64);
+    // request body {"audio": "<b64>", "mime": "audio/wav"} — streamed, not
+    // assembled in one buffer (b64 is huge and lives in PSRAM).
+    BodyStream body("{\"audio\":\"", b64, b64_len, "\",\"mime\":\"audio/wav\"}");
 
     WiFiClientSecure client;
     client.setInsecure();  // TODO: pin the Supabase cert
@@ -298,9 +365,13 @@ static void post_audio(void)
     http.addHeader("apikey", key);
     http.addHeader("Authorization", (std::string("Bearer ") + key).c_str());
     http.setTimeout(30000);
-    int code = http.POST((uint8_t*)body.data(), body.size());
+    log_d("[ai] POST %s (%u bytes audio, %u body)", endpoint.c_str(),
+          (unsigned)data_bytes, (unsigned)body.total());
+    int code = http.sendRequest("POST", &body, body.total());
     String resp = http.getString();
     http.end();
+    free(b64);  // held until now — BodyStream points into it
+    log_d("[ai] HTTP %d, %d bytes resp", code, (int)resp.length());
 
     JsonDocument out;
     if (code == 200 && deserializeJson(out, resp.c_str()) == DeserializationError::Ok &&
@@ -310,6 +381,7 @@ static void post_audio(void)
         s_state = FRIJ_AI_DONE;
     } else {
         const char* err = out["error"] | "";
+        log_d("[ai] fail: HTTP %d, err='%s', resp='%.120s'", code, err, resp.c_str());
         fail(err[0] ? err : "Couldn't reach Frij AI. Check the connection.");
     }
 }
@@ -336,6 +408,7 @@ static void capture_task(void*)
     // Leave the speaker OFF (it hisses when idle); frij_audio_* re-begins it
     // on demand for a tone. Re-begin here would resume the white noise.
     M5.Speaker.end();
+    log_d("[ai] captured %u samples (%.2fs)", (unsigned)s_pcm_n, (float)s_pcm_n / MIC_RATE);
 
     if (s_cancelled.load()) {
         // backed out — drop the clip, don't call the cloud

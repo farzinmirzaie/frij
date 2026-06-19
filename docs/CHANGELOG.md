@@ -2,6 +2,24 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-19 — Scoreboard re-roll hint, Frij AI moved + cleaned up
+
+- **Reel "Tap to spin again"** — once a name lands ("X goes first!"), a small hint
+  line invites a re-roll; it hides while the reel is spinning.
+- **Frij AI app moved** — now sits right after Scoreboard in the carousel
+  (home, todo, events, scoreboard, **assistant**, stopwatch, counter).
+- **Listening screen calmer** — removed the breathing accent halo at the screen rim
+  on the Listening state; the center ripple + bars carry it.
+- **Device voice POST fixed** — the audio upload failed with "Failed to send
+  chunk": the base64 WAV (~100 KB+) was sent as one giant TLS write held in an
+  internal-RAM `std::string`, which mbedTLS can't push. Now a `BodyStream` feeds
+  the JSON body to HTTPClient in small reads straight from the PSRAM base64 blob
+  (no big internal copy, no single huge write). Verified end-to-end on device:
+  capture → POST → HTTP 200. (A quota'd cloud key still shows its error message,
+  which is correct.)
+- **AI voice path logs** — capture length, POST size, HTTP code, and error body
+  log over serial (`log_d`, visible at `CORE_DEBUG_LEVEL=4`) for future tracing.
+
 ## 2026-06-19 — Audio idle-off, Wi-Fi scan keeps connection, drag thresholds
 
 - **White noise fixed** — the ES8311 amp was left powered after a tone (idle hiss);

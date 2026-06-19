@@ -155,22 +155,6 @@ static void build_listening(void)
     lv_obj_clean(s_overlay);
     overlay_glow();
 
-    // a very subtle accent halo breathing at the screen's rim — "the room is
-    // listening", without competing with the center visual
-    lv_obj_t* edge = frij_edge_glow(s_overlay, ACCENT);
-    if (frij_anim_enabled()) {
-        lv_anim_t a;
-        lv_anim_init(&a);
-        lv_anim_set_var(&a, edge);
-        lv_anim_set_exec_cb(&a, frij_anim_exec_opa);
-        lv_anim_set_values(&a, 90, 255);
-        lv_anim_set_duration(&a, 1100);
-        lv_anim_set_playback_duration(&a, 1100);
-        lv_anim_set_repeat_count(&a, LV_ANIM_REPEAT_INFINITE);
-        lv_anim_set_path_cb(&a, lv_anim_path_ease_in_out);
-        lv_anim_start(&a);
-    }
-
     lv_obj_t* col = overlay_col();
 
     // rippling rings with the audio glyph at their heart
