@@ -192,7 +192,10 @@ void lvgl_port_init(M5GFX &gfx)
     ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, 10 * 1000));
     // 16 KB stack (ESP-IDF counts bytes): lv_timer_handler runs all rendering +
     // the apps' build callbacks; 4 KB overflowed the canary on the first flash.
-    xTaskCreate(lvgl_rtos_task, "lvgl_rtos_task", 16384, NULL, 1, NULL);
+    // Pin the LVGL render task to core 1 (APP). Core 0 (PRO) runs the Wi-Fi stack
+    // + our network/background tasks (store sync, AI, wifi), so keeping render on
+    // core 1 stops a sync/connect burst from hitching the UI.
+    xTaskCreatePinnedToCore(lvgl_rtos_task, "lvgl_rtos_task", 16384, NULL, 1, NULL, 1);
 #elif !defined(ARDUINO) && (__has_include(<SDL2/SDL.h>) || __has_include(<SDL.h>))
     xGuiMutex = SDL_CreateMutex();
     SDL_AddTimer(10, lvgl_tick_timer, NULL);
@@ -326,7 +329,10 @@ void lvgl_port_init(M5GFX &gfx)
     ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, 10 * 1000));
     // 16 KB stack (ESP-IDF counts bytes): lv_timer_handler runs all rendering +
     // the apps' build callbacks; 4 KB overflowed the canary on the first flash.
-    xTaskCreate(lvgl_rtos_task, "lvgl_rtos_task", 16384, NULL, 1, NULL);
+    // Pin the LVGL render task to core 1 (APP). Core 0 (PRO) runs the Wi-Fi stack
+    // + our network/background tasks (store sync, AI, wifi), so keeping render on
+    // core 1 stops a sync/connect burst from hitching the UI.
+    xTaskCreatePinnedToCore(lvgl_rtos_task, "lvgl_rtos_task", 16384, NULL, 1, NULL, 1);
 #elif !defined(ARDUINO) && (__has_include(<SDL2/SDL.h>) || __has_include(<SDL.h>))
     xGuiMutex = SDL_CreateMutex();
     SDL_AddTimer(10, lvgl_tick_timer, NULL);

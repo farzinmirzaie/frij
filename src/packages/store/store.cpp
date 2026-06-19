@@ -463,8 +463,9 @@ void frij_store_init(void)
     s_fs_mtx = xSemaphoreCreateMutex();
     LittleFS.begin(/*formatOnFail=*/true);  // mounts the data partition; formats once on first boot
     s_q = xQueueCreate(8, sizeof(store_op_t*));
-    // 12 KB stack: WiFiClientSecure's TLS handshake is stack-hungry.
-    xTaskCreate(store_worker, "frijstore", 12288, NULL, 1, NULL);
+    // 12 KB stack: WiFiClientSecure's TLS handshake is stack-hungry. Pin to core 0
+    // (PRO, with Wi-Fi) so the recurring sync TLS stays off the render core (1).
+    xTaskCreatePinnedToCore(store_worker, "frijstore", 12288, NULL, 1, NULL, 0);
 }
 
 bool frij_store_load(const char* key, char* buf, size_t buf_size)

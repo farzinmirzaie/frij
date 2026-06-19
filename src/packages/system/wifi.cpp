@@ -353,7 +353,7 @@ void frij_wifi_scan_start(void)
         return;
     }
     s_scan_busy = true;
-    if (xTaskCreate(scan_task, "wifiscan", 6144, NULL, 1, NULL) != pdPASS) {
+    if (xTaskCreatePinnedToCore(scan_task, "wifiscan", 6144, NULL, 1, NULL, 0) != pdPASS) {
         s_scan_busy  = false;  // couldn't spawn — fall back to a blocking scan
         s_scan_count = frij_wifi_scan(s_scan_buf, (int)(sizeof(s_scan_buf) / sizeof(s_scan_buf[0])));
     }
@@ -393,7 +393,7 @@ void frij_wifi_connect_start(const char* ssid, const char* password)
     strncpy(s_conn_pw, password ? password : "", sizeof(s_conn_pw) - 1);
     s_conn_pw[sizeof(s_conn_pw) - 1] = '\0';
     s_conn                           = FRIJ_WIFI_CONNECTING;
-    if (xTaskCreate(connect_task, "wificonn", 6144, NULL, 1, NULL) != pdPASS) {
+    if (xTaskCreatePinnedToCore(connect_task, "wificonn", 6144, NULL, 1, NULL, 0) != pdPASS) {
         bool ok = frij_wifi_connect(s_conn_ssid, s_conn_pw);  // fallback: blocking
         s_conn  = ok ? FRIJ_WIFI_CONNECTED : FRIJ_WIFI_FAILED;
     }

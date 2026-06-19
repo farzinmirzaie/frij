@@ -2,6 +2,15 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-19 — Bigger glow + core affinity (UI off the network core)
+
+- **Accent glow images enlarged** 320 → 400 px — a wider halo behind each glance.
+- **Render pinned to core 1; network/background to core 0.** The LVGL render task
+  was unpinned (could land on the Wi-Fi core); now it owns core 1 (APP) while the
+  store sync worker, AI capture/upload, and wifi scan/connect run on core 0 (PRO,
+  with the Wi-Fi stack). A sync / connect / AI burst no longer hitches the UI.
+  (Dual-core *render* was tried and reverted — flush-bound, no gain.)
+
 ## 2026-06-19 — New carousel launcher (device, behind FRIJ_NEW_LAUNCHER)
 
 - An alternate launcher for the device, selected at build time by

@@ -367,9 +367,9 @@ bool frij_ai_listen_start(void)
     s_state     = FRIJ_AI_BUSY;
     s_cancelled = false;
     s_capturing = true;
-    // pinned to core 1; 16 KB stack — the mbedTLS handshake (WiFiClientSecure) +
-    // JSON parse live here and overflow an 8 KB stack.
-    xTaskCreatePinnedToCore(capture_task, "frij_ai", 16384, nullptr, 1, &s_task, 1);
+    // core 0 (PRO, with Wi-Fi) so the TLS upload stays off the render core (core
+    // 1); 16 KB stack — the mbedTLS handshake + JSON parse overflow an 8 KB stack.
+    xTaskCreatePinnedToCore(capture_task, "frij_ai", 16384, nullptr, 1, &s_task, 0);
     return s_task != nullptr;
 }
 
