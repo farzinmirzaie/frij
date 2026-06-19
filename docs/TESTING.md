@@ -35,7 +35,7 @@ sips -s format png /tmp/frij_snapshot.bmp --out /tmp/frij_snapshot.png
 
 `FRIJ_SNAP` values: `home_glance` `todo` `todo_glance` `events`
 `events_glance` `events_countdown` `events_calendars` `assistant` `assistant_glance` `ai_listen`
-`ai_answer` `ai_error` `ai_thinking` `counter` `stopwatch` `stopwatch_glance` `scoreboard`
+`ai_answer` `ai_error` `ai_thinking` `stopwatch` `stopwatch_glance` `scoreboard`
 `scoreboard_reel` `scoreboard_glance` `settings`
 (General) `network` `netoff` `sheet` `confirm` `keyboard` (numpad) `result`
 `about`. (unset = the launcher/home.) Exit codes: 0 ok, 1 capture failed,
@@ -47,7 +47,7 @@ Then open/Read `/tmp/frij_snapshot.png`. It renders the real UI offscreen at
 ## 4. Checklist before done
 
 - [ ] `pio run` SUCCESS (and `-e snapshot` if UI changed).
-- [ ] Snapshot reviewed for any screen you touched (home / todo / counter / settings).
+- [ ] Snapshot reviewed for any screen you touched (home / todo / events / settings).
 - [ ] No content clipped by the round edge; text legible at 466.
 - [ ] `docs/CHANGELOG.md` updated.
 - [ ] Round left uncommitted for review (see the commit/review loop in CLAUDE.md).

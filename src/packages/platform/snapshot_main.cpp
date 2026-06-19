@@ -18,7 +18,6 @@
 #include "lvgl.h"
 
 #include "apps/assistant/assistant.h"
-#include "apps/counter/counter.h"
 #include "apps/home/home.h"
 #include "apps/events/events.h"
 #include "apps/scoreboard/scoreboard.h"
@@ -33,7 +32,7 @@
 extern void user_app(void);
 
 // Render one app screen, round-clipped like the launcher does (for verifying a
-// specific screen via FRIJ_SNAP=todo|counter|settings).
+// specific screen via FRIJ_SNAP=todo|stopwatch|settings).
 static void build_app_screen(const frij_app_t* app, int index)
 {
     lv_obj_t* s = lv_screen_active();
@@ -199,8 +198,6 @@ int main(int, char**)
         build_glance_view(assistant_app());
         frij_assistant_ptt(true);
         frij_assistant_ptt(false);  // 1.5s mock think + the 3s settle -> answer
-    } else if (scr && strcmp(scr, "counter") == 0) {
-        build_app_screen(counter_app(), 0);
     } else if (scr && strcmp(scr, "stopwatch") == 0) {
         build_app_screen(stopwatch_app(), 0);
     } else if (scr && strcmp(scr, "stopwatch_glance") == 0) {
@@ -242,7 +239,7 @@ int main(int, char**)
         if (scr && scr[0]) {  // typo'd key would silently render the launcher
             printf("unknown FRIJ_SNAP '%s' — valid: todo todo_glance "
                    "events events_glance events_countdown assistant assistant_glance ai_listen "
-                   "ai_answer ai_error ai_thinking counter stopwatch stopwatch_glance scoreboard "
+                   "ai_answer ai_error ai_thinking stopwatch stopwatch_glance scoreboard "
                    "scoreboard_reel scoreboard_glance settings network netoff sheet confirm keyboard result "
                    "about\n",
                    scr);

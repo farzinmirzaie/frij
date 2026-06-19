@@ -30,8 +30,8 @@ theme, list rows, …) as patterns repeat.
   - `frij_toggle` — themed switch (takes an accent).
   - `frij_action_row` — a tappable card row (label + chevron) for actions.
   - `frij_value_row` — a read-only row: label + muted value (Battery, Last sync…).
-  - `frij_circle_button` — a circular icon button (press-pop + haptic); counter's
-    ± and Todo's add button.
+  - `frij_circle_button` — a circular icon button (press-pop + haptic); e.g. the
+    assistant answer screen's OK action.
   - `frij_prompt_screen` — a full-screen prompt (big colored ring + title +
     message + 1–2 pill actions; primary = app accent or FRIJ_DANGER). Use it
     before destructive actions; Back/Cancel dismiss without firing.

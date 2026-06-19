@@ -465,7 +465,6 @@ static void pull_synced_keys(void)
 {
     frij_store_pull_async("todo");
     frij_store_pull_async("events");
-    frij_store_pull_async("counter");
     frij_store_pull_async("sb_a");
     frij_store_pull_async("sb_b");
     // Stamp when the todo list was last synced, for its "Updated Xm ago"

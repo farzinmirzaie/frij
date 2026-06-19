@@ -19,7 +19,7 @@ frij_store_clear();               // wipe the local cache (factory reset)
 ```
 
 Key = app name; one JSON blob per app. Apps choose their own serialization
-(Counter stores a number; Todo a JSON array via ArduinoJson).
+(Todo/Events store a JSON array via ArduinoJson; settings store scalars).
 
 ## Backends
 

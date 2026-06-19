@@ -36,7 +36,7 @@ target whatever board we run on (see [HARDWARE.md](HARDWARE.md)).
 - [ ] **P2 — Flesh out Todos**: on-device add/delete (today: toggle on device,
   add/remove via Keep through the bridge; AI voice-add queues to `todo_inbox`).
 - [x] **Storage 1**: shared `frij_store` (key→JSON) + emulator file backend;
-  Counter persists. See [STORAGE.md](STORAGE.md).
+  Todo/Events persist. See [STORAGE.md](STORAGE.md).
 - [ ] **Storage 2**: Supabase backend on device (wifi, scoped key, offline queue).
 - [ ] **Storage 3**: web app reading the same data (Google-Keep-style).
 - [x] **Keep sync**: off-device bridge syncs a shared Google Keep list with

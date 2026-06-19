@@ -2,6 +2,14 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-19 — Drop the Counter app
+
+- **Counter app removed** — it was an early test app with no real use. Deleted
+  `src/apps/counter/`, unregistered it, dropped its `store:counter` cloud pull
+  (boot + Sync now), removed its snapshot key, and scrubbed the doc/comment
+  references. Carousel is now home → todo → events → scoreboard → assistant →
+  stopwatch. (Any old `store:counter` blob in the cloud is just left orphaned.)
+
 ## 2026-06-19 — Show the real AI error on screen
 
 - **Actual cloud error shown** — the device parsed the response only inside the

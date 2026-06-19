@@ -135,7 +135,6 @@ static void on_sync_now(lv_event_t* e)
 {
     (void)e;
     frij_store_pull_async("todo");  // best-effort cloud refresh
-    frij_store_pull_async("counter");
     frij_store_pull_async("sb_a");
     frij_store_pull_async("sb_b");
     frij_store_save_int("last_sync", (int)time(NULL));
@@ -172,7 +171,7 @@ static void on_reset(lv_event_t* e)
 static void do_erase(lv_event_t* e)
 {
     (void)e;
-    frij_store_clear();  // wipe todos / counter / settings; defaults return on next read
+    frij_store_clear();  // wipe todos / events / scoreboard / settings; defaults return on next read
     // Wi-Fi credentials live in NVS, not the store — drop them too so "all
     // data" means all data.
     const char* cur = frij_wifi_connected();

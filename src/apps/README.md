@@ -104,10 +104,8 @@ every app shares the look but has its own scheme.
   `ask` edge function + Gemini — see [../../docs/AI.md](../../docs/AI.md); the
   device records the mic, the emulator sends a sample question, falling back to
   canned answers only when the cloud is unconfigured). Overlay driven by the
-  input layer (`frij_assistant_ptt`): listening (voice bars + pulse rings +
-  breathing edge glow) / thinking (dots) / answer; screen 0 lists the last 5
-  questions + answers. Violet.
-- `counter/` — a number with ±, persists; long-press the number to reset. Blue.
+  input layer (`frij_assistant_ptt`): listening (voice bars + pulse rings) /
+  thinking (dots) / answer; screen 0 lists the last 5 questions + answers. Violet.
 - `settings/` — 3 screens: General (Display: brightness/sleep/raise-to-wake;
   Sound: volume/touch-sounds; Preferences: 24-hour/vibration/animations/auto-sync), Network
   (Wi-Fi list + connect/disconnect/forget), About (battery, last sync, sync now,

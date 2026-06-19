@@ -24,8 +24,8 @@
 
 // Per-app accent palette. Each app picks ONE of these as its `color` and uses
 // it for its checks/rings/highlights; the page background stays Surface-1, so
-// every app shares the look but has its own scheme (e.g. Todo amber, Counter
-// blue, Home purple).
+// every app shares the look but has its own scheme (e.g. Todo amber, Home
+// purple, Assistant violet).
 
 #define FRIJ_SURFACE_1  0x000000  // app background — pure black (true off on AMOLED)
 #define FRIJ_SURFACE_2  0x16161B  // cards / rows
