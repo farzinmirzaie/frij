@@ -269,8 +269,8 @@ static void slide_y(lv_obj_t* o, int to, lv_anim_completed_cb_t done)
     lv_anim_start(&a);
 }
 
-static void done_enter_app(lv_anim_t* a)      { (void)a; s_cur = APP;      s_active = &s_capp; s_anim = false; frij_haptic(FRIJ_HAPTIC_TAP); }
-static void done_enter_settings(lv_anim_t* a) { (void)a; s_cur = SETTINGS; s_active = &s_cset; s_anim = false; frij_haptic(FRIJ_HAPTIC_TAP); }
+static void done_enter_app(lv_anim_t* a)      { (void)a; s_cur = APP;      s_active = &s_capp; s_anim = false; frij_haptic(FRIJ_HAPTIC_SELECT); }
+static void done_enter_settings(lv_anim_t* a) { (void)a; s_cur = SETTINGS; s_active = &s_cset; s_anim = false; frij_haptic(FRIJ_HAPTIC_SELECT); }
 
 // We're back on home (a close finished, or a partial open was cancelled): drop
 // whichever transient layer exists — only one can at a time.
@@ -286,7 +286,7 @@ static void done_back_home(lv_anim_t* a)
     s_cur = HOME; s_active = &s_chome; s_anim = false;
     layer_fx(s_home, 0);  // safety: home settles at native scale/opacity
     if (closed) {
-        frij_haptic(FRIJ_HAPTIC_TAP);
+        frij_haptic(FRIJ_HAPTIC_SELECT);
         if (s_home_index0 && frij_carousel_index(&s_chome) != 0) {
             // hold-Back: continue to the watch face (goto builds it fresh)
             s_home_index0 = false;

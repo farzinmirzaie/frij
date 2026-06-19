@@ -2,6 +2,20 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-19 — UX: Wi-Fi sort, drag fix, consistent haptics, reel feedback
+
+- **Wi-Fi list sorted** — the connected network first, then strongest → weakest
+  signal.
+- **Drag-to-open-app fixed** — an up-drag from the watch face no longer occasionally
+  jumps to Settings. The vertical nav now commits only on travel *in the locked
+  direction* (was absolute |dy|), so a brief direction mis-lock reverts instead of
+  firing the wrong layer.
+- **Consistent haptics** — every tap now uses the medium buzz (SELECT), matching the
+  slider; removed the double-buzz on toggles and score cards (they were
+  `frij_haptic_attach`'d *and* fired a second haptic). SUCCESS still marks completions.
+- **Reel spin feedback** — the "who goes first?" reel ticks (buzz + click) once per
+  name, fast → slow with the ease-out, ending on the winner's success buzz.
+
 ## 2026-06-19 — Bigger glow + core affinity (UI off the network core)
 
 - **Accent glow images enlarged** 320 → 400 px — a wider halo behind each glance.

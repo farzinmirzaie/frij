@@ -280,24 +280,29 @@ static void iso_input(lv_event_t* e)
         }
     } else if (code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST) {
         lv_indev_get_point(indev, &p);
-        int dy   = p.y - s_iso_start.y;
-        int dist = (dy < 0) ? -dy : dy;  // travel in the locked direction
+        int dy = p.y - s_iso_start.y;
+        // Travel measured IN the locked direction (negative if the finger actually
+        // went the other way). Committing on |dy| used to fire the locked target
+        // even when the user dragged the opposite way — e.g. an up-drag to open the
+        // app, after the sign briefly mis-locked downward, still jumped to Settings
+        // on release. Now a reversed drag just reverts.
+        int travel = (s_v_sign > 0) ? dy : -dy;
         // A fast, short flick commits too — waiting for the full 30% makes quick
         // swipes feel ignored (the old launcher's snappiness).
         int thr = h * 30 / 100;
-        if (dist > 40 && lv_tick_elaps(s_iso_press_tick) < 260) {
+        if (travel > 40 && lv_tick_elaps(s_iso_press_tick) < 260) {
             thr = 40;
         }
         if (s_iso_axis == 1) {
             frij_carousel_end(active_inner(), p.x - s_iso_start.x);
         } else if (s_iso_axis == 2 && s_v_transition && !s_vanim) {
-            bool commit = dist > thr;
+            bool commit = travel > thr;  // only if the finger actually went the locked way
             s_vanim     = true;
             // Only home + the one locked target ever moved, so both always slide
             // to a clean rest position here — nothing is left stranded mid-screen.
             if (s_cur == 0 && s_v_sign > 0) {  // home <-> settings
                 if (commit) {
-                    frij_haptic(FRIJ_HAPTIC_TAP);
+                    frij_haptic(FRIJ_HAPTIC_SELECT);
                     slide_layer(s_layer_home, h, false);
                     slide_layer(s_layer_set, 0, true);
                     s_cur = 1;
@@ -307,7 +312,7 @@ static void iso_input(lv_event_t* e)
                 }
             } else if (s_cur == 0) {  // home <-> app
                 if (commit) {
-                    frij_haptic(FRIJ_HAPTIC_TAP);
+                    frij_haptic(FRIJ_HAPTIC_SELECT);
                     slide_layer(s_layer_home, -h, false);
                     slide_layer(s_layer_app, 0, true);
                     s_cur = 2;
@@ -317,7 +322,7 @@ static void iso_input(lv_event_t* e)
                 }
             } else if (s_cur == 1) {  // settings -> home
                 if (commit) {
-                    frij_haptic(FRIJ_HAPTIC_TAP);
+                    frij_haptic(FRIJ_HAPTIC_SELECT);
                     slide_layer(s_layer_set, -h, false);
                     slide_layer(s_layer_home, 0, true);
                     s_cur = 0;
@@ -327,7 +332,7 @@ static void iso_input(lv_event_t* e)
                 }
             } else {  // app -> home
                 if (commit) {
-                    frij_haptic(FRIJ_HAPTIC_TAP);
+                    frij_haptic(FRIJ_HAPTIC_SELECT);
                     slide_layer(s_layer_app, h, false);
                     slide_layer_to(s_layer_home, 0, vanim_done_refresh_home);  // fresh glance
                     s_cur = 0;

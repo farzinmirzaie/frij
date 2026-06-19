@@ -295,7 +295,7 @@ static void numpad_key_cb(lv_event_t* e)
 
     if (code == NUMPAD_OK) {
         if (c->len == 0) {
-            frij_haptic(FRIJ_HAPTIC_TAP);  // nothing typed — nudge, don't submit ""
+            frij_haptic(FRIJ_HAPTIC_SELECT);  // nothing typed — nudge, don't submit ""
             return;
         }
         char out[FRIJ_NUMPAD_MAX + 1];  // copy out before the close frees ctx

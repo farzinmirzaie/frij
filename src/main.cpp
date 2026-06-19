@@ -94,7 +94,7 @@ void loop(void)
     // task, not the LVGL render task, so take the lock around it — without it the
     // overlay creation races the renderer and corrupts LVGL (hang -> black).
     if (M5.BtnA.wasPressed() && !waking) {
-        frij_haptic(FRIJ_HAPTIC_TAP);
+        frij_haptic(FRIJ_HAPTIC_SELECT);
         if (lvgl_port_lock()) {
             frij_assistant_ptt(true);
             lvgl_port_unlock();
@@ -106,7 +106,7 @@ void loop(void)
         }
     }
     if (M5.BtnB.wasPressed() && !waking) {
-        frij_haptic(FRIJ_HAPTIC_TAP);
+        frij_haptic(FRIJ_HAPTIC_SELECT);
         frij_audio_click();
     }
     if (M5.BtnB.wasReleased() && !M5.BtnB.wasHold() && !waking) {
@@ -126,7 +126,7 @@ void loop(void)
     // Key A (G2, yellow) = push-to-talk for Frij AI: hold to record, release to ask.
     // Lock around it: the overlay it builds is LVGL work and we're on the loop task.
     if (M5.BtnA.wasPressed() && !waking) {
-        frij_haptic(FRIJ_HAPTIC_TAP);
+        frij_haptic(FRIJ_HAPTIC_SELECT);
         if (lvgl_port_lock()) {
             frij_assistant_ptt(true);
             lvgl_port_unlock();
@@ -139,7 +139,7 @@ void loop(void)
     }
     // Key B (G1, blue) = Back: tap goes back one layer, hold jumps home.
     if (M5.BtnB.wasPressed() && !waking) {
-        frij_haptic(FRIJ_HAPTIC_TAP);
+        frij_haptic(FRIJ_HAPTIC_SELECT);
         frij_audio_click();
     }
     if (M5.BtnB.wasReleased() && !M5.BtnB.wasHold() && !waking) {

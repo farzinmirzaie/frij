@@ -297,7 +297,7 @@ static void commit_done(lv_anim_t* a)
     page_fx(c->cur, 0);  // make sure the settled page is at native scale/opa
     refresh_dots(c);
     dots_show(c);
-    frij_haptic(FRIJ_HAPTIC_TAP);  // light tick: the page change landed
+    frij_haptic(FRIJ_HAPTIC_SELECT);  // light tick: the page change landed
     notify(c);
 }
 

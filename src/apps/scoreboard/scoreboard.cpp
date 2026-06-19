@@ -1,6 +1,7 @@
 #include "scoreboard.h"
 
 #include "store/store.h"
+#include "system/audio.h"
 #include "system/haptics.h"
 #include "ui/anim.h"
 #include "ui/components.h"
@@ -83,7 +84,8 @@ static void on_card_tap(lv_event_t* e)
     }
     refresh(c);
     pop(is_a ? c->val_a : c->val_b);
-    frij_haptic(FRIJ_HAPTIC_SELECT);
+    // No haptic here: the card is frij_haptic_attach'd (TAP + click on tap/release),
+    // so the press already buzzes once — matching every other tappable.
     frij_store_save_int(is_a ? KEY_A : KEY_B, is_a ? s_a : s_b);
 }
 
@@ -99,7 +101,7 @@ static void on_card_hold(lv_event_t* e)
     (*v)--;
     refresh(c);
     pop(is_a ? c->val_a : c->val_b);
-    frij_haptic(FRIJ_HAPTIC_TAP);
+    // attach handles the buzz (CLICKED fires on the long-press release too)
     frij_store_save_int(is_a ? KEY_A : KEY_B, *v);
 }
 
@@ -168,6 +170,7 @@ typedef struct {
     lv_obj_t* result;
     int       center;  // strip row currently in the centre slot
     int       win;     // landed winner (0/1)
+    int       tick_y;  // last y a spin tick fired at (for the fast->slow haptic)
     bool      busy;
 } reel_ctx_t;
 
@@ -182,6 +185,20 @@ static int reel_y_for(int r)
 static void reel_move(void* obj, int32_t y)
 {
     lv_obj_set_y((lv_obj_t*)obj, (lv_coord_t)y);
+    // A tick — buzz + click — per name that scrolls past. The ease-out spin slows,
+    // so the gaps grow -> ticks go fast then slow, matching the scrolling names.
+    reel_ctx_t* c = s_reel;
+    if (c) {
+        int dy = y - c->tick_y;
+        if (dy < 0) {
+            dy = -dy;
+        }
+        if (dy >= REEL_H) {
+            c->tick_y = y;
+            frij_haptic(FRIJ_HAPTIC_SELECT);  // medium buzz
+            frij_audio_click();               // + a click per name (touch-sfx gated)
+        }
+    }
 }
 
 static void reel_finish(reel_ctx_t* c)
@@ -218,6 +235,7 @@ static void reel_spin(lv_event_t* e)
     int from = reel_y_for(base);
     lv_obj_set_y(c->inner, from);
     c->center = base;
+    c->tick_y = from;  // spin ticks count from here
 
     int win  = (int)lv_rand(0, 1);
     int land = base + REEL_MIN_TRAVEL + (int)lv_rand(0, 4);  // >= 20 rows of travel

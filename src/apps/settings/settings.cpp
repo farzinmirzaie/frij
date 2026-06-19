@@ -287,6 +287,23 @@ static void scan_mark_connected(const char* ssid)  // NULL = nothing connected
     }
 }
 
+// Order the scan: the connected network first, then strongest signal (rssi closer
+// to 0) to weakest. Insertion sort — the list is tiny (<= 12). Called before the
+// rows are built so the row index -> s_scan mapping stays consistent.
+static void scan_sort(void)
+{
+    for (int i = 1; i < s_scan_n; i++) {
+        frij_wifi_net_t key = s_scan[i];
+        int             j   = i - 1;
+        while (j >= 0 && ((key.connected && !s_scan[j].connected) ||
+                          (key.connected == s_scan[j].connected && key.rssi > s_scan[j].rssi))) {
+            s_scan[j + 1] = s_scan[j];
+            j--;
+        }
+        s_scan[j + 1] = key;
+    }
+}
+
 // Poll the async scan/connect and reflect results when ready. Self-stops when
 // nothing is pending.
 static void net_poll_cb(lv_timer_t* t)
@@ -307,7 +324,7 @@ static void net_poll_cb(lv_timer_t* t)
             if (ok) {
                 scan_mark_connected(s_conn_ssid_ui);
             }
-            frij_haptic(ok ? FRIJ_HAPTIC_SUCCESS : FRIJ_HAPTIC_TAP);
+            frij_haptic(ok ? FRIJ_HAPTIC_SUCCESS : FRIJ_HAPTIC_SELECT);
             net_refresh(false);
             if (s_conn_via_pw) {
                 frij_result_screen(ok, ok ? "Connected" : "Couldn't connect", s_conn_ssid_ui,
@@ -472,6 +489,7 @@ static void build_network(lv_obj_t* col, bool rescan)
         frij_stagger_in(col, 40);
         return;
     }
+    scan_sort();  // connected first, then strongest signal
     for (int i = 0; i < s_scan_n; i++) {
         frij_wifi_net_t* nw  = &s_scan[i];
         lv_obj_t*        r   = frij_surface_row(col);

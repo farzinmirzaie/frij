@@ -183,7 +183,7 @@ static void on_lap_reset(lv_event_t* e)
     if (s_running) {
         if (s_lap_n < MAX_LAPS) {
             s_laps[s_lap_n++] = elapsed_ms();
-            frij_haptic(FRIJ_HAPTIC_TAP);
+            frij_haptic(FRIJ_HAPTIC_SELECT);
             if (c->laps) {
                 populate_laps(c->laps);
                 if (lv_obj_get_child_count(c->laps) > 0) {

@@ -10,7 +10,7 @@
 static void on_tap_feedback(lv_event_t* e)
 {
     (void)e;
-    frij_haptic(FRIJ_HAPTIC_TAP);
+    frij_haptic(FRIJ_HAPTIC_SELECT);
     frij_audio_click();  // touch sound (only if enabled in Settings)
 }
 
@@ -840,7 +840,9 @@ static void toggle_row_click_cb(lv_event_t* e)
     } else {
         lv_obj_add_state(sw, LV_STATE_CHECKED);
     }
-    frij_haptic(FRIJ_HAPTIC_SELECT);  // same feedback as the sliders/toggles
+    // No haptic here: the row is a frij_surface_row, already tap-feedback'd
+    // (TAP + click on CLICKED). Adding SELECT made toggles double-buzz vs every
+    // other tappable — taps feel the same everywhere now.
     lv_obj_send_event(sw, LV_EVENT_VALUE_CHANGED, NULL);  // run the caller's handler
 }
 
