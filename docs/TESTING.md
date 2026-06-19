@@ -33,7 +33,7 @@ FRIJ_SNAP=todo .pio/build/snapshot/program        # one screen — see set below
 sips -s format png /tmp/frij_snapshot.bmp --out /tmp/frij_snapshot.png
 ```
 
-`FRIJ_SNAP` values: `todo` `todo_glance` `events`
+`FRIJ_SNAP` values: `home_glance` `todo` `todo_glance` `events`
 `events_glance` `events_countdown` `events_calendars` `assistant` `assistant_glance` `ai_listen`
 `ai_answer` `ai_error` `ai_thinking` `counter` `stopwatch` `stopwatch_glance` `scoreboard`
 `scoreboard_reel` `scoreboard_glance` `settings`

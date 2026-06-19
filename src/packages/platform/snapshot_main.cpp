@@ -19,6 +19,7 @@
 
 #include "apps/assistant/assistant.h"
 #include "apps/counter/counter.h"
+#include "apps/home/home.h"
 #include "apps/events/events.h"
 #include "apps/scoreboard/scoreboard.h"
 #include "system/battery.h"
@@ -160,7 +161,9 @@ int main(int, char**)
     frij_battery_init();  // init battery subjects (screens bind to them)
 
     const char* scr = getenv("FRIJ_SNAP");
-    if (scr && strcmp(scr, "todo") == 0) {
+    if (scr && strcmp(scr, "home_glance") == 0) {
+        build_glance_view(home_app());
+    } else if (scr && strcmp(scr, "todo") == 0) {
         build_app_screen(todo_app(), 0);
     } else if (scr && strcmp(scr, "todo_glance") == 0) {
         build_glance_view(todo_app());

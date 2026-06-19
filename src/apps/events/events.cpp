@@ -118,14 +118,27 @@ static void populate_list(lv_obj_t* col)
         return;
     }
 
+    // Render at most LIST_CAP rows. Each row is ~6 LVGL objects; 50 rows (~300
+    // objects + their stagger anims) can exhaust LVGL's 64 KB heap and crash the
+    // build — worst on the first open, while Wi-Fi/boot-sync still hold internal
+    // RAM. A watch list this deep isn't scrollable-useful anyway; the rest is
+    // summarised by a "+N more" footer (and still drives the countdown/glance).
+    const int LIST_CAP = 16;
+    int       shown    = n < LIST_CAP ? n : LIST_CAP;
+
     int last_sec = -1;
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < shown; i++) {
         int sec = section_of(views[i].days);
         if (sec != last_sec) {  // views arrive sorted, so sections are runs
             frij_section_label(col, SECTIONS[sec]);
             last_sec = sec;
         }
         add_event_row(col, &views[i]);
+    }
+    if (n > shown) {
+        char more[24];
+        lv_snprintf(more, sizeof(more), "+ %d more", n - shown);
+        frij_label(col, more, FRIJ_FONT_SMALL, FRIJ_TEXT_3);
     }
 
     char upd[40];

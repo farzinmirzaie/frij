@@ -20,9 +20,11 @@
  *====================*/
 
 /** Color depth: 1 (I1), 8 (L8), 16 (RGB565), 24 (RGB888), 32 (XRGB8888) */
-/* Frij: 32-bit so gradients/glows are smooth (16-bit RGB565 bands badly).
- * Device note: the port flush must match the panel format (see docs/HARDWARE.md). */
-#define LV_COLOR_DEPTH 32
+/* Frij: 16-bit RGB565 — the M5 panel (and the port's writePixels flush) are
+ * RGB565, so this MUST be 16 or the device renders garbage (wrong byte stride →
+ * broken colors + misaligned geometry). The SDL emulator/snapshot also render
+ * 16-bit; gradients/glows band a little but the device is the real target. */
+#define LV_COLOR_DEPTH 16
 
 /*=========================
    STDLIB WRAPPER SETTINGS
@@ -475,7 +477,7 @@
 #define LV_COLOR_MIX_ROUND_OFS  0
 
 /** Add 2 x 32-bit variables to each `lv_obj_t` to speed up getting style properties */
-#define LV_OBJ_STYLE_CACHE      0
+#define LV_OBJ_STYLE_CACHE      1
 
 /** Add `id` field to `lv_obj_t` */
 #define LV_USE_OBJ_ID           0

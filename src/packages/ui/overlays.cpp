@@ -90,14 +90,10 @@ static lv_obj_t* modal_backdrop(void)
     s_modal_top = modal;  // Back closes this first (see frij_modal_close_top)
     lv_obj_add_event_cb(modal, modal_clear_top_cb, LV_EVENT_DELETE, NULL);
 
-    lv_anim_t a;
-    lv_anim_init(&a);
-    lv_anim_set_var(&a, modal);
-    lv_anim_set_exec_cb(&a, frij_anim_exec_bg_opa);
-    lv_anim_set_values(&a, 0, LV_OPA_60);
-    lv_anim_set_duration(&a, FRIJ_ANIM_MS);
-    lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
-    lv_anim_start(&a);
+    // Set the dim once, no fade-in: animating a full-screen bg_opa re-blends the
+    // whole screen every frame, a visible fps dip on the GPU-less panel. The card
+    // (small) animates in over it instead, which reads as the dialog appearing.
+    lv_obj_set_style_bg_opa(modal, LV_OPA_60, LV_PART_MAIN);
     return modal;
 }
 
@@ -118,22 +114,6 @@ static lv_obj_t* modal_card(lv_obj_t* modal)
     lv_obj_set_flex_align(card, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_row(card, FRIJ_SP_M, LV_PART_MAIN);
     frij_anim_enter(card, 30);  // fade + rise entrance (no-op under reduce-motion)
-
-    // …plus a subtle scale-in pop (pivot at the card's center)
-    if (frij_anim_enabled()) {
-        lv_obj_set_style_transform_pivot_x(card, lv_pct(50), LV_PART_MAIN);
-        lv_obj_set_style_transform_pivot_y(card, lv_pct(50), LV_PART_MAIN);
-        lv_obj_set_style_transform_scale(card, 236, LV_PART_MAIN);  // ~0.92
-        lv_anim_t pop;
-        lv_anim_init(&pop);
-        lv_anim_set_var(&pop, card);
-        lv_anim_set_exec_cb(&pop, frij_anim_exec_scale);
-        lv_anim_set_values(&pop, 236, 256);
-        lv_anim_set_duration(&pop, FRIJ_ANIM_MS);
-        lv_anim_set_delay(&pop, 30);
-        lv_anim_set_path_cb(&pop, lv_anim_path_ease_out);
-        lv_anim_start(&pop);
-    }
     return card;
 }
 
@@ -469,18 +449,6 @@ static void prompt_screen(const char* symbol, uint32_t color, const char* title,
     lv_obj_set_style_bg_color(ring, lv_color_hex(color), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(ring, LV_OPA_20, LV_PART_MAIN);
     lv_obj_clear_flag(ring, LV_OBJ_FLAG_SCROLLABLE);
-    if (frij_anim_enabled()) {  // the ring pops in with a small overshoot
-        lv_obj_set_style_transform_pivot_x(ring, lv_pct(50), LV_PART_MAIN);
-        lv_obj_set_style_transform_pivot_y(ring, lv_pct(50), LV_PART_MAIN);
-        lv_anim_t pop;
-        lv_anim_init(&pop);
-        lv_anim_set_var(&pop, ring);
-        lv_anim_set_exec_cb(&pop, frij_anim_exec_scale);
-        lv_anim_set_values(&pop, 190, 256);
-        lv_anim_set_duration(&pop, 320);
-        lv_anim_set_path_cb(&pop, lv_anim_path_overshoot);
-        lv_anim_start(&pop);
-    }
 
     lv_obj_t* glyph = lv_label_create(ring);
     lv_label_set_text(glyph, symbol);

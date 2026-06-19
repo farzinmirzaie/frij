@@ -168,20 +168,18 @@ static void make_dots(frij_carousel_t* c)
 
 // ---- pages ----------------------------------------------------------------
 
-// Transition FX: pages zoom + fade slightly as they leave/enter, tied to the
-// drag. `p` is "outness": 0 = fully in (native), 256 = fully out.
-#define FX_SCALE_MIN 220  // ~0.86 at fully-out
-#define FX_OPA_MIN   90   // ~35% opacity at fully-out
+// Transition FX hook: `p` is "outness" (0 = fully in, 256 = fully out). The
+// zoom/fade itself is disabled (see page_fx) — too slow on the GPU-less panel —
+// but the hook + `p` plumbing stay so the slide machinery is unchanged.
 
 static void page_fx(lv_obj_t* page, int32_t p)
 {
-    if (page == NULL || !frij_anim_enabled()) {
-        return;
-    }
-    if (p < 0) p = 0;
-    if (p > 256) p = 256;
-    lv_obj_set_style_transform_scale(page, 256 - (256 - FX_SCALE_MIN) * p / 256, LV_PART_MAIN);
-    lv_obj_set_style_opa(page, 255 - (255 - FX_OPA_MIN) * p / 256, LV_PART_MAIN);
+    // Drag zoom/fade is disabled: transform_scale + opa on a full-screen page
+    // force the GPU-less software renderer to rasterize + rescale BOTH the
+    // outgoing and incoming page every drag frame (~2fps). The plain horizontal
+    // slide stays smooth. (No-op kept so the call sites/anims need no changes.)
+    (void)page;
+    (void)p;
 }
 
 static void page_fx_exec(void* page, int32_t p)
@@ -234,6 +232,7 @@ static lv_obj_t* make_page(frij_carousel_t* c)
     lv_obj_set_style_transform_pivot_x(p, lv_pct(50), LV_PART_MAIN);  // zoom from center
     lv_obj_set_style_transform_pivot_y(p, lv_pct(50), LV_PART_MAIN);
     lv_obj_clear_flag(p, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_scrollbar_mode(p, LV_SCROLLBAR_MODE_OFF);  // never show a bar (a screen builder may re-add scroll)
     lv_obj_add_flag(p, LV_OBJ_FLAG_EVENT_BUBBLE);
     dots_to_front(c);  // a fresh page is on top — push the dots back above it
     return p;
@@ -251,14 +250,34 @@ static void anim_x(void* obj, int32_t v)
     lv_obj_set_x((lv_obj_t*)obj, (lv_coord_t)v);
 }
 
+static void anim_y(void* obj, int32_t v)
+{
+    lv_obj_set_y((lv_obj_t*)obj, (lv_coord_t)v);
+}
+
+// Axis helpers: a vertical carousel pages along y instead of x (same logic).
+static int car_span(const frij_carousel_t* c)
+{
+    return c->vertical ? lv_obj_get_height(c->viewport) : lv_obj_get_width(c->viewport);
+}
+
+static void car_set_pos(const frij_carousel_t* c, lv_obj_t* o, int v)
+{
+    if (c->vertical) {
+        lv_obj_set_y(o, v);
+    } else {
+        lv_obj_set_x(o, v);
+    }
+}
+
 static void slide(frij_carousel_t* c, lv_obj_t* obj, int to, lv_anim_completed_cb_t done)
 {
     lv_anim_t a;
     lv_anim_init(&a);
     lv_anim_set_var(&a, obj);
-    lv_anim_set_values(&a, lv_obj_get_x(obj), to);
+    lv_anim_set_values(&a, c->vertical ? lv_obj_get_y(obj) : lv_obj_get_x(obj), to);
     lv_anim_set_duration(&a, ANIM_MS);
-    lv_anim_set_exec_cb(&a, anim_x);
+    lv_anim_set_exec_cb(&a, c->vertical ? anim_y : anim_x);
     lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
     if (done) {
         lv_anim_set_completed_cb(&a, done);
@@ -319,6 +338,7 @@ void frij_carousel_init(frij_carousel_t* c, lv_obj_t* parent, int count,
     c->adj_index   = 0;
     c->dir_sign    = 0;
     c->busy        = false;
+    c->vertical    = false;
     c->builder     = builder;
     c->user        = user;
     c->adj         = NULL;
@@ -361,11 +381,11 @@ void frij_carousel_drag(frij_carousel_t* c, int dx)
     if (c->count <= 1 || c->busy || dx == 0) {
         return;
     }
-    int w    = lv_obj_get_width(c->viewport);
+    int w    = car_span(c);
     int sign = dx < 0 ? -1 : +1;
     ensure_neighbor(c, sign);
-    lv_obj_set_x(c->cur, dx);
-    lv_obj_set_x(c->adj, (sign < 0 ? w : -w) + dx);
+    car_set_pos(c, c->cur, dx);
+    car_set_pos(c, c->adj, (sign < 0 ? w : -w) + dx);
     // zoom/fade follows the finger: the leaving page recedes, the entering one grows
     int p = 256 * abs(dx) / (w > 0 ? w : 1);
     page_fx(c->cur, p);
@@ -380,7 +400,7 @@ void frij_carousel_end(frij_carousel_t* c, int dx)
     if (c->busy || c->adj == NULL) {
         return;
     }
-    int w   = lv_obj_get_width(c->viewport);
+    int w   = car_span(c);
     int p   = 256 * abs(dx) / (w > 0 ? w : 1);
     if (p > 256) p = 256;
     c->busy = true;

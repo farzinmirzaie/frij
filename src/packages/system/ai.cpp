@@ -353,6 +353,11 @@ bool frij_ai_listen_start(void)
     if (!frij_ai_available() || s_state == FRIJ_AI_BUSY || s_task) {
         return false;
     }
+    // No point powering the mic + spawning the upload task with no Wi-Fi to POST
+    // to — drop to the caller's mock path instead.
+    if (WiFi.status() != WL_CONNECTED) {
+        return false;
+    }
     if (!s_pcm) {
         s_pcm = (int16_t*)heap_caps_malloc(MAX_SAMPLES * sizeof(int16_t), MALLOC_CAP_SPIRAM);
     }
@@ -362,8 +367,9 @@ bool frij_ai_listen_start(void)
     s_state     = FRIJ_AI_BUSY;
     s_cancelled = false;
     s_capturing = true;
-    // pinned to core 1 with a generous stack (HTTPS + JSON live here)
-    xTaskCreatePinnedToCore(capture_task, "frij_ai", 8192, nullptr, 1, &s_task, 1);
+    // pinned to core 1; 16 KB stack — the mbedTLS handshake (WiFiClientSecure) +
+    // JSON parse live here and overflow an 8 KB stack.
+    xTaskCreatePinnedToCore(capture_task, "frij_ai", 16384, nullptr, 1, &s_task, 1);
     return s_task != nullptr;
 }
 

@@ -120,6 +120,10 @@ lv_obj_t* frij_header(lv_obj_t* parent, const char* title, uint32_t accent,
 // Show/hide + set the icon of the header's action button (NULL/"" hides it).
 void frij_header_set_action(lv_obj_t* header, const char* symbol);
 
+// Spin the header's action icon one full turn (the refresh affordance on tap).
+// No-op if the action is hidden or animations are off.
+void frij_header_spin_action(lv_obj_t* header);
+
 // A slider styled as a full-width card: the whole card is draggable left/right
 // and an accent fill shows the amount; `label` sits on top. Returns the slider
 // (an lv_slider) — attach LV_EVENT_VALUE_CHANGED and read lv_slider_get_value.

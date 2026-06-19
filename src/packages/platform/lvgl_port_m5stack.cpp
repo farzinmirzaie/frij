@@ -13,7 +13,18 @@ static SDL_mutex *xGuiMutex;
 #endif
 
 #ifndef LV_BUFFER_LINE
-#define LV_BUFFER_LINE 120
+#if defined(ARDUINO) && defined(ESP_PLATFORM)
+// Device: the draw buffer lives in internal DMA-capable RAM, the SAME scarce pool
+// WiFiClientSecure's TLS handshake draws from. 80 lines (~74 KB) once starved
+// M5GFX's getDMABuffer during a TLS sync -> null memcpy -> crash; 40 (~37 KB) was
+// the safe floor. 64 (~58 KB) is the sweet spot: fewer flush round-trips per full
+// redraw (smoother slides) while staying under that crash threshold.
+// (Async-DMA double-buffering was tried — endWrite force-waits on this panel, so
+//  there was no overlap and the smaller buffers it needed were a net loss.)
+#define LV_BUFFER_LINE 64
+#else
+#define LV_BUFFER_LINE 80  // emulator: plain RAM, perf irrelevant
+#endif
 #endif
 
 #ifdef __cplusplus
@@ -179,7 +190,9 @@ void lvgl_port_init(M5GFX &gfx)
     esp_timer_handle_t periodic_timer;
     ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
     ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, 10 * 1000));
-    xTaskCreate(lvgl_rtos_task, "lvgl_rtos_task", 4096, NULL, 1, NULL);
+    // 16 KB stack (ESP-IDF counts bytes): lv_timer_handler runs all rendering +
+    // the apps' build callbacks; 4 KB overflowed the canary on the first flash.
+    xTaskCreate(lvgl_rtos_task, "lvgl_rtos_task", 16384, NULL, 1, NULL);
 #elif !defined(ARDUINO) && (__has_include(<SDL2/SDL.h>) || __has_include(<SDL.h>))
     xGuiMutex = SDL_CreateMutex();
     SDL_AddTimer(10, lvgl_tick_timer, NULL);
@@ -243,7 +256,15 @@ void lvgl_port_init(M5GFX &gfx)
 {
     lv_init();
 
-    static lv_display_t *disp = lv_display_create(gfx.width(), gfx.height());
+    int32_t disp_w = gfx.width();
+    int32_t disp_h = gfx.height();
+#if defined(ARDUINO) && defined(ESP_PLATFORM)
+    // M5GFX autodetect configures the StopWatch CO5300 as 468 tall, but the panel
+    // is physically 466 (its TE line = 0x1D2 = 466). Drawing the extra 2 rows
+    // shows a garbage line near the bottom — clamp to the real height.
+    if (disp_h == 468) disp_h = 466;
+#endif
+    static lv_display_t *disp = lv_display_create(disp_w, disp_h);
     if (disp == NULL) {
         LV_LOG_ERROR("lv_display_create failed");
         return;
@@ -252,15 +273,14 @@ void lvgl_port_init(M5GFX &gfx)
     lv_display_set_driver_data(disp, &gfx);
     lv_display_set_flush_cb(disp, lvgl_flush_cb);
 #if defined(ARDUINO) && defined(ESP_PLATFORM)
-#if defined(BOARD_HAS_PSRAM)
-    static uint8_t *buf1 = (uint8_t *)heap_caps_malloc(gfx.width() * LV_BUFFER_LINE, MALLOC_CAP_SPIRAM);
-    static uint8_t *buf2 = (uint8_t *)heap_caps_malloc(gfx.width() * LV_BUFFER_LINE, MALLOC_CAP_SPIRAM);
-    lv_display_set_buffers(disp, (void *)buf1, (void *)buf2, gfx.width() * LV_BUFFER_LINE,
-                           LV_DISPLAY_RENDER_MODE_PARTIAL);
-#else
-    static uint8_t *buf1 = (uint8_t *)malloc(gfx.width() * LV_BUFFER_LINE);
-    lv_display_set_buffers(disp, (void *)buf1, NULL, gfx.width() * LV_BUFFER_LINE, LV_DISPLAY_RENDER_MODE_PARTIAL);
-#endif
+    // RGB565 = 2 bytes/pixel; LVGL v9 sizes set_buffers in BYTES.
+    const size_t buf_bytes = (size_t)gfx.width() * LV_BUFFER_LINE * 2;
+    // The draw buffer MUST live in internal DMA-capable RAM, not PSRAM: M5GFX
+    // can't DMA out of PSRAM, so a PSRAM buffer falls back to a slow byte copy
+    // and the UI crawls (worst while dragging, which redraws constantly). One
+    // internal buffer keeps flushes DMA-fast; PARTIAL mode keeps it small.
+    static uint8_t *buf1 = (uint8_t *)heap_caps_malloc(buf_bytes, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
+    lv_display_set_buffers(disp, (void *)buf1, NULL, buf_bytes, LV_DISPLAY_RENDER_MODE_PARTIAL);
 #elif !defined(ARDUINO) && (__has_include(<SDL2/SDL.h>) || __has_include(<SDL.h>))
     const uint32_t buf_pixels = gfx.width() * LV_BUFFER_LINE;
     const uint32_t buf_bytes  = buf_pixels * 2;  // LVGL v9 uses bytes (2 bytes per pixel for RGB565)
@@ -304,7 +324,9 @@ void lvgl_port_init(M5GFX &gfx)
     esp_timer_handle_t periodic_timer;
     ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
     ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, 10 * 1000));
-    xTaskCreate(lvgl_rtos_task, "lvgl_rtos_task", 4096, NULL, 1, NULL);
+    // 16 KB stack (ESP-IDF counts bytes): lv_timer_handler runs all rendering +
+    // the apps' build callbacks; 4 KB overflowed the canary on the first flash.
+    xTaskCreate(lvgl_rtos_task, "lvgl_rtos_task", 16384, NULL, 1, NULL);
 #elif !defined(ARDUINO) && (__has_include(<SDL2/SDL.h>) || __has_include(<SDL.h>))
     xGuiMutex = SDL_CreateMutex();
     SDL_AddTimer(10, lvgl_tick_timer, NULL);

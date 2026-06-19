@@ -23,6 +23,7 @@ typedef struct {
     int               adj_index;
     int               dir_sign;    // -1 dragging left (next), +1 right (prev)
     bool              busy;        // snap animation running
+    bool              vertical;    // page along y (up/down) instead of x (left/right)
     frij_page_builder builder;
     void*             user;
     lv_obj_t*         dots;        // page indicator (NULL when count <= 1)

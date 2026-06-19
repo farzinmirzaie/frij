@@ -62,6 +62,12 @@ void setup(void)
     if (auto *bus = static_cast<lgfx::Bus_SPI *>(M5.Display.getPanel()->getBus())) {
         auto bc          = bus->config();
         bc.dma_channel   = SPI_DMA_CH_AUTO;
+        // Push the panel write clock up: the flush (pixel push) is the slide
+        // bottleneck and its time scales ~1/clock. Autodetect leaves it
+        // conservative; 80 MHz is the usual ceiling for these S3 QSPI AMOLEDs.
+        // If the panel shows garbled/torn pixels, this is too high — drop to
+        // 60 MHz (60000000) or remove this line to fall back to autodetect.
+        bc.freq_write    = 80000000;
         bus->config(bc);
         bus->init();
     }
@@ -77,17 +83,59 @@ void loop(void)
     frij_motion_update();      // raise-to-wake (no-op when the setting is off)
     bool waking = buttons_wake_only();  // G1/G2 wake the panel; suppress their action
 
+#ifdef FRIJ_NEW_LAUNCHER
+    // New carousel launcher. Key A (G2) = push-to-talk for Frij AI: the assistant
+    // pops a full-screen overlay (not a carousel layer), so it works on any layer.
+    // Key B (G1) = Back: tap = back one layer, hold = jump to the watch face.
+    extern void frij_iso_back(void);
+    extern void frij_iso_home(void);
+
+    // frij_assistant_ptt builds the assistant overlay (LVGL). We're on the loop
+    // task, not the LVGL render task, so take the lock around it — without it the
+    // overlay creation races the renderer and corrupts LVGL (hang -> black).
+    if (M5.BtnA.wasPressed() && !waking) {
+        frij_haptic(FRIJ_HAPTIC_TAP);
+        if (lvgl_port_lock()) {
+            frij_assistant_ptt(true);
+            lvgl_port_unlock();
+        }
+    } else if (M5.BtnA.wasReleased() && !waking) {
+        if (lvgl_port_lock()) {
+            frij_assistant_ptt(false);
+            lvgl_port_unlock();
+        }
+    }
+    if (M5.BtnB.wasPressed() && !waking) {
+        frij_haptic(FRIJ_HAPTIC_TAP);
+        frij_audio_click();
+    }
+    if (M5.BtnB.wasReleased() && !M5.BtnB.wasHold() && !waking) {
+        frij_iso_back();
+    } else if (M5.BtnB.wasHold() && !waking) {
+        frij_iso_home();
+    }
+    delay(5);
+    return;
+#endif
+
     // Physical buttons echo the same press feedback as on-screen taps. Haptic on
     // both. The click *tone* only on Back: Key A immediately hands the I2S bus to
     // the mic for recording, so a tone there would be cut off mid-buzz. Both
     // respect their settings (frij_haptic / frij_audio_click are no-ops when off).
 
     // Key A (G2, yellow) = push-to-talk for Frij AI: hold to record, release to ask.
+    // Lock around it: the overlay it builds is LVGL work and we're on the loop task.
     if (M5.BtnA.wasPressed() && !waking) {
         frij_haptic(FRIJ_HAPTIC_TAP);
-        frij_assistant_ptt(true);
+        if (lvgl_port_lock()) {
+            frij_assistant_ptt(true);
+            lvgl_port_unlock();
+        }
     } else if (M5.BtnA.wasReleased() && !waking) {
-        frij_assistant_ptt(false);
+        if (lvgl_port_lock()) {
+            frij_assistant_ptt(false);
+            lvgl_port_unlock();
+        }
     }
     // Key B (G1, blue) = Back: tap goes back one layer, hold jumps home.
     if (M5.BtnB.wasPressed() && !waking) {

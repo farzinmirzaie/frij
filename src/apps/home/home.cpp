@@ -20,11 +20,17 @@
 static const uint32_t ACCENT = FRIJ_PRIMARY;
 
 typedef struct {
-    lv_obj_t* arc;      // seconds ring (outer)
-    lv_obj_t* arc_min;  // minutes ring (inner, dimmer)
     lv_obj_t* time;
     lv_obj_t* date;
+    lv_obj_t* arc;      // seconds ring (outer), glides between ticks
+    lv_obj_t* arc_min;  // minutes ring (inner, dimmer)
 } clock_ctx_t;
+
+// anim exec: drive an arc's value (for the gliding seconds hand).
+static void arc_set_value_cb(void* arc, int32_t v)
+{
+    lv_arc_set_value((lv_obj_t*)arc, (int32_t)v);
+}
 
 // Battery glyph for a charge level (or the charging bolt while plugged in).
 static const char* battery_glyph(uint8_t pct, bool charging)
@@ -86,7 +92,7 @@ static void render(clock_ctx_t* c)
             lv_anim_t a;
             lv_anim_init(&a);
             lv_anim_set_var(&a, c->arc);
-            lv_anim_set_exec_cb(&a, frij_anim_exec_arc);
+            lv_anim_set_exec_cb(&a, arc_set_value_cb);
             lv_anim_set_values(&a, cur, target);
             lv_anim_set_duration(&a, 950);  // finishes before the next 1s tick
             lv_anim_set_path_cb(&a, lv_anim_path_linear);
@@ -98,6 +104,7 @@ static void render(clock_ctx_t* c)
     if (c->arc_min) {
         lv_arc_set_value(c->arc_min, tmv.tm_min);  // minutes sweep once an hour
     }
+
     // battery is observer-driven (see battery_observer_cb) — not polled here
 }
 
@@ -159,14 +166,15 @@ static void build_clock(lv_obj_t* parent)
         return;  // out of memory — skip the face rather than deref NULL
     }
 
-    // A thin seconds ring fills most of the face (scales with the screen)...
+    // Outer seconds ring fills most of the face; a dimmer inner ring tracks the
+    // minutes. Restored as live arcs now the per-app glow is a baked opaque image
+    // (the slide has fps headroom again — these used to compound the glow's lag).
     int ring = frij_screen_min() * 80 / 100;
     c->arc   = frij_progress_ring(col, ring, 0, ACCENT);
     lv_arc_set_range(c->arc, 0, 60);
     lv_obj_set_style_arc_width(c->arc, 5, LV_PART_MAIN);
     lv_obj_set_style_arc_width(c->arc, 5, LV_PART_INDICATOR);
 
-    // ...a dimmer inner ring tracks the minutes...
     c->arc_min = lv_arc_create(c->arc);
     lv_obj_set_size(c->arc_min, ring * 80 / 100, ring * 80 / 100);
     lv_obj_center(c->arc_min);
@@ -181,7 +189,7 @@ static void build_clock(lv_obj_t* parent)
     lv_obj_set_style_arc_opa(c->arc_min, LV_OPA_50, LV_PART_INDICATOR);
     lv_obj_set_style_arc_rounded(c->arc_min, true, LV_PART_INDICATOR);
 
-    // ...with the big time + date stacked dead-center inside it.
+    // Big time + date stacked dead-center inside the rings.
     lv_obj_t* inner = frij_col(c->arc, 2);
     lv_obj_set_width(inner, LV_SIZE_CONTENT);
     lv_obj_center(inner);

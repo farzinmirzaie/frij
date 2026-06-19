@@ -291,37 +291,19 @@ static void glow_free_cb(lv_event_t* e)
     lv_free(lv_event_get_user_data(e));  // the gradient descriptor outlives the call
 }
 
+// Opaque accent halo from a baked RGB565 image (glow_img.c) — a plain opaque blit
+// instead of an every-frame alpha blend (the old translucent gradient/disc tanked
+// fps on the GPU-less panel). On the pure-black AMOLED bg an opaque glow-on-black
+// looks identical. One image per app accent; frij_glow_for() picks by colour.
+extern "C" const lv_image_dsc_t* frij_glow_for(uint32_t accent);
+
 lv_obj_t* frij_glow(lv_obj_t* parent, uint32_t accent)
 {
-    int       sz = frij_screen_min() * 80 / 100;
-    lv_obj_t* g  = lv_obj_create(parent);
-    lv_obj_remove_style_all(g);
-    lv_obj_set_size(g, sz, sz);
+    lv_obj_t* g = lv_image_create(parent);
+    lv_image_set_src(g, frij_glow_for(accent));
     lv_obj_center(g);
-    // FLOATING: fixed background that doesn't scroll or grow the scroll area
-    lv_obj_add_flag(g, LV_OBJ_FLAG_FLOATING);
-    lv_obj_clear_flag(g, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_clear_flag(g, LV_OBJ_FLAG_SCROLLABLE);
-
-    // true radial gradient: accent at the center fading to transparent at the edge
-    lv_grad_dsc_t* d = (lv_grad_dsc_t*)lv_malloc(sizeof(lv_grad_dsc_t));
-    if (d == NULL) {
-        return g;  // OOM — a plain (gradient-less) object is fine
-    }
-    lv_memzero(d, sizeof(*d));
-    lv_grad_radial_init(d, LV_GRAD_CENTER, LV_GRAD_CENTER, LV_GRAD_RIGHT, LV_GRAD_CENTER,
-                        LV_GRAD_EXTEND_PAD);
-    d->stops_count   = 2;
-    d->stops[0].color = lv_color_hex(accent);
-    d->stops[0].opa   = 120;
-    d->stops[0].frac  = 0;
-    d->stops[1].color = lv_color_hex(accent);
-    d->stops[1].opa   = 0;
-    d->stops[1].frac  = 255;
-
-    lv_obj_set_style_bg_grad(g, d, LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(g, LV_OPA_COVER, LV_PART_MAIN);
-    lv_obj_add_event_cb(g, glow_free_cb, LV_EVENT_DELETE, d);
+    lv_obj_add_flag(g, LV_OBJ_FLAG_FLOATING);  // fixed bg, out of layout/scroll
+    lv_obj_remove_flag(g, LV_OBJ_FLAG_CLICKABLE);
     return g;
 }
 
@@ -901,7 +883,15 @@ extern void frij_back(void);
 static void on_header_back(lv_event_t* e)
 {
     (void)e;
+#ifdef FRIJ_NEW_LAUNCHER
+    // New carousel launcher: the old frij_back is inert. This fires inside the
+    // LVGL render task (lock already held), so call the no-lock core directly —
+    // frij_iso_back would re-take the non-recursive LVGL mutex and dead-lock.
+    extern void frij_iso_back_from_ui(void);
+    frij_iso_back_from_ui();
+#else
     frij_back();
+#endif
 }
 
 static lv_obj_t* icon_button(lv_obj_t* parent, const char* sym, uint32_t color)
@@ -1005,4 +995,29 @@ void frij_header_set_action(lv_obj_t* header, const char* symbol)
         header_action_fade(action, LV_OPA_TRANSP);  // fade out, don't pop out
         lv_obj_remove_flag(action, LV_OBJ_FLAG_CLICKABLE);  // untappable right away
     }
+}
+
+void frij_header_spin_action(lv_obj_t* header)
+{
+    if (!header || !frij_anim_enabled()) {
+        return;
+    }
+    lv_obj_t* action = lv_obj_get_child(header, lv_obj_get_child_count(header) - 1);
+    if (!action || !lv_obj_has_flag(action, LV_OBJ_FLAG_CLICKABLE)) {
+        return;  // only spin a visible/tappable action
+    }
+    lv_obj_t* icon = lv_obj_get_child(action, 0);
+    if (!icon) {
+        return;
+    }
+    lv_obj_set_style_transform_pivot_x(icon, lv_pct(50), LV_PART_MAIN);
+    lv_obj_set_style_transform_pivot_y(icon, lv_pct(50), LV_PART_MAIN);
+    lv_anim_t a;
+    lv_anim_init(&a);
+    lv_anim_set_var(&a, icon);
+    lv_anim_set_exec_cb(&a, frij_anim_exec_rotation);
+    lv_anim_set_values(&a, 0, 3600);  // 0.1° units = one full turn
+    lv_anim_set_duration(&a, 450);
+    lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
+    lv_anim_start(&a);
 }

@@ -2,6 +2,40 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-19 — New carousel launcher (device, behind FRIJ_NEW_LAUNCHER)
+
+- An alternate launcher for the device, selected at build time by
+  `-D FRIJ_NEW_LAUNCHER` (the `device_new` env): vertical Home / Settings / App
+  layers with a horizontal glance row. The original `frij_launcher_start` is
+  unchanged and still the default (`device`). Vertical nav direction-locks per
+  gesture with a fast-flick (fling) commit + nav haptics; Key B = Back (tap = back
+  a layer, hold = watch face); swipe hint + header action-spin carry over.
+
+## 2026-06-19 — Watch face: clock rings back, accent glow as an image
+
+- **Clock rings restored.** The home face shows the outer gliding seconds ring +
+  the dimmer inner minutes ring again (dropped earlier for slide perf).
+- **Accent glow is back as a baked opaque image.** The old translucent gradient
+  re-blended every slide frame (~1 fps on the GPU-less panel); an opaque RGB565
+  glow-on-black is a plain blit (identical look on the pure-black AMOLED) that
+  costs ~nothing. One image per app accent (`glow_img.c`); `frij_glow_for()` picks
+  by colour.
+
+## 2026-06-19 — Performance round (device)
+
+- **Panel SPI write clock → 80 MHz.** The pixel-push (flush) is the slide
+  bottleneck and its time scales ~1/clock; autodetect left it conservative — the
+  biggest single slide-fps win. (Async-DMA double-buffering was tried and reverted:
+  `endWrite` force-waits on this panel, so there's no overlap to gain.)
+- **Draw buffer 40 → 64 lines** — fewer flush round-trips per full redraw, still
+  under the internal-RAM ceiling the TLS handshake shares.
+- **`LV_OBJ_STYLE_CACHE` on** — fewer style-cascade lookups per redraw.
+- **`CORE_DEBUG_LEVEL` 4 → 1** (device_new) — drops per-event `log_d()` printf over
+  USB CDC (was stalling the UI during a sync).
+- **Events list capped at 16 rows** (+ "+N more" footer) — 50 heavy rows could
+  exhaust LVGL's heap and crash on first open; the full set still feeds the
+  countdown/glance.
+
 ## 2026-06-18 — Scoreboard: moved up, swipe fix, "who goes first?" slot reel
 
 - **Moved up.** Scoreboard now sits right after the Events glance (3rd app),
@@ -15,6 +49,18 @@ Newest first. One short entry per change.
   — a 5-slot window with a 3-stop top/bottom gradient (header-style) buries the
   neighbour names so the centre pick stands alone. Reduce-motion lands instantly.
   (A pill spinner and a coin flip were trialled first; the reel won.)
+
+## 2026-06-18 — Header Back fix + Frij AI on the new launcher
+
+- **Header Back button now works on the new launcher.** `on_header_back` called
+  the old, inert `frij_back`. It now routes to the iso launcher. `frij_iso_back`
+  was split into a no-lock core (`iso_back_impl`) + a locking wrapper: the header
+  tap fires inside the LVGL render task (lock already held) so it calls the core
+  directly — re-locking would dead-lock the non-recursive LVGL mutex. Key B
+  (device) still uses the locking wrapper.
+- **Frij AI wired into the new launcher.** Key A (G2) is now push-to-talk on the
+  carousel launcher too (it was only on the old one). The assistant pops a
+  full-screen overlay, so it works from any layer.
 
 ## 2026-06-16 — Network time (SNTP) on device
 

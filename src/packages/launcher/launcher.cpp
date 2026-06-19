@@ -116,20 +116,18 @@ static lv_obj_t* make_layer(void)
     return o;
 }
 
-// Layer transition FX (mirrors the carousel's page_fx): layers zoom + fade as
-// they leave/enter, tied to the vertical drag. `p` = outness, 0..256.
-#define LFX_SCALE_MIN 220
-#define LFX_OPA_MIN   90
+// Layer transition FX hook (mirrors the carousel's page_fx): `p` = outness,
+// 0..256. The zoom/fade is disabled (see layer_fx) — too slow on the GPU-less
+// panel — but the hook + `p` plumbing stay so the slide machinery is unchanged.
 
 static void layer_fx(lv_obj_t* layer, int32_t p)
 {
-    if (layer == NULL || !frij_anim_enabled()) {
-        return;
-    }
-    if (p < 0) p = 0;
-    if (p > 256) p = 256;
-    lv_obj_set_style_transform_scale(layer, 256 - (256 - LFX_SCALE_MIN) * p / 256, LV_PART_MAIN);
-    lv_obj_set_style_opa(layer, 255 - (255 - LFX_OPA_MIN) * p / 256, LV_PART_MAIN);
+    // Layer zoom/fade is disabled: transform_scale + opa on a full-screen layer
+    // make the GPU-less software renderer rasterize + rescale it every frame, so
+    // the home<->settings<->app transition would crawl. The plain vertical slide
+    // stays smooth. (No-op kept so the call sites/anims need no changes.)
+    (void)layer;
+    (void)p;
 }
 
 static void layer_fx_exec(void* layer, int32_t p)
@@ -158,23 +156,7 @@ static void layer_fx_to(lv_obj_t* layer, int32_t from, int32_t to)
 static void header_action_clicked(lv_event_t* e)
 {
     (void)e;
-    // spin the icon once — every current action is a refresh-style verb
-    if (s_layer_header && frij_anim_enabled()) {
-        lv_obj_t* action = lv_obj_get_child(s_layer_header, lv_obj_get_child_count(s_layer_header) - 1);
-        lv_obj_t* icon   = lv_obj_get_child(action, 0);
-        if (icon && lv_obj_has_flag(action, LV_OBJ_FLAG_CLICKABLE)) {  // visible action only
-            lv_obj_set_style_transform_pivot_x(icon, lv_pct(50), LV_PART_MAIN);
-            lv_obj_set_style_transform_pivot_y(icon, lv_pct(50), LV_PART_MAIN);
-            lv_anim_t a;
-            lv_anim_init(&a);
-            lv_anim_set_var(&a, icon);
-            lv_anim_set_exec_cb(&a, frij_anim_exec_rotation);
-            lv_anim_set_values(&a, 0, 3600);  // 0.1° units = one full turn
-            lv_anim_set_duration(&a, 450);
-            lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
-            lv_anim_start(&a);
-        }
-    }
+    frij_header_spin_action(s_layer_header);  // spin the refresh-style icon once
     if (s_layer_app && s_layer_app->on_action && s_active) {
         s_layer_app->on_action(frij_carousel_index(s_active));
     }
@@ -195,13 +177,16 @@ static void layer_change_cb(int index, void* user)
 
 // Re-query the current screen's action symbol — for when an app's action
 // availability changes without a screen change (e.g. Wi-Fi toggled off hides
-// the rescan button).
+// the rescan button). The iso carousel launcher provides its own definition
+// (see user_app.cpp), so skip this one in that build.
+#ifndef FRIJ_NEW_LAUNCHER
 void frij_launcher_refresh_action(void)
 {
     if (s_active) {
         layer_change_cb(frij_carousel_index(s_active), NULL);
     }
 }
+#endif
 
 // Add the shared header above a layer's content carousel. The header zone stays
 // the dark base color; a small fade strip below it dissolves scrolling rows
