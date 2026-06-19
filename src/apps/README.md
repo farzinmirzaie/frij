@@ -110,10 +110,13 @@ every app shares the look but has its own scheme.
   today?" — No does nothing, Yes logs the day (then flips to a logged state with
   a "Made up" toggle + Undo). Screen 1 is stats: a peace-streak hero, a 7-day dot
   strip, this week / this month, best streak, made-up rate, total, and a
-  month-over-month recap line; the header clears history (confirm). Glance shows
-  days since the last fight. One entry per logged day (a local-midnight day index)
-  in a JSON array under `couples_fights`, with the made-up subset in
-  `couples_resolved`; both persist + sync. Pink.
+  month-over-month recap line; the header clears history (confirm). Screen 2,
+  "Together since", shows elapsed years/months/days since the relationship +
+  marriage dates (`FRIJ_TOGETHER_SINCE` / `FRIJ_MARRIED_SINCE`, baked from the
+  env at build time; "Not set" when unset). Glance shows days since the last
+  fight. One entry per logged day (a local-midnight day index) in a JSON array
+  under `couples_fights`, with the made-up subset in `couples_resolved`; both
+  persist + sync. Pink.
 - `settings/` — 3 screens: General (Display: brightness/sleep/raise-to-wake;
   Sound: volume/touch-sounds; Preferences: 24-hour/vibration/animations/auto-sync), Network
   (Wi-Fi list + connect/disconnect/forget), About (battery, last sync, sync now,

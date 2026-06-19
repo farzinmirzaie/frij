@@ -36,7 +36,7 @@ sips -s format png /tmp/frij_snapshot.bmp --out /tmp/frij_snapshot.png
 `FRIJ_SNAP` values: `home_glance` `todo` `todo_glance` `events`
 `events_glance` `events_countdown` `events_calendars` `assistant` `assistant_glance` `ai_listen`
 `ai_answer` `ai_error` `ai_thinking` `stopwatch` `stopwatch_glance` `scoreboard`
-`scoreboard_reel` `scoreboard_glance` `couples` `couples_stats` `couples_glance` `settings`
+`scoreboard_reel` `scoreboard_glance` `couples` `couples_stats` `couples_since` `couples_glance` `settings`
 (General) `network` `netoff` `sheet` `confirm` `keyboard` (numpad) `result`
 `about`. (unset = the launcher/home.) Exit codes: 0 ok, 1 capture failed,
 2 unknown key — scriptable in CI.

@@ -1,8 +1,18 @@
 #include "couples.h"
 
+#include <stdio.h>
 #include <time.h>
 
 #include <ArduinoJson.h>
+
+// Milestone dates (YYYY-MM-DD) baked from the shell/.env at build time (see
+// platformio.ini + .env.example). Empty when unset → the screen shows "Not set".
+#ifndef FRIJ_TOGETHER_SINCE
+#define FRIJ_TOGETHER_SINCE ""
+#endif
+#ifndef FRIJ_MARRIED_SINCE
+#define FRIJ_MARRIED_SINCE ""
+#endif
 
 #include "store/store.h"
 #include "system/haptics.h"
@@ -503,12 +513,105 @@ static void couples_on_action(int index)
                        "Forget every logged day. Can't be undone.", "Clear", "Cancel", do_clear);
 }
 
+// ---- screen 2: "together since" / "married since" --------------------------
+
+static int days_in_month(int y, int m)  // m is 1..12
+{
+    static const int d[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    if (m == 2) {
+        bool leap = (y % 4 == 0 && y % 100 != 0) || (y % 400 == 0);
+        return leap ? 29 : 28;
+    }
+    return d[m - 1];
+}
+
+static bool parse_date(const char* s, int* y, int* m, int* d)
+{
+    return s && s[0] && sscanf(s, "%d-%d-%d", y, m, d) == 3;
+}
+
+// Calendar-correct elapsed years/months/days from `iso` to today. False if the
+// date is unset/malformed or in the future.
+static bool elapsed_since(const char* iso, int* yy, int* mm, int* dd)
+{
+    int sy, sm, sd;
+    if (!parse_date(iso, &sy, &sm, &sd)) {
+        return false;
+    }
+    time_t    t  = time(NULL);
+    struct tm lt = *localtime(&t);
+    int       ty = lt.tm_year + 1900, tm = lt.tm_mon + 1, td = lt.tm_mday;
+    if (sy > ty || (sy == ty && (sm > tm || (sm == tm && sd > td)))) {
+        return false;  // future date
+    }
+    int years = ty - sy, months = tm - sm, days = td - sd;
+    if (days < 0) {  // borrow days from the previous month
+        int pm = tm - 1, py = ty;
+        if (pm == 0) {
+            pm = 12;
+            py--;
+        }
+        days += days_in_month(py, pm);
+        months--;
+    }
+    if (months < 0) {  // borrow a year
+        months += 12;
+        years--;
+    }
+    *yy = years;
+    *mm = months;
+    *dd = days;
+    return true;
+}
+
+// "1 year 2 months 5 days" — drops zero leading parts, pluralizes, always days.
+static void fmt_elapsed(char* buf, size_t n, int y, int m, int d)
+{
+    int off = 0;
+    if (y > 0) {
+        off += lv_snprintf(buf + off, n - off, "%d %s ", y, y == 1 ? "year" : "years");
+    }
+    if (y > 0 || m > 0) {
+        off += lv_snprintf(buf + off, n - off, "%d %s ", m, m == 1 ? "month" : "months");
+    }
+    lv_snprintf(buf + off, n - off, "%d %s", d, d == 1 ? "day" : "days");
+}
+
+static void milestone(lv_obj_t* col, const char* label, const char* iso)
+{
+    frij_label(col, label, FRIJ_FONT_BODY, FRIJ_TEXT_2);
+    int  y, m, d;
+    char dur[48];
+    bool ok = elapsed_since(iso, &y, &m, &d);
+    if (ok) {
+        fmt_elapsed(dur, sizeof(dur), y, m, d);
+    }
+    lv_obj_t* v = frij_label(col, ok ? dur : "Not set", FRIJ_FONT_TITLE,
+                             ok ? ACCENT : FRIJ_TEXT_3);
+    lv_obj_set_width(v, LV_PCT(90));
+    lv_label_set_long_mode(v, LV_LABEL_LONG_WRAP);
+    lv_obj_set_style_text_align(v, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    lv_obj_set_style_margin_bottom(v, FRIJ_SP_L, LV_PART_MAIN);
+}
+
+static void since_screen(lv_obj_t* parent)
+{
+    lv_obj_t* col = frij_page(parent);
+    lv_obj_set_style_pad_row(col, FRIJ_SP_XS, LV_PART_MAIN);
+    milestone(col, "Together", FRIJ_TOGETHER_SINCE);
+    milestone(col, "Married", FRIJ_MARRIED_SINCE);
+    frij_page_settle(col);
+    frij_stagger_in(col, 60);
+}
+
 // ---- app contract ----------------------------------------------------------
 
 static void screen(lv_obj_t* parent, int index)
 {
     if (index == 1) {
         stats_screen(parent);
+    } else if (index == 2) {
+        since_screen(parent);
     } else {
         choice_screen(parent);
     }
@@ -516,7 +619,7 @@ static void screen(lv_obj_t* parent, int index)
 
 const frij_app_t* couples_app(void)
 {
-    static const frij_app_t app = {"Couples",        ACCENT, glance, 2, screen,
+    static const frij_app_t app = {"Couples",        ACCENT, glance, 3, screen,
                                    couples_action, couples_on_action};
     return &app;
 }

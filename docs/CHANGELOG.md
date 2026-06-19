@@ -2,6 +2,16 @@
 
 Newest first. One short entry per change.
 
+## 2026-06-19 — Couples: "Together since" screen
+
+- **New screen 2** — "Together since" shows elapsed **years / months / days**
+  (calendar-correct, with month/year borrow) since two milestone dates: the
+  relationship start and the marriage. Pink, wraps on the round screen.
+- **Env-driven dates** — `FRIJ_TOGETHER_SINCE` / `FRIJ_MARRIED_SINCE` (YYYY-MM-DD)
+  bake into the firmware from the shell/`.env` at build time (shared
+  `platformio.ini` `[env]` flags; added to `.env.example` + `.env`). Unset →
+  "Not set". `set -a; source .env` before building so they bake in.
+
 ## 2026-06-19 — Couples: made-up flag, best streak, recap
 
 - **"Made up" toggle** — the logged state now has a resolved-same-day switch; the
